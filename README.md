@@ -1,0 +1,80 @@
+# Headless Service
+
+## Description
+
+A service that provides a way to execute the Puppeteer's logic without the need of a browser at the client side.
+
+## Prerequisites
+
+- Node.js: 18 or higher
+- pnpm: 9 or higher
+
+## Environment Variables
+
+- `HOST`: The host where the service will be listening. Default: `0.0.0.0`
+- `PORT`: The port where the service will be listening. Default: `3000`
+- `PRE_BOOT_QUANTITY` (optional): The number of Puppeteer instances that will be created before the service starts listening. Default: `3`
+
+## Usage
+
+1. Install the dependencies:
+
+```bash
+pnpm install
+```
+
+2. Start the service:
+
+```bash
+pnpm dev
+```
+
+3. Make a request to the service:
+
+```bash
+curl --location "http://localhost:3000/api/run" \
+--header "Content-Type: text/plain" \
+--data "const puppeteer = require('puppeteer-core');
+exports.handler = async (params) => {
+  const { browserWSEndpoint } = params;
+  const browser = await puppeteer.connect({
+    browserWSEndpoint,
+  });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1920, height: 1080 });
+  await page.goto('https://example.com', {
+    waitUntil: 'domcontentloaded',
+  });
+  const title = await page.title();
+  await browser.close();
+  return { title };
+};
+"
+```
+
+or you can connect to the service using a WebSocket client:
+
+```typescript
+import puppeteer from 'puppeteer-core';
+
+async function main() {
+  const browser = await puppeteer.connect({
+    browserWSEndpoint: 'ws://127.0.0.1:3000',
+  });
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1920, height: 1080 });
+  await page.goto('https://example.com', {
+    waitUntil: 'domcontentloaded',
+  });
+
+  const title = await page.title();
+  console.log(title);
+
+  await browser.close();
+}
+
+main().catch(console.error);
+```
+
+> you can also run the demo script by executing `pnpm ts-node examples/demo.ts`
