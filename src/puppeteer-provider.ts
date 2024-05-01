@@ -57,6 +57,5 @@ export class PuppeteerProvider {
     if (closeBrowser) {
       await browser.close();
     }
-    this.swarms.remove(browser);
   }
 }

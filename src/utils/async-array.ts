@@ -33,16 +33,6 @@ export class AsyncArray<T> {
     });
   }
 
-  remove(item: T) {
-    const index = this._array.indexOf(item);
-
-    if (index === -1) {
-      return;
-    }
-
-    this._array.splice(index, 1);
-  }
-
   map(callbackFn: (value: T, index: number, array: T[]) => unknown, thisArg?: any) {
     return this._array.map(callbackFn, thisArg);
   }
