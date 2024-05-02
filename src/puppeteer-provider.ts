@@ -32,7 +32,7 @@ export class PuppeteerProvider {
 
     const opts: PuppeteerLaunchOptions = {
       ...(options ?? {}),
-      headless: false,
+      headless: true,
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
       defaultViewport: DEFAULT_VIEWPORT,

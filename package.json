@@ -12,27 +12,30 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/body-parser": "^1.19.5",
     "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
     "@types/http-proxy": "^1.17.14",
     "@types/node": "^20.12.7",
     "dotenv": "^16.4.5",
     "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"
   },
   "dependencies": {
     "axios": "^1.6.8",
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "express": "^4.19.2",
     "http-proxy": "^1.18.1",
+    "prettier": "^3.2.5",
     "puppeteer": "^22.7.1",
     "puppeteer-core": "^22.7.1",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "pure-http": "^4.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=9.0.0"
+    "pnpm": ">=8.0.0"
   }
 }

@@ -1,5 +1,6 @@
-import express from 'express';
+import pureHttp, { Handler } from 'pure-http';
 import cors from 'cors';
+import bodyParser from 'body-parser';
 import { createServer } from 'http';
 import httpProxy from 'http-proxy';
 
@@ -17,9 +18,9 @@ export class HeadlessServer {
 
   private puppeteerProvider = new PuppeteerProvider();
 
-  private app = express();
+  private server = createServer();
 
-  private server = createServer(this.app);
+  private app = pureHttp({ server: this.server });
 
   private proxy = httpProxy.createProxyServer({});
 
@@ -29,9 +30,9 @@ export class HeadlessServer {
     this.app.set('puppeteerProvider', this.puppeteerProvider);
 
     this.app.use(cors());
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(express.raw({ type: '*/*' }));
+    this.app.use(bodyParser.json() as Handler);
+    this.app.use(bodyParser.urlencoded({ extended: true }) as Handler);
+    this.app.use(bodyParser.raw({ type: '*/*' }) as Handler);
     this.app.use('/api', api);
   }
 
@@ -68,7 +69,10 @@ export class HeadlessServer {
   }
 
   async close() {
-    await Promise.race(
+    process.removeAllListeners();
+    this.proxy.removeAllListeners();
+
+    await Promise.all(
       this.puppeteerProvider.swarms.map((browser) => this.puppeteerProvider.cleanup(browser, true))
     );
 
