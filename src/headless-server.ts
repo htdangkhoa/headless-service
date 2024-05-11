@@ -72,9 +72,7 @@ export class HeadlessServer {
     process.removeAllListeners();
     this.proxy.removeAllListeners();
 
-    await Promise.all(
-      this.puppeteerProvider.swarms.map((browser) => this.puppeteerProvider.cleanup(browser, true))
-    );
+    await this.puppeteerProvider.close();
 
     setTimeout(() => {
       console.error('Could not close connections in time, forcefully shutting down');

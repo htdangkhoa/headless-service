@@ -1,12 +1,13 @@
 import type { Browser, PuppeteerLaunchOptions } from 'puppeteer';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import treeKill from 'tree-kill';
 
 import { AsyncArray } from '@/utils';
 import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
 
 export class PuppeteerProvider {
-  swarms = new AsyncArray<Browser>();
+  private swarms = new AsyncArray<Browser>();
 
   setSwarm(browsers?: Browser | Browser[]) {
     if (!browsers) {
@@ -32,7 +33,7 @@ export class PuppeteerProvider {
 
     const opts: PuppeteerLaunchOptions = {
       ...(options ?? {}),
-      headless: true,
+      headless: false,
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
       defaultViewport: DEFAULT_VIEWPORT,
@@ -52,10 +53,29 @@ export class PuppeteerProvider {
     return this.swarms.get();
   }
 
-  async cleanup(browser: Browser, closeBrowser = false) {
+  async closeBrowser(browser: Browser) {
+    const pages = await browser.pages();
+
+    pages.forEach((page) => {
+      page.removeAllListeners();
+      // @ts-ignore
+      page = null;
+    });
     browser.removeAllListeners();
-    if (closeBrowser) {
+
+    try {
       await browser.close();
+    } catch (error) {
+      console.error('Error closing browser', error);
+    } finally {
+      const proc = browser.process();
+      if (proc && proc.pid) {
+        treeKill(proc.pid, 'SIGKILL');
+      }
     }
+  }
+
+  async close() {
+    await Promise.all(this.swarms.map((browser) => this.closeBrowser(browser)));
   }
 }

@@ -1,10 +1,8 @@
 import { Router } from 'pure-http';
-import fs from 'node:fs';
 import { Worker } from 'node:worker_threads';
-import prettier from 'prettier';
-
-const prettierrcStr = fs.readFileSync('.prettierrc', 'utf8');
-const prettierrc = JSON.parse(prettierrcStr);
+import path from 'node:path';
+import fs from 'node:fs';
+import tsc from 'typescript';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
 
@@ -19,26 +17,25 @@ router.post('/run', async (req, res) => {
   /**
    * handle client side script
    */
-  const sourceFromUser = Buffer.from(req.body).toString('utf8');
+  const userCode = Buffer.from(req.body).toString('utf8');
 
-  const source = [
-    "const { parentPort } = require('worker_threads');",
-    sourceFromUser,
-    `
-      parentPort.on('message', async (...args) => {
-        const result = await exports.handler(...args);
-        parentPort.postMessage(result);
-      });
-    `,
-  ].join('\n');
+  const templateFile = path.resolve(process.cwd(), 'templates/puppeteer-connect.ts');
+  const masterCode = fs.readFileSync(templateFile, 'utf8');
 
-  const code = await prettier.format(source, { ...prettierrc, parser: 'babel' });
+  const mergedCode = [userCode, masterCode].join('\n');
 
-  console.log('===== script from client =====');
-  console.log(code);
-  console.log('===============================');
+  const { outputText: compiledCode } = tsc.transpileModule(mergedCode, {
+    compilerOptions: {
+      module: tsc.ModuleKind.CommonJS,
+      target: tsc.ScriptTarget.ESNext,
+    },
+  });
 
-  const worker = new Worker(code, {
+  console.log('===== Code compiled =====');
+  console.log(compiledCode);
+  console.log('=========================');
+
+  const worker = new Worker(compiledCode, {
     eval: true,
     env: {
       NODE_ENV: 'SANDBOX',
@@ -52,20 +49,25 @@ router.post('/run', async (req, res) => {
   worker.postMessage({ browserWSEndpoint });
 
   worker.on('message', async (msg) => {
-    await puppeteerProvider.launchBrowser();
+    worker.emit('exit', 0);
 
-    res.send({
-      data: msg,
-    });
+    return res.send({ data: msg });
   });
 
-  worker.on('error', async (err) => {
-    await puppeteerProvider.cleanup(browser, true);
+  worker.once('error', async (err) => {
+    worker.emit('exit', 1);
+
+    return res.status(500).send({ message: err.message });
+  });
+
+  worker.once('exit', async (code) => {
+    await puppeteerProvider.closeBrowser(browser);
+
     await puppeteerProvider.launchBrowser();
 
-    res.status(500).send({
-      message: err.message,
-    });
+    worker.removeAllListeners();
+
+    await worker.terminate();
   });
 });
 
