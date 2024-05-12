@@ -3,25 +3,10 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
 
-import { AsyncArray } from '@/utils';
 import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
 
 export class PuppeteerProvider {
-  private swarms = new AsyncArray<Browser>();
-
-  setSwarm(browsers?: Browser | Browser[]) {
-    if (!browsers) {
-      this.swarms.length = 0;
-      return;
-    }
-
-    ([] as Browser[])
-      .concat(browsers)
-      .filter(Boolean)
-      .forEach((browser) => {
-        this.swarms.push(browser);
-      });
-  }
+  private runnings: Browser[] = [];
 
   async launchBrowser(options?: PuppeteerLaunchOptions) {
     puppeteer.use(StealthPlugin());
@@ -40,17 +25,14 @@ export class PuppeteerProvider {
       handleSIGINT: false,
       handleSIGTERM: false,
       handleSIGHUP: false,
+      waitForInitialPage: false,
     };
 
     const browser = await puppeteer.launch(opts);
 
-    this.swarms.push(browser);
+    this.runnings.push(browser);
 
     return browser;
-  }
-
-  getBrowser() {
-    return this.swarms.get();
   }
 
   async closeBrowser(browser: Browser) {
@@ -76,6 +58,6 @@ export class PuppeteerProvider {
   }
 
   async close() {
-    await Promise.all(this.swarms.map((browser) => this.closeBrowser(browser)));
+    await Promise.all(this.runnings.map((browser) => this.closeBrowser(browser)));
   }
 }

@@ -8,7 +8,6 @@ import { PuppeteerProvider } from '@/puppeteer-provider';
 import api from '@/apis';
 
 export interface HeadlessServerOptions {
-  preBootQuantity?: number;
   port?: number;
   host?: string;
 }
@@ -37,14 +36,8 @@ export class HeadlessServer {
   }
 
   async start() {
-    await Promise.all(
-      Array.from({ length: this.options.preBootQuantity ?? 1 }).map(() =>
-        this.puppeteerProvider.launchBrowser()
-      )
-    );
-
     this.server.on('upgrade', async (req, socket, head) => {
-      const browser = await this.puppeteerProvider.getBrowser();
+      const browser = await this.puppeteerProvider.launchBrowser();
 
       const browserWSEndpoint = browser.wsEndpoint();
 
@@ -65,6 +58,7 @@ export class HeadlessServer {
 
     this.server.listen(port, host, () => {
       console.log(`Server running at http://${host}:${port}`);
+      console.log(`WS Proxy running at ws://${host}:${port}`);
     });
   }
 

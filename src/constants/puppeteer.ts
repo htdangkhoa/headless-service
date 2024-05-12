@@ -5,6 +5,7 @@ export const DEFAULT_VIEWPORT = {
 
 export const DEFAULT_LAUNCH_ARGS = [
   '--no-first-run',
+  '--no-startup-window',
   '--mute-audio',
   '--disable-features=site-per-process',
   '--no-sandbox',
@@ -13,5 +14,4 @@ export const DEFAULT_LAUNCH_ARGS = [
   '--no-zygote',
   '--disable-dev-shm-usage',
   `--window-size=${DEFAULT_VIEWPORT.width},${DEFAULT_VIEWPORT.height}`,
-  '--incognito',
 ];

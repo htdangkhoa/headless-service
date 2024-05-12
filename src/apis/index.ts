@@ -11,7 +11,7 @@ const router = Router();
 router.post('/run', async (req, res) => {
   const puppeteerProvider = req.app.get<PuppeteerProvider>('puppeteerProvider');
 
-  const browser = await puppeteerProvider.getBrowser();
+  const browser = await puppeteerProvider.launchBrowser();
   const browserWSEndpoint = browser.wsEndpoint();
 
   /**
@@ -65,8 +65,6 @@ router.post('/run', async (req, res) => {
 
   worker.once('exit', async (code) => {
     await puppeteerProvider.closeBrowser(browser);
-
-    await puppeteerProvider.launchBrowser();
 
     worker.removeAllListeners();
 
