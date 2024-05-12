@@ -132,3 +132,6 @@ dist
 .env
 .env.*
 !.env.example
+
+public/*
+!public/.gitkeep
