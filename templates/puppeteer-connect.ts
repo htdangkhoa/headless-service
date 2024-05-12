@@ -1,6 +1,6 @@
 import { parentPort } from 'node:worker_threads';
-import puppeteer from 'puppeteer-core';
-import type { Page, BrowserContext } from 'puppeteer-core';
+import type { Page, BrowserContext } from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
 
 type Context = Pick<BrowserContext, 'overridePermissions' | 'clearPermissionOverrides'>;
 

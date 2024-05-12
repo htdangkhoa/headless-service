@@ -41,8 +41,8 @@ router.post('/run', async (req, res) => {
       NODE_ENV: 'SANDBOX',
     },
     resourceLimits: {
-      maxOldGenerationSizeMb: 16,
-      maxYoungGenerationSizeMb: 4,
+      maxOldGenerationSizeMb: 128,
+      maxYoungGenerationSizeMb: 32,
       codeRangeSizeMb: 16,
     },
   });
@@ -57,7 +57,10 @@ router.post('/run', async (req, res) => {
   worker.once('error', async (err) => {
     worker.emit('exit', 1);
 
-    return res.status(500).send({ message: err.message });
+    return res.status(500).send({
+      message: err.message,
+      stack: err.stack,
+    });
   });
 
   worker.once('exit', async (code) => {
