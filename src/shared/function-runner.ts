@@ -7,20 +7,30 @@ export class FunctionRunner {
   private browser?: Browser;
   private page?: Page;
 
-  constructor() {}
+  constructor(private browserWSEndpoint: string) {}
 
-  async start(browserWSEndpoint: string) {
-    const connectionTransport = await BrowserWebSocketTransport.create(browserWSEndpoint);
+  async start(handler: any) {
+    const connectionTransport = await BrowserWebSocketTransport.create(this.browserWSEndpoint);
     const cdpOptions = {
       headers: {
         Host: '127.0.0.1',
       },
     };
 
-    this.browser = await connect(connectionTransport, browserWSEndpoint, cdpOptions);
+    this.browser = await connect(connectionTransport, this.browserWSEndpoint, cdpOptions);
+    this.browser.once('disconnected', this.stop.bind(this));
     this.page = await this.browser.newPage();
 
-    return 'ok';
+    const result = await handler({ page: this.page });
+    await this.page.close();
+
+    return result;
+  }
+
+  async stop() {
+    if (this.browser) {
+      await this.browser.disconnect();
+    }
   }
 }
 

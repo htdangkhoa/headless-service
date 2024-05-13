@@ -1,5 +1,5 @@
+import { IncomingMessage } from 'node:http';
 import type { Browser, PuppeteerLaunchOptions } from 'puppeteer';
-import { IncomingMessage } from 'http';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
@@ -48,23 +48,30 @@ export class PuppeteerProvider {
   }
 
   async closeBrowser(browser: Browser) {
-    const pages = await browser.pages();
+    const sessionId = browser.wsEndpoint().split('/').pop();
+    const foundIndex = this.runnings.findIndex((b) => b.wsEndpoint().includes(sessionId!));
+    const [found] = this.runnings.splice(foundIndex, 1);
 
-    pages.forEach((page) => {
-      page.removeAllListeners();
-      // @ts-ignore
-      page = null;
-    });
-    browser.removeAllListeners();
+    if (found) {
+      const pages = await found.pages();
 
-    try {
-      await browser.close();
-    } catch (error) {
-      console.error('Error closing browser', error);
-    } finally {
-      const proc = browser.process();
-      if (proc && proc.pid) {
-        treeKill(proc.pid, 'SIGKILL');
+      pages.forEach((page) => {
+        page.removeAllListeners();
+
+        // @ts-ignore
+        page = null;
+      });
+      found.removeAllListeners();
+
+      try {
+        await found.close();
+      } catch (error) {
+        console.error('Error closing browser', error);
+      } finally {
+        const proc = found.process();
+        if (proc && proc.pid) {
+          treeKill(proc.pid, 'SIGKILL');
+        }
       }
     }
   }

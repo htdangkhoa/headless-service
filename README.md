@@ -32,21 +32,14 @@ pnpm dev
 3. Make a request to the service:
 
 ```bash
-curl --location "http://localhost:3000/api/run" \
---header "Content-Type: text/plain" \
---data "const puppeteer = require('puppeteer-core');
-exports.handler = async (params) => {
-  const { browserWSEndpoint } = params;
-  const browser = await puppeteer.connect({
-    browserWSEndpoint,
-  });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1920, height: 1080 });
+curl --location "http://localhost:3000/api/function" \
+--header "Content-Type: application/javascript" \
+--data "
+export default async function ({ page }: { page: Page }) {
   await page.goto('https://example.com', {
     waitUntil: 'domcontentloaded',
   });
   const title = await page.title();
-  await browser.close();
   return { title };
 };
 "

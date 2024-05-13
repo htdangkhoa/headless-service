@@ -4,10 +4,10 @@
   "description": "",
   "scripts": {
     "predev": "pnpm build:function",
-    "dev": "nodemon",
+    "dev": "tsx --watch -r dotenv/config src/index.ts",
     "build:function": "node scripts/build-function.js",
     "build": "tsc -p tsconfig.build.json",
-    "ts-node": "ts-node"
+    "tsx": "tsx"
   },
   "keywords": [],
   "author": "",
@@ -21,10 +21,8 @@
     "dotenv": "^16.4.5",
     "esbuild": "^0.21.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "nodemon": "^3.1.0",
     "prettier": "^3.2.5",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0"
+    "tsx": "^4.10.2"
   },
   "dependencies": {
     "axios": "^1.6.8",

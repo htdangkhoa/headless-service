@@ -1,5 +1,6 @@
-import path from 'path';
-import { createServer } from 'http';
+import path from 'node:path';
+import { IncomingMessage, createServer } from 'node:http';
+import { Socket } from 'node:net';
 import pureHttp, { Handler } from 'pure-http';
 import consolidate from 'consolidate';
 import cors from 'cors';
@@ -7,7 +8,7 @@ import bodyParser from 'body-parser';
 import httpProxy from 'http-proxy';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { execute, function as func } from '@/apis';
+import { function as func } from '@/apis';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -41,31 +42,52 @@ export class HeadlessServer {
     this.app.use(bodyParser.json() as Handler);
     this.app.use(bodyParser.urlencoded({ extended: true }) as Handler);
     this.app.use(bodyParser.raw({ type: 'application/javascript' }) as Handler);
-    this.app.use('/api', ...[execute, func]);
+    this.app.use('/api', ...[func]);
     this.app.all('/function/index.html', async (_, res) => {
       return res.render('function/index');
     });
   }
 
-  async start() {
-    this.server.on('upgrade', async (req, socket, head) => {
-      const browser = await this.puppeteerProvider.launchBrowser(req);
+  async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
+    const browser = await this.puppeteerProvider.launchBrowser(req);
 
-      const browserWSEndpoint = browser.wsEndpoint();
+    const browserWSEndpoint = browser.wsEndpoint();
+
+    return new Promise<void>((resolve, reject) => {
+      function close() {
+        browser.off('close', close);
+        browser.process()?.off('close', close);
+        socket.off('close', close);
+        return resolve();
+      }
+
+      browser?.once('close', close);
+      browser?.process()?.once('close', close);
+      socket.once('close', close);
 
       req.url = '';
+
       // Delete headers known to cause issues
       delete req.headers.origin;
 
-      socket.once('close', async () => {
-        // TODO: Close browser
-      });
-
-      return this.proxy.ws(req, socket, head, {
-        target: browserWSEndpoint,
-        changeOrigin: true,
-      });
+      this.proxy.ws(
+        req,
+        socket,
+        head,
+        {
+          target: browserWSEndpoint,
+          changeOrigin: true,
+        },
+        (error) => {
+          this.puppeteerProvider.closeBrowser(browser);
+          return reject(error);
+        }
+      );
     });
+  }
+
+  async start() {
+    this.server.on('upgrade', this.onUpgrade.bind(this));
 
     this.server.timeout = 0;
     this.server.keepAliveTimeout = 0;
