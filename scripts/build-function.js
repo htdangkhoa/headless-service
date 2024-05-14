@@ -1,7 +1,7 @@
-const fs = require('fs');
-const { join } = require('path');
-const { build } = require('esbuild');
-const { polyfillNode } = require('esbuild-plugin-polyfill-node');
+import fs from 'fs';
+import { join } from 'path';
+import { build } from 'esbuild';
+import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 
 const html = (contents) => `
 <!DOCTYPE html>

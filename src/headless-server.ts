@@ -1,36 +1,30 @@
 import path from 'node:path';
 import { IncomingMessage, createServer } from 'node:http';
 import { Socket } from 'node:net';
-import pureHttp, { Handler } from 'pure-http';
+import express from 'express';
 import consolidate from 'consolidate';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import httpProxy from 'http-proxy';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { FunctionPostRoute } from '@/routes';
-import { makeExternalUrl } from './utils';
-import { GroupRouter } from './router';
-import { OpenAPI } from './openapi';
+import { makeExternalUrl } from '@/utils';
+import { GroupRouter } from '@/router';
+import { OpenAPI } from '@/openapi';
 
 export interface HeadlessServerOptions {
   port?: number;
   host?: string;
 }
 
+const publicDir = path.resolve(process.cwd(), 'public');
+
 export class HeadlessServer {
   private options: HeadlessServerOptions;
 
-  private server = createServer();
+  private app = express();
 
-  private app = pureHttp({
-    server: this.server,
-    views: {
-      dir: path.resolve(process.cwd(), 'public'),
-      ext: 'html',
-      engine: consolidate.mustache,
-    },
-  });
+  private server = createServer(this.app);
 
   private proxy = httpProxy.createProxyServer({});
 
@@ -45,27 +39,16 @@ export class HeadlessServer {
 
     // Add puppeteer provider as a variable into the app settings
     this.app.set('puppeteerProvider', this.puppeteerProvider);
+    this.app.set('views', publicDir);
+    this.app.engine('html', consolidate.mustache);
+    this.app.set('view engine', 'html');
 
     // Middleware
+    this.app.use(express.static(publicDir));
     this.app.use(cors());
-    this.app.use(bodyParser.json() as Handler);
-    this.app.use(bodyParser.urlencoded({ extended: true }) as Handler);
-    this.app.use(bodyParser.raw({ type: 'application/javascript' }) as Handler);
-
-    // Serving static files
-    this.app.all('/function/index.html', async (_, res) => {
-      return res.render('function/index');
-    });
-    this.app.all('/docs/*', async (req, res) => {
-      const filename = req.params?.wild!;
-      const filepath = path.resolve(process.cwd(), 'public', 'docs', filename);
-      return res.sendFile(filepath);
-    });
-    this.app.all('/docs', async (req, res) => {
-      return res.render('docs/index', {
-        url: makeExternalUrl('docs', 'openapi.json'),
-      });
-    });
+    this.app.use(express.json());
+    this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(express.raw({ type: 'application/javascript' }));
 
     // API Routes
     this.apiGroupRouter.registerRoute(FunctionPostRoute);
@@ -113,7 +96,7 @@ export class HeadlessServer {
   async start() {
     // Generate OpenAPI documentation
     this.openApi.generateDocument({
-      jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'openapi.json'),
+      jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'swagger.json'),
       title: 'Headless Server',
       version: '1.0.0',
       servers: [{ url: makeExternalUrl() }],

@@ -1,4 +1,4 @@
-import { Handler } from 'pure-http';
+import { Handler } from 'express';
 import tsc from 'typescript';
 import { randomUUID } from 'node:crypto';
 import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
@@ -70,7 +70,7 @@ export class FunctionPostRoute implements Route {
   private handler: Handler = async (req, res) => {
     const functionRequestUrl = makeExternalUrl('function');
 
-    const puppeteerProvider = req.app.get<PuppeteerProvider>('puppeteerProvider');
+    const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
 
     const browser = await puppeteerProvider.launchBrowser(req as IncomingMessage, {
       devtools: true,

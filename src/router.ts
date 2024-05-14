@@ -1,5 +1,5 @@
 import { RouteConfig } from '@asteasolutions/zod-to-openapi';
-import { Router, type Handler, type IRouter } from 'pure-http';
+import { Router, Handler } from 'express';
 
 export const enum Method {
   GET = 'get',
@@ -28,18 +28,19 @@ export interface Route
 }
 
 export class GroupRouter {
-  private router: IRouter;
+  private router: Router;
 
   private routes: Route[] = [];
 
   constructor(public prefix?: string) {
-    this.router = Router(prefix);
+    this.router = Router();
   }
 
   registerRoute(zClass: new () => Route) {
     const route = new zClass();
     this.routes.push(route);
-    this.router[route.method](route.path, ...route.handlers);
+    const fullPath = `${this.prefix ?? ''}${route.path}`;
+    this.router[route.method](fullPath, route.handlers);
   }
 
   getRouter() {
