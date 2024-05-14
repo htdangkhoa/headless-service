@@ -3,13 +3,17 @@ import { _connectToCdpBrowser as connect } from 'puppeteer-core/lib/esm/puppetee
 import { Browser } from 'puppeteer-core/lib/esm/puppeteer/api/Browser';
 import { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 
+export interface ICodeRunner {
+  (params: { page: Page; context?: Record<string, any> }): Promise<any>;
+}
+
 export class FunctionRunner {
   private browser?: Browser;
   private page?: Page;
 
   constructor(private browserWSEndpoint: string) {}
 
-  async start(handler: any) {
+  async start(codeRunner: ICodeRunner) {
     const connectionTransport = await BrowserWebSocketTransport.create(this.browserWSEndpoint);
     const cdpOptions = {
       headers: {
@@ -21,7 +25,7 @@ export class FunctionRunner {
     this.browser.once('disconnected', this.stop.bind(this));
     this.page = await this.browser.newPage();
 
-    const result = await handler({ page: this.page });
+    const result = await codeRunner({ page: this.page });
     await this.page.close();
 
     return result;

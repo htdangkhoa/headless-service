@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@asteasolutions/zod-to-openapi':
+    specifier: ^7.0.0
+    version: 7.0.0(zod@3.23.8)
   axios:
     specifier: ^1.6.8
     version: 1.6.8
@@ -45,8 +48,8 @@ dependencies:
     specifier: ^2.11.2
     version: 2.11.2(puppeteer-extra@3.3.6)
   pure-http:
-    specifier: ^4.0.0
-    version: 4.0.0
+    specifier: ^4.0.2
+    version: 4.0.2
   socks-proxy-agent:
     specifier: ^8.0.3
     version: 8.0.3
@@ -56,6 +59,9 @@ dependencies:
   typescript:
     specifier: ^5.4.5
     version: 5.4.5
+  zod:
+    specifier: ^3.23.8
+    version: 3.23.8
 
 devDependencies:
   '@types/body-parser':
@@ -90,6 +96,15 @@ devDependencies:
     version: 4.10.2
 
 packages:
+
+  /@asteasolutions/zod-to-openapi@7.0.0(zod@3.23.8):
+    resolution: {integrity: sha512-rJRKHD2m6nUb/9ZheeN8nqOURX24WTzY8Sex1ZKT0Kpx+xfpRcD0fTD6vEeXNHGaDGxzu65Jj/jb2x6nLTjcMw==}
+    peerDependencies:
+      zod: ^3.20.2
+    dependencies:
+      openapi3-ts: 4.3.1
+      zod: 3.23.8
+    dev: false
 
   /@babel/code-frame@7.24.2:
     resolution: {integrity: sha512-y5+tLQyV8pg3fsiln67BVLD1P13Eg4lh5RW9mF0zUuvLrv9uIQ4MCL+CRT+FTsBlBjcIan6PGsLcBN0m3ClUyQ==}
@@ -1715,6 +1730,12 @@ packages:
       wrappy: 1.0.2
     dev: false
 
+  /openapi3-ts@4.3.1:
+    resolution: {integrity: sha512-ha/kTOLhMQL7MvS9Abu/cpCXx5qwHQ++88YkUzn1CGfmM8JvCOG/4ZE6tRsexgXRFaoJrcwLyf81H2Y/CXALtA==}
+    dependencies:
+      yaml: 2.4.2
+    dev: false
+
   /pac-proxy-agent@7.0.1:
     resolution: {integrity: sha512-ASV8yU4LLKBAjqIPMbrgtaKIvxQri/yh2OpI+S6hVa9JRkUI3Y3NPFbfngDtY7oFtSMD3w31Xns89mDa3Feo5A==}
     engines: {node: '>= 14'}
@@ -1945,8 +1966,8 @@ packages:
       - utf-8-validate
     dev: false
 
-  /pure-http@4.0.0:
-    resolution: {integrity: sha512-7mZjN180mTLWVRnuoHwgFFVM+oDGfqcwSQV0Qz4qWNqdVfY2f2aAa4Huw9rxihVuoPcCU+nEQeLZwi1X1AxMjA==}
+  /pure-http@4.0.2:
+    resolution: {integrity: sha512-A9iVHtX6tEdovjUsGuZvpdAeSo5aY/e1Y6CL6CStlPgRx+NM6wxj4fqrZM7yiS6YVr7apHPjmxxfX+GaXu+EVw==}
     engines: {node: '>= 16'}
     dev: false
 
@@ -2241,6 +2262,12 @@ packages:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
     dev: false
 
+  /yaml@2.4.2:
+    resolution: {integrity: sha512-B3VqDZ+JAg1nZpaEmWtTXUlBneoGx6CPM9b0TENK6aoSu5t73dItudwdgmi6tHlIZZId4dZ9skcAQ2UbcyAeVA==}
+    engines: {node: '>= 14'}
+    hasBin: true
+    dev: false
+
   /yargs-parser@21.1.1:
     resolution: {integrity: sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==}
     engines: {node: '>=12'}
@@ -2268,4 +2295,8 @@ packages:
 
   /zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false
+
+  /zod@3.23.8:
+    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
     dev: false

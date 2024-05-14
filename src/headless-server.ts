@@ -8,7 +8,10 @@ import bodyParser from 'body-parser';
 import httpProxy from 'http-proxy';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { function as func } from '@/apis';
+import { FunctionRoute } from '@/routes';
+import { makeExternalUrl } from './utils';
+import { GroupRouter } from './router';
+import { OpenAPI } from './openapi';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -33,19 +36,40 @@ export class HeadlessServer {
 
   private puppeteerProvider = new PuppeteerProvider();
 
+  private apiGroupRouter: GroupRouter = new GroupRouter('/api');
+
+  private openApi = new OpenAPI([this.apiGroupRouter]);
+
   constructor(options: HeadlessServerOptions) {
     this.options = options;
 
+    // Add puppeteer provider as a variable into the app settings
     this.app.set('puppeteerProvider', this.puppeteerProvider);
 
+    // Middleware
     this.app.use(cors());
     this.app.use(bodyParser.json() as Handler);
     this.app.use(bodyParser.urlencoded({ extended: true }) as Handler);
     this.app.use(bodyParser.raw({ type: 'application/javascript' }) as Handler);
-    this.app.use('/api', ...[func]);
+
+    // Serving static files
     this.app.all('/function/index.html', async (_, res) => {
       return res.render('function/index');
     });
+    this.app.all('/docs/*', async (req, res) => {
+      const filename = req.params?.wild!;
+      const filepath = path.resolve(process.cwd(), 'public', 'docs', filename);
+      return res.sendFile(filepath);
+    });
+    this.app.all('/docs', async (req, res) => {
+      return res.render('docs/index', {
+        url: makeExternalUrl('docs', 'openapi.json'),
+      });
+    });
+
+    // API Routes
+    this.apiGroupRouter.registerRoute(new FunctionRoute());
+    this.app.use(this.apiGroupRouter.getRouter());
   }
 
   async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
@@ -87,6 +111,14 @@ export class HeadlessServer {
   }
 
   async start() {
+    // Generate OpenAPI documentation
+    this.openApi.generateDocument({
+      jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'openapi.json'),
+      title: 'Headless Server',
+      version: '1.0.0',
+      servers: [{ url: makeExternalUrl() }],
+    });
+
     this.server.on('upgrade', this.onUpgrade.bind(this));
 
     this.server.timeout = 0;
