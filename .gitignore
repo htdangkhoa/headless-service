@@ -134,5 +134,9 @@ dist
 !.env.example
 
 public/*
-!public/.gitkeep
+
+!public/docs
+public/docs/*
 !public/docs/index.html
+
+!public/.gitkeep
