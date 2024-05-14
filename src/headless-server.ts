@@ -8,7 +8,7 @@ import bodyParser from 'body-parser';
 import httpProxy from 'http-proxy';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionRoute } from '@/routes';
+import { FunctionPostRoute } from '@/routes';
 import { makeExternalUrl } from './utils';
 import { GroupRouter } from './router';
 import { OpenAPI } from './openapi';
@@ -68,7 +68,7 @@ export class HeadlessServer {
     });
 
     // API Routes
-    this.apiGroupRouter.registerRoute(new FunctionRoute());
+    this.apiGroupRouter.registerRoute(FunctionPostRoute);
     this.app.use(this.apiGroupRouter.getRouter());
   }
 

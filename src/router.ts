@@ -36,7 +36,8 @@ export class GroupRouter {
     this.router = Router(prefix);
   }
 
-  registerRoute(route: Route) {
+  registerRoute(zClass: new () => Route) {
+    const route = new zClass();
     this.routes.push(route);
     this.router[route.method](route.path, ...route.handlers);
   }

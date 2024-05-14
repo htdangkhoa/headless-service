@@ -5,6 +5,7 @@ import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
 import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
+import dedent from 'dedent';
 
 import { Method, Route } from '@/router';
 import { makeExternalUrl } from '@/utils';
@@ -22,7 +23,7 @@ declare global {
   }
 }
 
-export class FunctionRoute implements Route {
+export class FunctionPostRoute implements Route {
   method = Method.POST;
   path = '/function';
   request = {
@@ -31,6 +32,13 @@ export class FunctionRoute implements Route {
       content: {
         'application/javascript': {
           schema: z.string(),
+          example: dedent`export default async function ({ page }: { page: Page }) {
+            await page.goto('https://example.com', {
+              waitUntil: 'domcontentloaded',
+            });
+            const title = await page.title();
+            return { title };
+          };`,
         },
       },
       required: true,
@@ -150,7 +158,7 @@ export class FunctionRoute implements Route {
           return runner.start(handler as ICodeRunner);
         },
         {
-          browserWSEndpoint,
+          browserWSEndpoint: externalWSEndpoint,
           runtimeFunction,
         } as IPageFunctionArguments
       )
