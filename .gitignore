@@ -135,3 +135,4 @@ dist
 
 public/*
 !public/.gitkeep
+!public/docs/index.html
