@@ -7,13 +7,13 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 ## Prerequisites
 
 - Node.js: 18 or higher
-- pnpm: 9 or higher
+- pnpm: 8 or higher
 
 ## Environment Variables
 
 - `HOST`: The host where the service will be listening. Default: `0.0.0.0`
 - `PORT`: The port where the service will be listening. Default: `3000`
-- `PRE_BOOT_QUANTITY` (optional): The number of Puppeteer instances that will be created before the service starts listening. Default: `3`
+- `EXTERNAL_ADDRESS` The external address that will be used to connect to the service.
 
 ## Usage
 
