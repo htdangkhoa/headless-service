@@ -9,7 +9,7 @@ import httpProxy from 'http-proxy';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { FunctionPostRoute } from '@/routes';
 import { makeExternalUrl } from '@/utils';
-import { GroupRouter } from '@/router';
+import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 
 export interface HeadlessServerOptions {
@@ -30,15 +30,17 @@ export class HeadlessServer {
 
   private puppeteerProvider = new PuppeteerProvider();
 
-  private apiGroupRouter: GroupRouter = new GroupRouter('/api');
+  private apiGroup: RouteGroup = new RouteGroup(this.app, '/api');
 
-  private openApi = new OpenAPI([this.apiGroupRouter]);
+  private openApi = new OpenAPI([this.apiGroup]);
 
   constructor(options: HeadlessServerOptions) {
     this.options = options;
 
     // Add puppeteer provider as a variable into the app settings
     this.app.set('puppeteerProvider', this.puppeteerProvider);
+
+    // Set up views
     this.app.set('views', publicDir);
     this.app.engine('html', consolidate.mustache);
     this.app.set('view engine', 'html');
@@ -51,8 +53,7 @@ export class HeadlessServer {
     this.app.use(express.raw({ type: 'application/javascript' }));
 
     // API Routes
-    this.apiGroupRouter.registerRoute(FunctionPostRoute);
-    this.app.use(this.apiGroupRouter.getRouter());
+    this.apiGroup.registerRoute(FunctionPostRoute);
   }
 
   async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {

@@ -7,7 +7,7 @@ import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 import dedent from 'dedent';
 
-import { Method, Route } from '@/router';
+import { Method, Route } from '@/route-group';
 import { makeExternalUrl } from '@/utils';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';

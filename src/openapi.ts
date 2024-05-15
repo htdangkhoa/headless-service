@@ -1,12 +1,12 @@
 import { OpenAPIRegistry, OpenApiGeneratorV3, RouteConfig } from '@asteasolutions/zod-to-openapi';
 import fs from 'node:fs';
 
-import { GroupRouter } from '@/router';
+import { RouteGroup } from '@/route-group';
 
 export class OpenAPI {
   private registry = new OpenAPIRegistry();
 
-  constructor(private groups: GroupRouter[]) {}
+  constructor(private groups: RouteGroup[]) {}
 
   generateDocument(config: {
     title: string;

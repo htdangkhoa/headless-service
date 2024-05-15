@@ -1,5 +1,5 @@
 import { RouteConfig } from '@asteasolutions/zod-to-openapi';
-import { Router, Handler } from 'express';
+import { Express, Handler } from 'express';
 
 export const enum Method {
   GET = 'get',
@@ -27,24 +27,19 @@ export interface Route
   handlers: Array<Handler>;
 }
 
-export class GroupRouter {
-  private router: Router;
-
+export class RouteGroup {
   private routes: Route[] = [];
 
-  constructor(public prefix?: string) {
-    this.router = Router();
-  }
+  constructor(
+    private app: Express,
+    public prefix?: string
+  ) {}
 
   registerRoute(zClass: new () => Route) {
     const route = new zClass();
     this.routes.push(route);
     const fullPath = `${this.prefix ?? ''}${route.path}`;
-    this.router[route.method](fullPath, route.handlers);
-  }
-
-  getRouter() {
-    return this.router;
+    this.app[route.method](fullPath, route.handlers);
   }
 
   getRoutes() {
