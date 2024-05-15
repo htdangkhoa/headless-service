@@ -5,10 +5,12 @@ import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
 import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
+import { zu } from 'zod_utilz';
 import dedent from 'dedent';
+import { StatusCodes } from 'http-status-codes';
 
 import { Method, Route } from '@/route-group';
-import { makeExternalUrl } from '@/utils';
+import { BooleanOrStringSchema, ResponseBodySchema, makeExternalUrl, writeResponse } from '@/utils';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
@@ -23,23 +25,41 @@ declare global {
   }
 }
 
+const RequestFunctionQuerySchema = z
+  .object({
+    stealth: BooleanOrStringSchema.optional()
+      .describe('Whether to run the browser in stealth mode')
+      .openapi({
+        example: 'false',
+      }),
+    proxy: z.string().optional().describe('The proxy server to use').openapi({
+      example: 'http://localhost:8080',
+    }),
+  })
+  .strict();
+
+const RequestFunctionBodySchema = z.string();
+
 export class FunctionPostRoute implements Route {
   method = Method.POST;
   path = '/function';
   swagger = {
     request: {
+      query: RequestFunctionQuerySchema,
       body: {
         description: 'The user code to run',
         content: {
           'application/javascript': {
-            schema: z.string(),
-            example: dedent`export default async function ({ page }: { page: Page }) {
-              await page.goto('https://example.com', {
-                waitUntil: 'domcontentloaded',
-              });
-              const title = await page.title();
-              return { title };
-            };`,
+            schema: RequestFunctionBodySchema,
+            example: dedent`
+              export default async function ({ page }: { page: Page }) {
+                await page.goto('https://example.com', {
+                  waitUntil: 'domcontentloaded',
+                });
+                const title = await page.title();
+                return { title };
+              };
+            `,
           },
         },
         required: true,
@@ -50,9 +70,7 @@ export class FunctionPostRoute implements Route {
         description: 'Success',
         content: {
           'application/json': {
-            schema: z.object({
-              data: z.unknown(),
-            }),
+            schema: ResponseBodySchema,
           },
         },
       },
@@ -60,23 +78,27 @@ export class FunctionPostRoute implements Route {
         description: 'Internal Server Error',
         content: {
           'application/json': {
-            schema: z.object({
-              error: z.string(),
-              stack: z.string(),
-            }),
+            schema: ResponseBodySchema,
           },
         },
       },
     },
   };
   handler: Handler = async (req, res) => {
+    const queryValidation = zu.useTypedParsers(RequestFunctionQuerySchema).safeParse(req.query);
+
+    if (queryValidation.error) {
+      return writeResponse(res, queryValidation.error.errors, StatusCodes.BAD_REQUEST);
+    }
+
     const functionRequestUrl = makeExternalUrl('function');
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
 
-    const browser = await puppeteerProvider.launchBrowser(req as IncomingMessage, {
-      devtools: true,
-    });
+    const browser = await puppeteerProvider.launchBrowser(
+      req as IncomingMessage,
+      queryValidation.data
+    );
 
     const browserWSEndpoint = browser.wsEndpoint();
     const browserWebSocketURL = new URL(browserWSEndpoint);
@@ -164,8 +186,8 @@ export class FunctionPostRoute implements Route {
           runtimeFunction,
         } as IPageFunctionArguments
       )
-      .then((result) => res.send({ data: result }))
-      .catch((err) => res.status(500).send({ error: err.message, stack: err.stack }))
+      .then((result) => writeResponse(res, { data: result }))
+      .catch((err) => writeResponse(res, err, StatusCodes.INTERNAL_SERVER_ERROR))
       .finally(async () => {
         await page.setRequestInterception(false);
         await puppeteerProvider.closeBrowser(browser);

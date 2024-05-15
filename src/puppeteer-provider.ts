@@ -9,7 +9,10 @@ import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
 export class PuppeteerProvider {
   private runnings: Browser[] = [];
 
-  async launchBrowser(req: IncomingMessage, options?: PuppeteerLaunchOptions) {
+  async launchBrowser(
+    req: IncomingMessage,
+    options?: PuppeteerLaunchOptions & { stealth?: boolean; proxy?: string }
+  ) {
     if (req.url?.includes('devtools/browser')) {
       const sessionId = req.url.split('/').pop();
       const found = this.runnings.find((browser) => browser.wsEndpoint().includes(sessionId!));
@@ -21,12 +24,18 @@ export class PuppeteerProvider {
       return found;
     }
 
-    puppeteer.use(StealthPlugin());
+    if (options?.stealth) {
+      puppeteer.use(StealthPlugin());
+    }
 
     const launchArgs = Array.from<string>({ length: 0 }).concat(
       DEFAULT_LAUNCH_ARGS,
       options?.args ?? []
     );
+
+    if (options?.proxy) {
+      launchArgs.push(`--proxy-server=${options.proxy}`);
+    }
 
     const opts: PuppeteerLaunchOptions = {
       ...(options ?? {}),
