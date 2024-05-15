@@ -1,5 +1,6 @@
 import { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import { Express, Handler } from 'express';
+import { Omit, Optional } from '@/types';
 
 export const enum Method {
   GET = 'get',
@@ -14,17 +15,12 @@ export const enum Method {
   ALL = 'all',
 }
 
-export interface Route
-  extends Pick<
-    RouteConfig,
-    'tags' | 'summary' | 'description' | 'deprecated' | 'path' | 'request'
-  > {
+export interface Route {
   method: Method;
-  security?: {
-    [name: string]: string[];
-  };
-  responses: RouteConfig['responses'];
-  handlers: Array<Handler>;
+  path: string;
+  handler?: Handler;
+  handlers?: Handler[];
+  swagger: Omit<RouteConfig, 'method' | 'path'>;
 }
 
 export class RouteGroup {
@@ -37,9 +33,16 @@ export class RouteGroup {
 
   registerRoute(zClass: new () => Route) {
     const route = new zClass();
+
     this.routes.push(route);
+
     const fullPath = `${this.prefix ?? ''}${route.path}`;
-    this.app[route.method](fullPath, route.handlers);
+
+    const handlers = Array<Optional<Handler>>()
+      .concat(route.handler, route.handlers)
+      .filter(Boolean);
+
+    this.app[route.method](fullPath, handlers as Array<Handler>);
   }
 
   getRoutes() {

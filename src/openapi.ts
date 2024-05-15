@@ -16,13 +16,16 @@ export class OpenAPI {
     servers?: { url: string }[];
   }) {
     this.groups.forEach((groupRouter) => {
-      groupRouter.getRoutes().forEach(({ handlers, path, ...route }) => {
-        const fullPath = (groupRouter.prefix ?? '') + path;
+      groupRouter.getRoutes().forEach(({ path, method, swagger }) => {
+        const fullPath = [groupRouter.prefix, path].filter(Boolean).join('');
 
-        this.registry.registerPath({
-          ...(route as RouteConfig),
+        const swaggerRouteConfig = {
+          ...swagger,
+          method,
           path: fullPath,
-        });
+        };
+
+        this.registry.registerPath(swaggerRouteConfig as RouteConfig);
       });
     });
 

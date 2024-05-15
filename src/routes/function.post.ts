@@ -26,48 +26,50 @@ declare global {
 export class FunctionPostRoute implements Route {
   method = Method.POST;
   path = '/function';
-  request = {
-    body: {
-      description: 'The user code to run',
-      content: {
-        'application/javascript': {
-          schema: z.string(),
-          example: dedent`export default async function ({ page }: { page: Page }) {
-            await page.goto('https://example.com', {
-              waitUntil: 'domcontentloaded',
-            });
-            const title = await page.title();
-            return { title };
-          };`,
+  swagger = {
+    request: {
+      body: {
+        description: 'The user code to run',
+        content: {
+          'application/javascript': {
+            schema: z.string(),
+            example: dedent`export default async function ({ page }: { page: Page }) {
+              await page.goto('https://example.com', {
+                waitUntil: 'domcontentloaded',
+              });
+              const title = await page.title();
+              return { title };
+            };`,
+          },
+        },
+        required: true,
+      },
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: z.object({
+              data: z.unknown(),
+            }),
+          },
         },
       },
-      required: true,
+      500: {
+        description: 'Internal Server Error',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+              stack: z.string(),
+            }),
+          },
+        },
+      },
     },
   };
-  responses = {
-    200: {
-      description: 'Success',
-      content: {
-        'application/json': {
-          schema: z.object({
-            data: z.unknown(),
-          }),
-        },
-      },
-    },
-    500: {
-      description: 'Internal Server Error',
-      content: {
-        'application/json': {
-          schema: z.object({
-            error: z.string(),
-            stack: z.string(),
-          }),
-        },
-      },
-    },
-  };
-  private handler: Handler = async (req, res) => {
+  handler: Handler = async (req, res) => {
     const functionRequestUrl = makeExternalUrl('function');
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
@@ -169,5 +171,4 @@ export class FunctionPostRoute implements Route {
         await puppeteerProvider.closeBrowser(browser);
       });
   };
-  handlers = [this.handler.bind(this)];
 }
