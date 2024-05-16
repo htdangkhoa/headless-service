@@ -9,6 +9,15 @@ export const BooleanOrStringSchema = z.boolean().or(
     .transform((value) => value === 'true')
 );
 
+export const NumberOrStringSchema = z.number().or(
+  z
+    .string()
+    .refine((value) => !Number.isNaN(Number(value)), {
+      message: 'Value must be a number',
+    })
+    .transform((value) => Number(value))
+);
+
 export const ResponseBodySchema = z.object({
   data: z.unknown().optional(),
   errors: z.array(z.unknown()).optional(),

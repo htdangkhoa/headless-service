@@ -17,6 +17,8 @@ export class OpenAPI {
   }) {
     this.groups.forEach((groupRouter) => {
       groupRouter.getRoutes().forEach(({ path, method, swagger }) => {
+        if (!swagger) return;
+
         const fullPath = [groupRouter.prefix, path].filter(Boolean).join('');
 
         const swaggerRouteConfig = {

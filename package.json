@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "predev": "pnpm build:function",
-    "dev": "tsx --watch -r dotenv/config src/index.ts",
+    "dev": "nodemon",
     "build:function": "node scripts/build-function.js",
+    "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.build.json",
     "postbuild": "tsc-alias -p tsconfig.build.json -f true -fe .js",
-    "tsx": "tsx"
+    "tsx": "tsx",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/connect-timeout": "^0.0.39",
     "@types/consolidate": "^0.14.4",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -23,13 +26,16 @@
     "dotenv": "^16.4.5",
     "esbuild": "^0.21.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
+    "nodemon": "^3.1.0",
     "prettier": "^3.2.5",
+    "rimraf": "^5.0.7",
     "tsc-alias": "^1.8.10",
-    "tsx": "^4.10.2"
+    "tsx": "^4.10.3"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.0.0",
     "axios": "^1.6.8",
+    "connect-timeout": "^1.9.0",
     "consolidate": "^1.0.3",
     "cors": "^2.8.5",
     "dedent": "^1.5.3",
@@ -38,6 +44,7 @@
     "http-proxy-agent": "^7.0.2",
     "http-status-codes": "^2.3.0",
     "https-proxy-agent": "^7.0.4",
+    "lighthouse": "^12.0.0",
     "mustache": "^4.2.0",
     "puppeteer": "^22.8.0",
     "puppeteer-core": "^22.8.0",

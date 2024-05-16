@@ -1,5 +1,6 @@
 import { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import { Express, Handler } from 'express';
+
 import { Omit, Optional } from '@/types';
 
 export const enum Method {
@@ -20,7 +21,7 @@ export interface Route {
   path: string;
   handler?: Handler;
   handlers?: Handler[];
-  swagger: Omit<RouteConfig, 'method' | 'path'>;
+  swagger?: Omit<RouteConfig, 'method' | 'path'>;
 }
 
 export class RouteGroup {

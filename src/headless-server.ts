@@ -1,14 +1,15 @@
 import path from 'node:path';
 import { IncomingMessage, createServer } from 'node:http';
 import { Socket } from 'node:net';
-import express from 'express';
+import express, { ErrorRequestHandler } from 'express';
+import timeout from 'connect-timeout';
 import consolidate from 'consolidate';
 import cors from 'cors';
 import httpProxy from 'http-proxy';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionPostRoute } from '@/routes';
-import { makeExternalUrl } from '@/utils';
+import { FunctionPostRoute, PerformancePostRoute } from '@/routes';
+import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 
@@ -51,9 +52,22 @@ export class HeadlessServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.raw({ type: 'application/javascript' }));
+    this.app.use(timeout('30s'));
 
     // API Routes
     this.apiGroup.registerRoute(FunctionPostRoute);
+    this.apiGroup.registerRoute(PerformancePostRoute);
+
+    // Error handling
+    this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
+      console.error(err);
+      return next(err);
+    }));
+    this.app.use(<ErrorRequestHandler>((err, req, res, next) => {
+      if (req.timedout) return writeResponse(res, new Error('Request Timeout'), 408);
+      if (req.xhr) return writeResponse(res, new Error('Something went wrong'), 500);
+      return writeResponse(res, err, 500);
+    }));
   }
 
   async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
