@@ -6,8 +6,21 @@ import treeKill from 'tree-kill';
 
 import { Method, Route } from '@/route-group';
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { NumberOrStringSchema, ResponseBodySchema, env, writeResponse } from '@/utils';
+import {
+  NumberOrStringSchema,
+  RequestLaunchQuerySchema,
+  ResponseBodySchema,
+  env,
+  writeResponse,
+} from '@/utils';
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
+import { OPENAPI_TAGS } from '@/constants';
+
+const RequestPerformanceQuerySchema = z
+  .object({
+    launch: RequestLaunchQuerySchema.optional(),
+  })
+  .strict();
 
 const RequestPerformanceBodySchema = z
   .object({
@@ -21,7 +34,9 @@ export class PerformancePostRoute implements Route {
   method = Method.POST;
   path = '/performance';
   swagger = {
+    tags: [OPENAPI_TAGS.REST_APIS],
     request: {
+      query: RequestPerformanceQuerySchema,
       body: {
         description: 'The performance data',
         content: {

@@ -2,6 +2,7 @@ import { OpenAPIRegistry, OpenApiGeneratorV3, RouteConfig } from '@asteasolution
 import fs from 'node:fs';
 
 import { RouteGroup } from '@/route-group';
+import { OPENAPI_VERSION } from '@/constants';
 
 export class OpenAPI {
   private registry = new OpenAPIRegistry();
@@ -34,7 +35,7 @@ export class OpenAPI {
     const generator = new OpenApiGeneratorV3(this.registry.definitions);
 
     const docs = generator.generateDocument({
-      openapi: '3.0.0',
+      openapi: OPENAPI_VERSION,
       info: {
         title: config.title,
         version: config.version,

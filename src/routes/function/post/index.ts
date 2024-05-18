@@ -10,7 +10,14 @@ import dedent from 'dedent';
 import { StatusCodes } from 'http-status-codes';
 
 import { Method, Route } from '@/route-group';
-import { BooleanOrStringSchema, ResponseBodySchema, makeExternalUrl, writeResponse } from '@/utils';
+import {
+  BooleanOrStringSchema,
+  RequestLaunchQuerySchema,
+  ResponseBodySchema,
+  makeExternalUrl,
+  writeResponse,
+} from '@/utils';
+import { OPENAPI_TAGS } from '@/constants';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
@@ -27,27 +34,24 @@ declare global {
 
 const RequestFunctionQuerySchema = z
   .object({
-    stealth: BooleanOrStringSchema.optional()
-      .describe('Whether to run the browser in stealth mode')
-      .openapi({
-        example: 'false',
-      }),
-    proxy: z.string().optional().describe('The proxy server to use').openapi({
-      example: 'http://localhost:8080',
-    }),
+    launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
+    stealth: BooleanOrStringSchema.describe(
+      'Whether to run the browser in stealth mode'
+    ).optional(),
+    proxy: z.string().describe('The proxy server to use').optional(),
   })
   .strict();
 
-const RequestFunctionBodySchema = z.string();
+const RequestFunctionBodySchema = z.string().describe('The user code to run');
 
 export class FunctionPostRoute implements Route {
   method = Method.POST;
   path = '/function';
   swagger = {
+    tags: [OPENAPI_TAGS.REST_APIS],
     request: {
       query: RequestFunctionQuerySchema,
       body: {
-        description: 'The user code to run',
         content: {
           'application/javascript': {
             schema: RequestFunctionBodySchema,
@@ -70,7 +74,15 @@ export class FunctionPostRoute implements Route {
         description: 'Success',
         content: {
           'application/json': {
-            schema: ResponseBodySchema,
+            schema: ResponseBodySchema.omit({ errors: true }),
+          },
+        },
+      },
+      400: {
+        description: 'Bad request',
+        content: {
+          'application/json': {
+            schema: ResponseBodySchema.omit({ data: true }),
           },
         },
       },
@@ -78,7 +90,7 @@ export class FunctionPostRoute implements Route {
         description: 'Internal Server Error',
         content: {
           'application/json': {
-            schema: ResponseBodySchema,
+            schema: ResponseBodySchema.omit({ data: true }),
           },
         },
       },
