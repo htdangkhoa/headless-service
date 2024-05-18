@@ -35,10 +35,6 @@ declare global {
 const RequestFunctionQuerySchema = z
   .object({
     launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
-    stealth: BooleanOrStringSchema.describe(
-      'Whether to run the browser in stealth mode'
-    ).optional(),
-    proxy: z.string().describe('The proxy server to use').optional(),
   })
   .strict();
 
@@ -109,7 +105,7 @@ export class FunctionPostRoute implements Route {
 
     const browser = await puppeteerProvider.launchBrowser(
       req as IncomingMessage,
-      queryValidation.data
+      queryValidation.data.launch
     );
 
     const browserWSEndpoint = browser.wsEndpoint();

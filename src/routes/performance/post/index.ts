@@ -81,6 +81,12 @@ export class PerformancePostRoute implements Route {
     },
   };
   handler?: Handler = async (req, res) => {
+    const queryValidation = zu.useTypedParsers(RequestPerformanceQuerySchema).safeParse(req.query);
+
+    if (!queryValidation.success) {
+      return writeResponse(res, queryValidation.error, 400);
+    }
+
     const bodyValidation = zu.useTypedParsers(RequestPerformanceBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
@@ -91,7 +97,7 @@ export class PerformancePostRoute implements Route {
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
 
-    const browser = await puppeteerProvider.launchBrowser(req);
+    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data.launch);
 
     const browserWSEndpoint = browser.wsEndpoint();
 

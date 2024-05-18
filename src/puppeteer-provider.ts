@@ -28,18 +28,18 @@ export class PuppeteerProvider {
       puppeteer.use(StealthPlugin());
     }
 
-    const launchArgs = Array.from<string>({ length: 0 }).concat(
-      DEFAULT_LAUNCH_ARGS,
-      options?.args ?? []
-    );
+    const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
+
+    (options?.args ?? []).forEach((arg) => setOfArgs.add(arg));
 
     if (options?.proxy) {
-      launchArgs.push(`--proxy-server=${options.proxy}`);
+      setOfArgs.add(`--proxy-server=${options.proxy}`);
     }
+
+    const launchArgs = Array.from(setOfArgs);
 
     const opts: PuppeteerLaunchOptions = {
       ...(options ?? {}),
-      headless: false,
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
       defaultViewport: DEFAULT_VIEWPORT,

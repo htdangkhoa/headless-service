@@ -15,8 +15,13 @@ export const NumberOrStringSchema = z.number().or(
 
 export const RequestLaunchQuerySchema = z.object({
   headless: BooleanOrStringSchema.or(z.enum(['shell']))
-    .optional()
-    .describe('Whether to run the browser in headless mode'),
+    .describe('Whether to run the browser in headless mode')
+    .optional(),
+  args: z.array(z.string()).describe('The additional arguments to pass to the browser').optional(),
+  devtools: BooleanOrStringSchema.describe('Whether to run the browser with devtools').optional(),
+  slowMo: NumberOrStringSchema.describe('The slow motion value').optional(),
+  stealth: BooleanOrStringSchema.describe('Whether to run the browser in stealth mode').optional(),
+  proxy: z.string().describe('The proxy server to use').optional(),
 });
 
 export const ResponseBodySchema = z.object({
