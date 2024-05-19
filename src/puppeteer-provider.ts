@@ -5,6 +5,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
 
 import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
+import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 
 export class PuppeteerProvider {
   private runnings: Browser[] = [];
@@ -13,6 +14,9 @@ export class PuppeteerProvider {
     req: IncomingMessage,
     options?: PuppeteerLaunchOptions & { stealth?: boolean; proxy?: string }
   ) {
+    // internal plugins for puppeteer extra
+    puppeteer.use(LiveUrlPlugin());
+
     if (req.url?.includes('devtools/browser')) {
       const sessionId = req.url.split('/').pop();
       const found = this.runnings.find((browser) => browser.wsEndpoint().includes(sessionId!));
