@@ -3,6 +3,7 @@ import type { Browser, PuppeteerLaunchOptions } from 'puppeteer';
 import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
+import { WebSocketServer } from 'ws';
 
 import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
@@ -12,38 +13,46 @@ export class PuppeteerProvider {
 
   async launchBrowser(
     req: IncomingMessage,
-    options?: PuppeteerLaunchOptions & { stealth?: boolean; proxy?: string }
+    options?: PuppeteerLaunchOptions & {
+      stealth?: boolean;
+      proxy?: string;
+      browserId?: string;
+      ws?: WebSocketServer;
+    }
   ) {
     // internal plugins for puppeteer extra
-    puppeteer.use(LiveUrlPlugin());
+    const { ws, browserId, ...restOfOptions } = options ?? {};
+    if (ws) {
+      puppeteer.use(LiveUrlPlugin(ws));
+    }
 
-    if (req.url?.includes('devtools/browser')) {
-      const sessionId = req.url.split('/').pop();
-      const found = this.runnings.find((browser) => browser.wsEndpoint().includes(sessionId!));
+    // if (req.url?.includes('devtools/browser') || req.url?.includes('/live')) {
+    if (browserId) {
+      const found = this.runnings.find((browser) => browser.wsEndpoint().includes(browserId!));
 
       if (!found) {
-        throw new Error(`Could't locate browser "${sessionId}" for request "${req.url}"`);
+        throw new Error(`Could't locate browser "${browserId}" for request "${req.url}"`);
       }
 
       return found;
     }
 
-    if (options?.stealth) {
+    if (restOfOptions?.stealth) {
       puppeteer.use(StealthPlugin());
     }
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
 
-    (options?.args ?? []).forEach((arg) => setOfArgs.add(arg));
+    (restOfOptions?.args ?? []).forEach((arg) => setOfArgs.add(arg));
 
-    if (options?.proxy) {
-      setOfArgs.add(`--proxy-server=${options.proxy}`);
+    if (restOfOptions?.proxy) {
+      setOfArgs.add(`--proxy-server=${restOfOptions.proxy}`);
     }
 
     const launchArgs = Array.from(setOfArgs);
 
     const opts: PuppeteerLaunchOptions = {
-      ...(options ?? {}),
+      ...(restOfOptions ?? {}),
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
       defaultViewport: DEFAULT_VIEWPORT,

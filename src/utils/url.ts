@@ -1,3 +1,5 @@
+import { IncomingMessage } from 'node:http';
+
 import { env } from './env';
 
 export const makeExternalUrl = (...parts: string[]) => {
@@ -6,4 +8,8 @@ export const makeExternalUrl = (...parts: string[]) => {
   const externalAddressURL = new URL(externalAddress);
 
   return new URL(parts.join('/'), externalAddressURL).href;
+};
+
+export const parseUrlFromIncomingMessage = (req: IncomingMessage) => {
+  return new URL(req.url!, `http://${req.headers.host}`);
 };

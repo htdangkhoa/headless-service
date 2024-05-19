@@ -6,10 +6,11 @@ import timeout from 'connect-timeout';
 import consolidate from 'consolidate';
 import cors from 'cors';
 import httpProxy from 'http-proxy';
+import { WebSocketServer } from 'ws';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { FunctionPostRoute, PerformancePostRoute } from '@/routes';
-import { makeExternalUrl, writeResponse } from '@/utils';
+import { makeExternalUrl, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 
@@ -34,6 +35,8 @@ export class HeadlessServer {
   private apiGroup: RouteGroup = new RouteGroup(this.app, '/api');
 
   private openApi = new OpenAPI([this.apiGroup]);
+
+  private wsServer = new WebSocketServer({ noServer: true });
 
   constructor(options: HeadlessServerOptions) {
     this.options = options;
@@ -71,7 +74,20 @@ export class HeadlessServer {
   }
 
   async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
-    const browser = await this.puppeteerProvider.launchBrowser(req);
+    const url = parseUrlFromIncomingMessage(req);
+
+    if (url.pathname !== '/') {
+      return this.wsServer.handleUpgrade(req, socket, head, (ws) => {
+        this.wsServer.emit('connection', ws, req);
+      });
+    }
+
+    const browserId = url.href.replace(url.search, '').split('/').pop();
+
+    const browser = await this.puppeteerProvider.launchBrowser(req, {
+      ws: this.wsServer,
+      browserId,
+    });
 
     const browserWSEndpoint = browser.wsEndpoint();
 
