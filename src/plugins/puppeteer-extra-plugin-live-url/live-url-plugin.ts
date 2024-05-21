@@ -82,28 +82,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         break;
       }
       default: {
-        await client.send(payload.command, payload.params);
+        try {
+          await client.send(payload.command, payload.params);
+        } catch (error) {
+          console.error('Error sending command', error);
+          console.debug('Payload params', payload.params);
+        }
         break;
       }
     }
-
-    // if (!Object.values(LIVE_COMMANDS).includes(data.command)) {
-    //   console.log('🚀 ~ PuppeteerExtraPluginLiveUrl ~ messageHandler ~ data:', data);
-    //   await client.send(data.command, data.params);
-    // }
-
-    // if (data.command === LIVE_COMMANDS.STOP_SCREENCAST) {
-    //   await client.send('Page.stopScreencast');
-
-    //   await client.detach();
-
-    //   this.cdpSession = undefined;
-
-    //   await this.browser?.close();
-
-    //   return console.log('stop screencast');
-    // }
-
-    // ... other commands
   }
 }

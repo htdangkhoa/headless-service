@@ -63,12 +63,14 @@ export class ScreencastView {
       this.$canvas.width = width;
       this.$canvas.height = height;
 
-      this.sendCommand(SPECIAL_COMMANDS.SET_VIEWPORT, {
-        width,
-        height,
+      const params = {
+        width: Math.floor(width),
+        height: Math.floor(height),
         deviceScaleFactor: 1,
         mobile: true,
-      });
+      };
+
+      this.sendCommand(SPECIAL_COMMANDS.SET_VIEWPORT, params);
     },
     500,
     { leading: true, trailing: true }
@@ -111,58 +113,6 @@ export class ScreencastView {
     this.sendCommand(LIVE_COMMANDS.INPUT_EMULATE_TOUCH_FROM_MOUSE_EVENT, params);
   }
 
-  private onKeyEvent(event: KeyboardEvent) {
-    let type: 'keyDown' | 'keyUp' | 'char';
-
-    // Prevent backspace from going back in history
-    if (event.keyCode === 8) {
-      event.preventDefault();
-    }
-
-    switch (event.type) {
-      case 'keydown':
-        type = 'keyDown';
-        break;
-      case 'keyup':
-        type = 'keyUp';
-        break;
-      case 'keypress':
-        type = 'char';
-        break;
-      default:
-        return;
-    }
-
-    const text = type === 'char' ? String.fromCharCode(event.charCode) : undefined;
-    const params: Dictionary<any> = {
-      type,
-      text,
-      unmodifiedText: text ? text.toLowerCase() : undefined,
-      keyIdentifier: (event as any).keyIdentifier,
-      code: event.code,
-      key: event.key,
-      windowsVirtualKeyCode: event.keyCode,
-      nativeVirtualKeyCode: event.keyCode,
-      autoRepeat: false,
-      isKeypad: false,
-      isSystemKey: false,
-    };
-
-    this.sendCommand(LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT, params);
-  }
-
-  private bindKeyboardEvents() {
-    window.addEventListener('keydown', this.onKeyEvent.bind(this));
-    window.addEventListener('keyup', this.onKeyEvent.bind(this));
-    window.addEventListener('keypress', this.onKeyEvent.bind(this));
-  }
-
-  private unbindKeyboardEvents() {
-    window.removeEventListener('keydown', this.onKeyEvent.bind(this));
-    window.removeEventListener('keyup', this.onKeyEvent.bind(this));
-    window.removeEventListener('keypress', this.onKeyEvent.bind(this));
-  }
-
   private sendCommand(command: string, params: Dictionary<any> = {}) {
     this.ws.send(JSON.stringify({ command, params }));
   }
@@ -171,15 +121,59 @@ export class ScreencastView {
     console.log('on open');
 
     // add event listener
-    window.addEventListener('resize', this.resizeWindow);
+    window.addEventListener('resize', this.resizeWindow.bind(this), false);
     this.$canvas.addEventListener('mousedown', this.onMouseEvent.bind(this), false);
     this.$canvas.addEventListener('mouseup', this.onMouseEvent.bind(this), false);
     // @ts-ignore
     this.$canvas.addEventListener('mousewheel', this.onMouseEvent.bind(this), false);
     this.$canvas.addEventListener('mousemove', this.onMouseEvent.bind(this), false);
 
-    this.$canvas.addEventListener('mouseenter', this.bindKeyboardEvents.bind(this), false);
-    this.$canvas.addEventListener('mouseleave', this.unbindKeyboardEvents.bind(this), false);
+    const self = this;
+    const onKeyEvent = (event: KeyboardEvent) => {
+      let type: 'keyDown' | 'keyUp' | 'char';
+
+      switch (event.type) {
+        case 'keydown':
+          type = 'keyDown';
+          break;
+        case 'keyup':
+          type = 'keyUp';
+          break;
+        case 'keypress':
+          type = 'char';
+          break;
+        default:
+          return;
+      }
+
+      const text = type === 'char' ? String.fromCharCode(event.charCode) : undefined;
+
+      const params = {
+        type,
+        modifiers: self.getModifiersForEvent(event),
+        timestamp: event.timeStamp,
+        text,
+        unmodifiedText: text,
+        keyIdentifier: `U+${event.keyCode.toString(16).toUpperCase()}`,
+        code: event.code,
+        key: text,
+        location: event.location,
+      };
+
+      self.sendCommand(LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT, params);
+    };
+
+    this.$canvas.addEventListener('mouseover', () => {
+      document.addEventListener('keydown', onKeyEvent);
+      document.addEventListener('keyup', onKeyEvent);
+      document.addEventListener('keypress', onKeyEvent);
+    });
+
+    this.$canvas.addEventListener('mouseleave', () => {
+      document.removeEventListener('keydown', onKeyEvent);
+      document.removeEventListener('keyup', onKeyEvent);
+      document.removeEventListener('keypress', onKeyEvent);
+    });
 
     // initialize
     this.resizeWindow();
