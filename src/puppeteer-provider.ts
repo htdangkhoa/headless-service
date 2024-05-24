@@ -1,6 +1,6 @@
 import { IncomingMessage } from 'node:http';
-import type { Browser, PuppeteerLaunchOptions } from 'puppeteer';
-import puppeteer from 'puppeteer-extra';
+import vanillaPuppeteer, { Browser, PuppeteerLaunchOptions } from 'puppeteer';
+import { addExtra, PuppeteerExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
@@ -11,6 +11,8 @@ import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 export class PuppeteerProvider {
   private runnings: Browser[] = [];
 
+  private puppeteers = new WeakMap<Browser, PuppeteerExtra>();
+
   async launchBrowser(
     req: IncomingMessage,
     options?: PuppeteerLaunchOptions & {
@@ -20,6 +22,8 @@ export class PuppeteerProvider {
       ws?: WebSocketServer;
     }
   ) {
+    const puppeteer = addExtra(vanillaPuppeteer);
+
     // internal plugins for puppeteer extra
     const { ws, browserId, ...restOfOptions } = options ?? {};
     if (ws) {
@@ -66,6 +70,8 @@ export class PuppeteerProvider {
 
     this.runnings.push(browser);
 
+    this.puppeteers.set(browser, puppeteer);
+
     return browser;
   }
 
@@ -75,6 +81,11 @@ export class PuppeteerProvider {
     const [found] = this.runnings.splice(foundIndex, 1);
 
     if (found) {
+      const puppeteer = this.puppeteers.get(found);
+      if (puppeteer) {
+        this.puppeteers.delete(found);
+      }
+
       const pages = await found.pages();
 
       pages.forEach((page) => {

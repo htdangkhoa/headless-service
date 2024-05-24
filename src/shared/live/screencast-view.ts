@@ -122,6 +122,7 @@ export class ScreencastView {
 
     // add event listener
     window.addEventListener('resize', this.resizeWindow.bind(this), false);
+
     this.$canvas.addEventListener('mousedown', this.onMouseEvent.bind(this), false);
     this.$canvas.addEventListener('mouseup', this.onMouseEvent.bind(this), false);
     // @ts-ignore
@@ -163,17 +164,49 @@ export class ScreencastView {
       self.sendCommand(LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT, params);
     };
 
-    this.$canvas.addEventListener('mouseover', () => {
+    const onMouseOver = () => {
       document.addEventListener('keydown', onKeyEvent);
       document.addEventListener('keyup', onKeyEvent);
       document.addEventListener('keypress', onKeyEvent);
-    });
+    };
+    this.$canvas.addEventListener('mouseover', onMouseOver);
 
-    this.$canvas.addEventListener('mouseleave', () => {
+    const onMouseLeave = () => {
       document.removeEventListener('keydown', onKeyEvent);
       document.removeEventListener('keyup', onKeyEvent);
       document.removeEventListener('keypress', onKeyEvent);
-    });
+    };
+    this.$canvas.addEventListener('mouseleave', onMouseLeave);
+
+    const beforeUnload = () => {
+      window.removeEventListener('resize', this.resizeWindow);
+      window.removeEventListener('beforeunload', beforeUnload);
+
+      this.$canvas.removeEventListener('mousedown', this.onMouseEvent);
+      this.$canvas.removeEventListener('mouseup', this.onMouseEvent);
+      // @ts-ignore
+      this.$canvas.removeEventListener('mousewheel', this.onMouseEvent);
+      this.$canvas.removeEventListener('mousemove', this.onMouseEvent);
+
+      this.$canvas.removeEventListener('mouseover', onMouseOver);
+      this.$canvas.removeEventListener('mouseleave', onMouseLeave);
+
+      document.removeEventListener('keydown', onKeyEvent);
+      document.removeEventListener('keyup', onKeyEvent);
+      document.removeEventListener('keypress', onKeyEvent);
+
+      this.sendCommand(LIVE_COMMANDS.STOP_SCREENCAST);
+
+      this.ws.removeEventListener('open', this.onOpen);
+      this.ws.removeEventListener('message', this.onMessage);
+      this.ws.removeEventListener('close', this.onClose);
+      this.ws.removeEventListener('error', this.onError);
+
+      if (this.ws.readyState !== WebSocket.CLOSED) {
+        this.ws.close();
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
 
     // initialize
     this.resizeWindow();

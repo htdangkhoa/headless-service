@@ -11,7 +11,6 @@ import { StatusCodes } from 'http-status-codes';
 
 import { Method, Route } from '@/route-group';
 import {
-  BooleanOrStringSchema,
   RequestLaunchQuerySchema,
   ResponseBodySchema,
   makeExternalUrl,

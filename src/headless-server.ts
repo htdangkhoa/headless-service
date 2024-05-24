@@ -76,6 +76,7 @@ export class HeadlessServer {
   async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
     const url = parseUrlFromIncomingMessage(req);
 
+    // Ex: /live
     if (url.pathname !== '/') {
       return this.wsServer.handleUpgrade(req, socket, head, (ws) => {
         this.wsServer.emit('connection', ws, req);
@@ -92,12 +93,20 @@ export class HeadlessServer {
     const browserWSEndpoint = browser.wsEndpoint();
 
     return new Promise<void>((resolve, reject) => {
-      function close() {
+      const close = async () => {
+        console.log('socket closed');
+
+        try {
+          await this.puppeteerProvider.closeBrowser(browser);
+        } catch (error) {
+          console.warn('Error closing browser', error);
+        }
+
         browser.off('close', close);
         browser.process()?.off('close', close);
         socket.off('close', close);
         return resolve();
-      }
+      };
 
       browser?.once('close', close);
       browser?.process()?.once('close', close);

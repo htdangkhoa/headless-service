@@ -1,22 +1,18 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Browser, Page, CDPSession } from 'puppeteer';
+import { Page, CDPSession, Target } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
-import { makeExternalUrl } from '@/utils';
+import { makeExternalUrl, parseUrlFromIncomingMessage } from '@/utils';
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
-  private browser?: Browser;
-
-  private page?: Page;
-
-  private cdpSession?: CDPSession;
+  private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
 
   constructor(private ws: WebSocketServer) {
     super();
 
-    this.ws.on('connection', async (socket, req) => {
+    this.ws.once('connection', async (socket, req) => {
       console.log('connected from plugins');
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
@@ -27,46 +23,65 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     return 'live-url';
   }
 
-  private async getCDPSession() {
-    if (!this.page) {
-      throw new Error('Page is not available');
-    }
+  async onClose(): Promise<void> {
+    Array.from(this.pageMap.values()).forEach(({ cdp }) => {
+      cdp.removeAllListeners();
+    });
 
-    if (!this.cdpSession) {
-      this.cdpSession = await this.page.createCDPSession();
-    }
-
-    return this.cdpSession;
+    this.pageMap.clear();
   }
 
-  async onBrowser(browser: Browser, opts: any): Promise<void> {
-    this.browser = browser;
+  async onTargetDestroyed(target: Target): Promise<void> {
+    const targetType = target.type();
+
+    if (targetType !== 'page') return;
+
+    // @ts-ignore
+    const targetId = target._targetId;
+
+    const pageMapped = this.pageMap.get(targetId);
+
+    if (!pageMapped) return;
+
+    const { cdp } = pageMapped;
+
+    cdp.removeAllListeners();
+
+    this.pageMap.delete(targetId);
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    this.page = page;
+    const client = await page.createCDPSession();
 
-    const browserId = page.browser().wsEndpoint().split('/').pop();
+    const { targetInfo } = await client.send('Target.getTargetInfo');
 
-    const client = await this.getCDPSession();
-
-    const sessionId = client.id();
+    this.pageMap.set(targetInfo.targetId, { page, cdp: client });
 
     await page.exposeFunction('liveURL', () => {
-      return makeExternalUrl(`/live?b=${browserId}&s=${sessionId}`);
+      return makeExternalUrl(`/live?t=${targetInfo.targetId}`);
     });
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
+    const { searchParams } = parseUrlFromIncomingMessage(req);
+
+    const targetId = searchParams.get('t');
+
+    if (!targetId) return;
+
+    const pageMapped = this.pageMap.get(targetId);
+
+    if (!pageMapped) return;
+
+    const { page, cdp: client } = pageMapped;
+
     const buffer = Buffer.from(rawMessage as Buffer);
     const message = Buffer.from(buffer).toString('utf8');
     const payload = JSON.parse(message);
 
-    const client = await this.getCDPSession();
-
     switch (payload.command) {
       case SPECIAL_COMMANDS.SET_VIEWPORT: {
-        await this.page?.setViewport(payload.params);
+        await page.setViewport(payload.params);
         break;
       }
       case LIVE_COMMANDS.START_SCREENCAST: {
@@ -78,6 +93,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
               data,
             })
           );
+        });
+        break;
+      }
+      case LIVE_COMMANDS.STOP_SCREENCAST: {
+        console.log('Stopping screencast');
+        await client.send(payload.command);
+        await page.evaluate(() => {
+          // @ts-ignore
+          window.liveComplete();
         });
         break;
       }

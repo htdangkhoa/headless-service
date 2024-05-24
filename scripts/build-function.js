@@ -10,7 +10,7 @@ const html = (contents) => `
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>headless function runner</title>
+    <title>Headless Function Runner</title>
     <script type="module">
     ${contents}
     </script>
@@ -22,7 +22,7 @@ const html = (contents) => `
 
 const cwd = process.cwd();
 
-const entryPoints = [join(cwd, 'src', 'shared', 'function-runner.ts')];
+const entryPoints = [join(cwd, 'src', 'shared', 'function-runner', 'index.ts')];
 const outfile = join(cwd, 'public', 'function', 'client.js');
 const htmlLocation = join(process.cwd(), 'public', 'function', 'index.html');
 
