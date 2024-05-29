@@ -22,6 +22,7 @@ export const RequestLaunchQuerySchema = z.object({
   slowMo: NumberOrStringSchema.describe('The slow motion value').optional(),
   stealth: BooleanOrStringSchema.describe('Whether to run the browser in stealth mode').optional(),
   proxy: z.string().describe('The proxy server to use').optional(),
+  block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
 });
 
 export const ResponseBodySchema = z.object({

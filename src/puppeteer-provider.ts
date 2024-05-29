@@ -1,4 +1,5 @@
 import { IncomingMessage } from 'node:http';
+import { resolve } from 'node:path';
 import vanillaPuppeteer, { Browser, PuppeteerLaunchOptions } from 'puppeteer';
 import { addExtra, PuppeteerExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
@@ -16,10 +17,12 @@ export class PuppeteerProvider {
   async launchBrowser(
     req: IncomingMessage,
     options?: PuppeteerLaunchOptions & {
-      stealth?: boolean;
-      proxy?: string;
       browserId?: string;
       ws?: WebSocketServer;
+      // feature options
+      stealth?: boolean;
+      proxy?: string;
+      block_ads?: boolean;
     }
   ) {
     const puppeteer = addExtra(vanillaPuppeteer);
@@ -41,22 +44,31 @@ export class PuppeteerProvider {
       return found;
     }
 
-    if (restOfOptions?.stealth) {
+    const { stealth, proxy, block_ads: blockAds, ...launchOptions } = restOfOptions ?? {};
+
+    if (stealth) {
       puppeteer.use(StealthPlugin());
     }
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
 
-    (restOfOptions?.args ?? []).forEach((arg) => setOfArgs.add(arg));
+    (launchOptions?.args ?? []).forEach((arg) => setOfArgs.add(arg));
 
-    if (restOfOptions?.proxy) {
-      setOfArgs.add(`--proxy-server=${restOfOptions.proxy}`);
+    if (proxy) {
+      setOfArgs.add(`--proxy-server=${proxy}`);
+    }
+
+    if (blockAds) {
+      const uBlock0Path = resolve(process.cwd(), 'extensions', 'ublock0.chromium');
+
+      setOfArgs.add(`--disable-extensions-except=${uBlock0Path}`);
+      setOfArgs.add(`--load-extension=${uBlock0Path}`);
     }
 
     const launchArgs = Array.from(setOfArgs);
 
     const opts: PuppeteerLaunchOptions = {
-      ...(restOfOptions ?? {}),
+      ...(launchOptions ?? {}),
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
       defaultViewport: DEFAULT_VIEWPORT,

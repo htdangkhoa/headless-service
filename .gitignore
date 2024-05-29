@@ -140,3 +140,6 @@ public/docs/*
 !public/docs/index.html
 
 !public/.gitkeep
+
+extensions/*
+!extensions/.gitkeep
