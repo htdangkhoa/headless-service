@@ -1,8 +1,9 @@
 import { OpenAPIRegistry, OpenApiGeneratorV3, RouteConfig } from '@asteasolutions/zod-to-openapi';
 import fs from 'node:fs';
 
-import { RouteGroup } from '@/route-group';
+import { Method, RouteGroup } from '@/route-group';
 import { OPENAPI_VERSION } from '@/constants';
+import { getFullPath } from './utils';
 
 export class OpenAPI {
   private registry = new OpenAPIRegistry();
@@ -14,13 +15,20 @@ export class OpenAPI {
     version: string;
     jsonFileName: string;
     description?: string;
-    servers?: { url: string }[];
+    servers?: { url: string; description?: string }[];
   }) {
     this.groups.forEach((groupRouter) => {
-      groupRouter.getRoutes().forEach(({ path, method, swagger }) => {
+      groupRouter.getRoutes().forEach((route) => {
+        const { path, swagger } = route;
+
+        let method: Method = Method.GET;
+        if ('method' in route) {
+          method = route.method;
+        }
+
         if (!swagger) return;
 
-        const fullPath = [groupRouter.prefix, path].filter(Boolean).join('');
+        const fullPath = getFullPath(path, groupRouter.prefix);
 
         const swaggerRouteConfig = {
           ...swagger,

@@ -78,3 +78,9 @@ export const writeResponse = async (
   response.write(httpResponse);
   return response.end();
 };
+
+export const getFullPath = (path: string, prefix?: string) =>
+  [prefix, path]
+    .filter(Boolean)
+    .join('')
+    .replace(/\/{2,}/g, '/');

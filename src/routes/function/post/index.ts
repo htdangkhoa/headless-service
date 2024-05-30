@@ -9,7 +9,7 @@ import { zu } from 'zod_utilz';
 import dedent from 'dedent';
 import { StatusCodes } from 'http-status-codes';
 
-import { Method, Route } from '@/route-group';
+import { Method, ApiRoute as Route } from '@/route-group';
 import {
   RequestDefaultQuerySchema,
   ResponseBodySchema,
@@ -39,6 +39,12 @@ export class FunctionPostRoute implements Route {
   path = '/function';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
+    summary: this.path,
+    description: dedent`
+      A JSON or JavaScript content-type API for running puppeteer code in the browser's context.
+      Browserless sets up a blank page, injects your puppeteer code, and runs it.
+      You can optionally load external libraries via the "import" module that are meant for browser usage. Values returned from the function are checked and an appropriate content-type and response is sent back to your HTTP call.
+    `,
     request: {
       query: RequestDefaultQuerySchema,
       body: {

@@ -1,6 +1,5 @@
 import path from 'node:path';
-import { IncomingMessage, createServer } from 'node:http';
-import { Socket } from 'node:net';
+import { createServer } from 'node:http';
 import express, { ErrorRequestHandler } from 'express';
 import timeout from 'connect-timeout';
 import consolidate from 'consolidate';
@@ -8,17 +7,10 @@ import cors from 'cors';
 import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 import { StatusCodes } from 'http-status-codes';
-import { zu } from 'zod_utilz';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionPostRoute, PerformancePostRoute } from '@/routes';
-import {
-  RequestDefaultQuerySchema,
-  makeExternalUrl,
-  parseSearchParams,
-  parseUrlFromIncomingMessage,
-  writeResponse,
-} from '@/utils';
+import { FunctionPostRoute, PerformancePostRoute, WsRoute } from '@/routes';
+import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 
@@ -40,11 +32,17 @@ export class HeadlessServer {
 
   private puppeteerProvider = new PuppeteerProvider();
 
+  private wsServer = new WebSocketServer({ noServer: true });
+
   private apiGroup: RouteGroup = new RouteGroup(this.app, '/api');
 
-  private openApi = new OpenAPI([this.apiGroup]);
+  private wsGroup: RouteGroup = new RouteGroup(this.server, '/', {
+    wsServer: this.wsServer,
+    puppeteerProvider: this.puppeteerProvider,
+    proxy: this.proxy,
+  });
 
-  private wsServer = new WebSocketServer({ noServer: true });
+  private openApi = new OpenAPI([this.apiGroup, this.wsGroup]);
 
   constructor(options: HeadlessServerOptions) {
     this.options = options;
@@ -87,79 +85,8 @@ export class HeadlessServer {
         body: err,
       });
     }));
-  }
 
-  async onUpgrade(req: IncomingMessage, socket: Socket, head: Buffer) {
-    const url = parseUrlFromIncomingMessage(req);
-
-    // Ex: /live
-    if (url.pathname !== '/') {
-      return this.wsServer.handleUpgrade(req, socket, head, (ws) => {
-        this.wsServer.emit('connection', ws, req);
-      });
-    }
-
-    const browserId = url.href.replace(url.search, '').split('/').pop();
-
-    const query = parseSearchParams(url.search);
-
-    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
-
-    if (queryValidation.error) {
-      const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
-
-      return writeResponse(socket, StatusCodes.BAD_REQUEST, {
-        message: `Bad Request: ${errorDetails}`,
-      });
-    }
-
-    const browser = await this.puppeteerProvider.launchBrowser(req, {
-      ...(queryValidation.data.launch ?? {}),
-      ws: this.wsServer,
-      browserId,
-    });
-
-    const browserWSEndpoint = browser.wsEndpoint();
-
-    return new Promise<void>((resolve, reject) => {
-      const close = async () => {
-        console.log('socket closed');
-
-        try {
-          await this.puppeteerProvider.closeBrowser(browser);
-        } catch (error) {
-          console.warn('Error closing browser', error);
-        }
-
-        browser.off('close', close);
-        browser.process()?.off('close', close);
-        socket.off('close', close);
-        return resolve();
-      };
-
-      browser?.once('close', close);
-      browser?.process()?.once('close', close);
-      socket.once('close', close);
-
-      req.url = '';
-
-      // Delete headers known to cause issues
-      delete req.headers.origin;
-
-      this.proxy.ws(
-        req,
-        socket,
-        head,
-        {
-          target: browserWSEndpoint,
-          changeOrigin: true,
-        },
-        (error) => {
-          this.puppeteerProvider.closeBrowser(browser);
-          return reject(error);
-        }
-      );
-    });
+    this.wsGroup.registerRoute(WsRoute);
   }
 
   async start() {
@@ -170,8 +97,6 @@ export class HeadlessServer {
       version: '1.0.0',
       servers: [{ url: makeExternalUrl() }],
     });
-
-    this.server.on('upgrade', this.onUpgrade.bind(this));
 
     this.server.timeout = 0;
     this.server.keepAliveTimeout = 0;

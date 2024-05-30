@@ -4,7 +4,7 @@ import { zu } from 'zod_utilz';
 import { fork } from 'node:child_process';
 import treeKill from 'tree-kill';
 
-import { Method, Route } from '@/route-group';
+import { Method, ApiRoute as Route } from '@/route-group';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import {
   NumberOrStringSchema,
@@ -31,6 +31,8 @@ export class PerformancePostRoute implements Route {
   path = '/performance';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
+    summary: this.path,
+    description: 'Run lighthouse performance audits with a supplied "url" in your JSON payload.',
     request: {
       query: RequestDefaultQuerySchema,
       body: {
