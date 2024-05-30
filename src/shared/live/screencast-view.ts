@@ -16,6 +16,7 @@ const MOUSE_EVENTS: Dictionary<string> = {
 };
 
 export class ScreencastView {
+  private $navigation: HTMLDivElement;
   private $viewer: HTMLDivElement;
   private $canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -24,7 +25,34 @@ export class ScreencastView {
   private ws: WebSocket;
 
   constructor(private container: HTMLElement) {
-    container.classList.add('flex-auto', 'widget', 'vbox');
+    this.container.classList.add('flex-auto', 'widget', 'vbox');
+
+    this.$navigation = document.createElement('div');
+    this.$navigation.classList.add('flex', 'flex-1');
+
+    const backButton = document.createElement('button');
+    backButton.textContent = 'Back';
+    backButton.addEventListener('click', this.handleBack.bind(this));
+
+    const forwardButton = document.createElement('button');
+    forwardButton.textContent = 'Forward';
+    forwardButton.addEventListener('click', this.handleForward.bind(this));
+
+    const reloadButton = document.createElement('button');
+    reloadButton.textContent = 'Reload';
+    reloadButton.addEventListener('click', this.handleReload.bind(this));
+
+    const input = document.createElement('input');
+    input.classList.add('flex-1', 'truncate', 'px-2');
+    input.type = 'text';
+    input.disabled = true;
+
+    this.$navigation.appendChild(backButton);
+    this.$navigation.appendChild(forwardButton);
+    this.$navigation.appendChild(reloadButton);
+    this.$navigation.appendChild(input);
+
+    container.appendChild(this.$navigation);
 
     this.$viewer = document.createElement('div');
     this.$viewer.classList.add('flex', 'flex-1');
@@ -211,6 +239,7 @@ export class ScreencastView {
     // initialize
     this.resizeWindow();
 
+    this.sendCommand(SPECIAL_COMMANDS.GET_URL);
     this.sendCommand(LIVE_COMMANDS.START_SCREENCAST, {
       format: 'jpeg',
       quality: 100,
@@ -223,16 +252,44 @@ export class ScreencastView {
 
     const text = event.data;
 
-    const { data } = JSON.parse(text);
+    const { command, data } = JSON.parse(text);
 
-    this.image.onload = () => {
-      this.ctx.drawImage(this.image, 0, 0, this.$canvas.width, this.$canvas.height);
-    };
-    this.image.src = `data:image/jpeg;base64,${data.data}`;
-    this.sendCommand(LIVE_COMMANDS.SCREENCAST_FRAME_ACK, { sessionId: data.sessionId });
+    switch (command) {
+      case LIVE_COMMANDS.SCREENCAST_FRAME: {
+        this.image.onload = () => {
+          this.ctx.drawImage(this.image, 0, 0, this.$canvas.width, this.$canvas.height);
+        };
+        this.image.src = `data:image/jpeg;base64,${data.data}`;
+        this.sendCommand(LIVE_COMMANDS.SCREENCAST_FRAME_ACK, { sessionId: data.sessionId });
+        break;
+      }
+      case SPECIAL_COMMANDS.GET_URL: {
+        const input = this.$navigation.querySelector('input') as HTMLInputElement;
+        input.value = data;
+        break;
+      }
+    }
   }
 
   async onClose(event: CloseEvent) {}
 
   async onError(event: Event) {}
+
+  private handleBack(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.GO_BACK);
+  }
+
+  private handleForward(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.GO_FORWARD);
+  }
+
+  private handleReload(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.RELOAD);
+  }
 }

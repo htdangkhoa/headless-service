@@ -9,4 +9,8 @@ export enum LIVE_COMMANDS {
 
 export enum SPECIAL_COMMANDS {
   SET_VIEWPORT = 'Page.setViewport',
+  GO_BACK = 'Page.goBack',
+  GO_FORWARD = 'Page.goForward',
+  RELOAD = 'Page.reload',
+  GET_URL = 'Page.getUrl',
 }
