@@ -1,6 +1,6 @@
 import { Handler } from 'express';
 import { z } from 'zod';
-import zu from 'zod_utilz';
+import { zu } from 'zod_utilz';
 import { fork } from 'node:child_process';
 import treeKill from 'tree-kill';
 
@@ -8,19 +8,15 @@ import { Method, Route } from '@/route-group';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import {
   NumberOrStringSchema,
-  RequestLaunchQuerySchema,
+  RequestDefaultQuerySchema,
   ResponseBodySchema,
   env,
+  parseSearchParams,
   writeResponse,
 } from '@/utils';
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
 import { OPENAPI_TAGS } from '@/constants';
-
-const RequestPerformanceQuerySchema = z
-  .object({
-    launch: RequestLaunchQuerySchema.optional(),
-  })
-  .strict();
+import { StatusCodes } from 'http-status-codes';
 
 const RequestPerformanceBodySchema = z
   .object({
@@ -36,7 +32,7 @@ export class PerformancePostRoute implements Route {
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     request: {
-      query: RequestPerformanceQuerySchema,
+      query: RequestDefaultQuerySchema,
       body: {
         description: 'The performance data',
         content: {
@@ -81,16 +77,22 @@ export class PerformancePostRoute implements Route {
     },
   };
   handler?: Handler = async (req, res) => {
-    const queryValidation = zu.useTypedParsers(RequestPerformanceQuerySchema).safeParse(req.query);
+    const query = parseSearchParams(req.query);
+
+    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (!queryValidation.success) {
-      return writeResponse(res, queryValidation.error, 400);
+      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+        body: queryValidation.error.errors,
+      });
     }
 
     const bodyValidation = zu.useTypedParsers(RequestPerformanceBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
-      return writeResponse(res, bodyValidation.error, 400);
+      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+        body: bodyValidation.error.errors,
+      });
     }
 
     const { timeout, ...childData } = bodyValidation.data;
@@ -129,7 +131,9 @@ export class PerformancePostRoute implements Route {
 
     child.on('error', (error) => {
       console.error(error);
-      return writeResponse(res, error, 500);
+      return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+        body: error,
+      });
     });
 
     child.on('message', (message: IChildProcessOutput) => {
@@ -144,15 +148,22 @@ export class PerformancePostRoute implements Route {
         }
         case Events.COMPLETE: {
           close(child.pid);
-          return writeResponse(res, { data: message.data }, 200);
+          return writeResponse(res, StatusCodes.OK, {
+            body: { data: message.data },
+          });
         }
         case Events.ERROR: {
           close(child.pid);
-          return writeResponse(res, message.error!, 500);
+          return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+            body: message.error,
+          });
         }
         default: {
           close(child.pid);
-          return writeResponse(res, new Error('Something went wrong'), 500);
+          const error = new Error('Something went wrong');
+          return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+            body: error,
+          });
         }
       }
     });

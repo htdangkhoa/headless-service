@@ -11,9 +11,10 @@ import { StatusCodes } from 'http-status-codes';
 
 import { Method, Route } from '@/route-group';
 import {
-  RequestLaunchQuerySchema,
+  RequestDefaultQuerySchema,
   ResponseBodySchema,
   makeExternalUrl,
+  parseSearchParams,
   writeResponse,
 } from '@/utils';
 import { OPENAPI_TAGS } from '@/constants';
@@ -31,12 +32,6 @@ declare global {
   }
 }
 
-const RequestFunctionQuerySchema = z
-  .object({
-    launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
-  })
-  .strict();
-
 const RequestFunctionBodySchema = z.string().describe('The user code to run');
 
 export class FunctionPostRoute implements Route {
@@ -45,7 +40,7 @@ export class FunctionPostRoute implements Route {
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     request: {
-      query: RequestFunctionQuerySchema,
+      query: RequestDefaultQuerySchema,
       body: {
         content: {
           'application/javascript': {
@@ -92,10 +87,14 @@ export class FunctionPostRoute implements Route {
     },
   };
   handler: Handler = async (req, res) => {
-    const queryValidation = zu.useTypedParsers(RequestFunctionQuerySchema).safeParse(req.query);
+    const query = parseSearchParams(req.query);
+
+    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
-      return writeResponse(res, queryValidation.error.errors, StatusCodes.BAD_REQUEST);
+      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+        body: queryValidation.error.errors,
+      });
     }
 
     const functionRequestUrl = makeExternalUrl('function');
@@ -193,8 +192,16 @@ export class FunctionPostRoute implements Route {
           runtimeFunction,
         } as IPageFunctionArguments
       )
-      .then((result) => writeResponse(res, { data: result }))
-      .catch((err) => writeResponse(res, err, StatusCodes.INTERNAL_SERVER_ERROR))
+      .then((result) =>
+        writeResponse(res, StatusCodes.OK, {
+          body: { data: result },
+        })
+      )
+      .catch((err) =>
+        writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+          body: err,
+        })
+      )
       .finally(async () => {
         await page.setRequestInterception(false);
         await puppeteerProvider.closeBrowser(browser);

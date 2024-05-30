@@ -7,10 +7,18 @@ import consolidate from 'consolidate';
 import cors from 'cors';
 import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
+import { StatusCodes } from 'http-status-codes';
+import { zu } from 'zod_utilz';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { FunctionPostRoute, PerformancePostRoute } from '@/routes';
-import { makeExternalUrl, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
+import {
+  RequestDefaultQuerySchema,
+  makeExternalUrl,
+  parseSearchParams,
+  parseUrlFromIncomingMessage,
+  writeResponse,
+} from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 
@@ -67,9 +75,17 @@ export class HeadlessServer {
       return next(err);
     }));
     this.app.use(<ErrorRequestHandler>((err, req, res, next) => {
-      if (req.timedout) return writeResponse(res, new Error('Request Timeout'), 408);
-      if (req.xhr) return writeResponse(res, new Error('Something went wrong'), 500);
-      return writeResponse(res, err, 500);
+      if (req.timedout)
+        return writeResponse(res, StatusCodes.REQUEST_TIMEOUT, {
+          body: new Error('Request Timeout'),
+        });
+      if (req.xhr)
+        return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+          body: new Error('Something went wrong'),
+        });
+      return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+        body: err,
+      });
     }));
   }
 
@@ -85,7 +101,20 @@ export class HeadlessServer {
 
     const browserId = url.href.replace(url.search, '').split('/').pop();
 
+    const query = parseSearchParams(url.search);
+
+    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+
+    if (queryValidation.error) {
+      const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
+
+      return writeResponse(socket, StatusCodes.BAD_REQUEST, {
+        message: `Bad Request: ${errorDetails}`,
+      });
+    }
+
     const browser = await this.puppeteerProvider.launchBrowser(req, {
+      ...(queryValidation.data.launch ?? {}),
       ws: this.wsServer,
       browserId,
     });

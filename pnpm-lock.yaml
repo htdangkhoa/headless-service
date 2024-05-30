@@ -53,6 +53,9 @@ dependencies:
   puppeteer-extra-plugin-stealth:
     specifier: ^2.11.2
     version: 2.11.2(puppeteer-extra@3.3.6)
+  qs:
+    specifier: ^6.12.1
+    version: 6.12.1
   tree-kill:
     specifier: ^1.2.2
     version: 1.2.2
@@ -96,6 +99,9 @@ devDependencies:
   '@types/node':
     specifier: ^20.12.7
     version: 20.12.8
+  '@types/qs':
+    specifier: ^6.9.15
+    version: 6.9.15
   '@types/ws':
     specifier: ^8.5.10
     version: 8.5.10
@@ -2929,6 +2935,13 @@ packages:
 
   /qs@6.11.0:
     resolution: {integrity: sha512-MvjoMCJwEarSbUYk5O+nmoSzSutSsTwF85zcHPQ9OrlFoZOYIjaqBAJIqIXjptyD5vThxGq52Xu/MaJzRkIk4Q==}
+    engines: {node: '>=0.6'}
+    dependencies:
+      side-channel: 1.0.6
+    dev: false
+
+  /qs@6.12.1:
+    resolution: {integrity: sha512-zWmv4RSuB9r2mYQw3zxQuHWeU+42aKi1wWig/j4ele4ygELZ7PEO6MM7rim9oAQH2A5MWfsAVf/jPvTPgCbvUQ==}
     engines: {node: '>=0.6'}
     dependencies:
       side-channel: 1.0.6

@@ -25,6 +25,12 @@ export const RequestLaunchQuerySchema = z.object({
   block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
 });
 
+export const RequestDefaultQuerySchema = z
+  .object({
+    launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
+  })
+  .strict();
+
 export const ResponseBodySchema = z.object({
   data: z.unknown().optional(),
   errors: z.array(z.unknown()).optional(),
