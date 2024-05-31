@@ -91,81 +91,95 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const message = Buffer.from(buffer).toString('utf8');
     const payload = JSON.parse(message);
 
-    switch (payload.command) {
-      case SPECIAL_COMMANDS.SET_VIEWPORT: {
-        await page.setViewport(payload.params);
+    try {
+      switch (payload.command) {
+        case SPECIAL_COMMANDS.SET_VIEWPORT: {
+          await page.setViewport(payload.params);
 
-        break;
-      }
-      case SPECIAL_COMMANDS.GO_BACK: {
-        await page.goBack();
-
-        break;
-      }
-      case SPECIAL_COMMANDS.GO_FORWARD: {
-        await page.goForward();
-
-        break;
-      }
-      case SPECIAL_COMMANDS.RELOAD: {
-        await page.reload();
-
-        break;
-      }
-      case SPECIAL_COMMANDS.GET_URL: {
-        const sendUrl = () => {
-          const url = page.url();
-
-          socket.send(
-            JSON.stringify({
-              command: SPECIAL_COMMANDS.GET_URL,
-              data: url,
-            })
-          );
-        };
-
-        sendUrl();
-
-        page.on('framenavigated', sendUrl);
-
-        break;
-      }
-      case LIVE_COMMANDS.START_SCREENCAST: {
-        await client.send(payload.command, payload.params);
-
-        client.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
-          socket.send(
-            JSON.stringify({
-              command: LIVE_COMMANDS.SCREENCAST_FRAME,
-              data,
-            })
-          );
-        });
-
-        break;
-      }
-      case LIVE_COMMANDS.STOP_SCREENCAST: {
-        console.log('Stopping screencast');
-
-        await client.send(payload.command);
-
-        await page.evaluate(() => {
-          // @ts-ignore
-          window.liveComplete();
-        });
-
-        break;
-      }
-      default: {
-        try {
-          await client.send(payload.command, payload.params);
-        } catch (error) {
-          console.error('Error sending command', error);
-          console.debug('Payload params', payload.params);
+          break;
         }
+        case SPECIAL_COMMANDS.GO_BACK: {
+          await page.goBack();
 
-        break;
+          break;
+        }
+        case SPECIAL_COMMANDS.GO_FORWARD: {
+          await page.goForward();
+
+          break;
+        }
+        case SPECIAL_COMMANDS.RELOAD: {
+          await page.reload();
+
+          break;
+        }
+        case SPECIAL_COMMANDS.GET_URL: {
+          const sendUrl = () => {
+            const url = page.url();
+
+            socket.send(
+              JSON.stringify({
+                command: SPECIAL_COMMANDS.GET_URL,
+                data: url,
+              })
+            );
+          };
+
+          sendUrl();
+
+          page.on('framenavigated', sendUrl);
+
+          break;
+        }
+        case LIVE_COMMANDS.START_SCREENCAST: {
+          await client.send(payload.command, payload.params);
+
+          client.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
+            socket.send(
+              JSON.stringify({
+                command: LIVE_COMMANDS.SCREENCAST_FRAME,
+                data,
+              })
+            );
+          });
+
+          break;
+        }
+        case LIVE_COMMANDS.STOP_SCREENCAST: {
+          console.log('Stopping screencast');
+
+          await client.send(payload.command);
+
+          await page.evaluate(() => {
+            // @ts-ignore
+            window.liveComplete();
+          });
+
+          break;
+        }
+        case LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT: {
+          if (
+            ['Delete', 'Backspace'].includes(payload.params.code) &&
+            payload.params.type === 'keyDown'
+          ) {
+            console.log('Backspace detected');
+
+            await page.keyboard.press('Backspace');
+          } else {
+            await client.send(payload.command, payload.params);
+          }
+
+          break;
+        }
+        default: {
+          await client.send(payload.command, payload.params);
+
+          break;
+        }
       }
+    } catch (error) {
+      console.error('Error sending command', error);
+      console.debug('Payload params', payload.params);
     }
   }
 }

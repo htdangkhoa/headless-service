@@ -1,4 +1,4 @@
-import { debounce } from 'lodash';
+import { debounce } from 'lodash-es';
 
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 import { Dictionary } from '@/types';
@@ -21,12 +21,14 @@ export class ScreencastView {
   private $canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private image = new Image();
+  private $notification: HTMLDivElement;
 
   private ws: WebSocket;
 
   constructor(private container: HTMLElement) {
     this.container.classList.add('flex-auto', 'widget', 'vbox');
 
+    /* ===== Navigation ===== */
     this.$navigation = document.createElement('div');
     this.$navigation.classList.add('flex', 'flex-1');
 
@@ -54,13 +56,18 @@ export class ScreencastView {
 
     container.appendChild(this.$navigation);
 
+    /* ===== Viewer ===== */
     this.$viewer = document.createElement('div');
     this.$viewer.classList.add('flex', 'flex-1');
 
     this.$canvas = document.createElement('canvas');
     this.ctx = this.$canvas.getContext('2d')!;
 
+    this.$notification = document.createElement('div');
+    this.$notification.classList.add('absolute', 'top-50', 'left-50', 'translate-n50', 'hidden');
+
     this.$viewer.appendChild(this.$canvas);
+    this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
 
     const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -145,8 +152,33 @@ export class ScreencastView {
     this.ws.send(JSON.stringify({ command, params }));
   }
 
+  private getNavigationInput() {
+    return this.$navigation.querySelector<HTMLInputElement>('input');
+  }
+
+  private handleBack(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.GO_BACK);
+  }
+
+  private handleForward(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.GO_FORWARD);
+  }
+
+  private handleReload(e: MouseEvent) {
+    e.preventDefault();
+
+    this.sendCommand(SPECIAL_COMMANDS.RELOAD);
+  }
+
   async onOpen(event: Event) {
     console.log('on open');
+
+    // hide notification
+    this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
     // add event listener
     window.addEventListener('resize', this.resizeWindow.bind(this), false);
@@ -271,25 +303,31 @@ export class ScreencastView {
     }
   }
 
-  async onClose(event: CloseEvent) {}
+  async onClose(event: CloseEvent) {
+    console.log('on close');
 
-  async onError(event: Event) {}
+    // clear canvas
+    this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 
-  private handleBack(e: MouseEvent) {
-    e.preventDefault();
+    // clear input
+    this.getNavigationInput()!.value = '';
 
-    this.sendCommand(SPECIAL_COMMANDS.GO_BACK);
+    // show notification
+    this.$notification.classList.remove('hidden');
+    this.$notification.textContent = 'Session closed';
   }
 
-  private handleForward(e: MouseEvent) {
-    e.preventDefault();
+  async onError(event: Event) {
+    console.log('on error', event);
 
-    this.sendCommand(SPECIAL_COMMANDS.GO_FORWARD);
-  }
+    // clear canvas
+    this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 
-  private handleReload(e: MouseEvent) {
-    e.preventDefault();
+    // clear input
+    this.getNavigationInput()!.value = '';
 
-    this.sendCommand(SPECIAL_COMMANDS.RELOAD);
+    // show notification
+    this.$notification.classList.remove('hidden');
+    this.$notification.textContent = 'An error occurred';
   }
 }
