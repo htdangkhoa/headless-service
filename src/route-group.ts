@@ -9,7 +9,7 @@ import { Omit, Optional } from '@/types';
 import { PuppeteerProvider } from './puppeteer-provider';
 import { parseUrlFromIncomingMessage } from './utils';
 
-export const enum Method {
+export enum Method {
   GET = 'get',
   POST = 'post',
   PUT = 'put',
@@ -18,7 +18,6 @@ export const enum Method {
   HEAD = 'head',
   OPTIONS = 'options',
   TRACE = 'trace',
-  CONNECT = 'connect',
   ALL = 'all',
 }
 

@@ -1,4 +1,4 @@
-import { OpenAPIRegistry, OpenApiGeneratorV3, RouteConfig } from '@asteasolutions/zod-to-openapi';
+import { OpenAPIRegistry, OpenApiGeneratorV31, RouteConfig } from '@asteasolutions/zod-to-openapi';
 import fs from 'node:fs';
 
 import { Method, RouteGroup } from '@/route-group';
@@ -30,17 +30,31 @@ export class OpenAPI {
 
         const fullPath = getFullPath(path, groupRouter.prefix);
 
-        const swaggerRouteConfig = {
-          ...swagger,
-          method,
-          path: fullPath,
-        };
+        if (method !== Method.ALL) {
+          const swaggerRouteConfig = {
+            ...swagger,
+            method,
+            path: fullPath,
+          };
 
-        this.registry.registerPath(swaggerRouteConfig as RouteConfig);
+          this.registry.registerPath(swaggerRouteConfig as RouteConfig);
+        } else {
+          const methods = Object.values(Method).filter((m) => m !== Method.ALL);
+
+          methods.forEach((m) => {
+            const swaggerRouteConfig = {
+              ...swagger,
+              method: m,
+              path: fullPath,
+            };
+
+            this.registry.registerPath(swaggerRouteConfig as RouteConfig);
+          });
+        }
       });
     });
 
-    const generator = new OpenApiGeneratorV3(this.registry.definitions);
+    const generator = new OpenApiGeneratorV31(this.registry.definitions);
 
     const docs = generator.generateDocument({
       openapi: OPENAPI_VERSION,

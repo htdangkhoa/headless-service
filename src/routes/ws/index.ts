@@ -1,4 +1,4 @@
-import zu from 'zod_utilz';
+import { zu } from 'zod_utilz';
 import { StatusCodes } from 'http-status-codes';
 
 import { WsRoute as Route, WsHandler } from '@/route-group';
