@@ -101,7 +101,7 @@ export class PerformancePostRoute implements Route {
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
 
-    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data.launch);
+    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data);
 
     const browserWSEndpoint = browser.wsEndpoint();
 

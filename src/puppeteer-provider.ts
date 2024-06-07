@@ -16,9 +16,11 @@ export class PuppeteerProvider {
 
   async launchBrowser(
     req: IncomingMessage,
-    options?: PuppeteerLaunchOptions & {
+    options?: {
       browserId?: string;
-      ws?: WebSocketServer;
+      ws?: WebSocketServer | false;
+      // launch options
+      launch?: PuppeteerLaunchOptions;
       // feature options
       stealth?: boolean;
       proxy?: string;
@@ -44,7 +46,7 @@ export class PuppeteerProvider {
       return found;
     }
 
-    const { stealth, proxy, block_ads: blockAds, ...launchOptions } = restOfOptions ?? {};
+    const { launch: launchOptions, stealth, proxy, block_ads: blockAds } = restOfOptions ?? {};
 
     if (stealth) {
       puppeteer.use(StealthPlugin());

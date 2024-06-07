@@ -45,6 +45,7 @@ export type WsHandler = (
 export interface WsRoute {
   path: string;
   handler: WsHandler;
+  shouldUpgrade: (req: IncomingMessage) => boolean;
   swagger?: Omit<RouteConfig, 'method' | 'path'>;
 }
 
@@ -69,9 +70,7 @@ export class RouteGroup {
     if (this.app instanceof Server && !!this.serverContext) {
       const _route = route as WsRoute;
       this.app.on('upgrade', (req, socket, head) => {
-        const url = parseUrlFromIncomingMessage(req);
-
-        if (url.pathname === fullPath) {
+        if (_route.shouldUpgrade(req)) {
           return _route.handler(req, socket, head, this.serverContext!);
         }
 

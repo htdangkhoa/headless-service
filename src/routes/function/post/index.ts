@@ -109,7 +109,7 @@ export class FunctionPostRoute implements Route {
 
     const browser = await puppeteerProvider.launchBrowser(
       req as IncomingMessage,
-      queryValidation.data.launch
+      queryValidation.data
     );
 
     const browserWSEndpoint = browser.wsEndpoint();

@@ -9,7 +9,7 @@ import { WebSocketServer } from 'ws';
 import { StatusCodes } from 'http-status-codes';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionPostRoute, PerformancePostRoute, WsRoute } from '@/routes';
+import { FunctionPostRoute, PerformancePostRoute, IndexWsRoute } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
@@ -86,7 +86,7 @@ export class HeadlessServer {
       });
     }));
 
-    this.wsGroup.registerRoute(WsRoute);
+    this.wsGroup.registerRoute(IndexWsRoute);
   }
 
   async start() {

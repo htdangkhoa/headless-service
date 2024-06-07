@@ -7,7 +7,7 @@ export const makeExternalUrl = (...parts: string[]) => {
 
   const externalAddressURL = new URL(externalAddress);
 
-  return new URL(parts.join('/'), externalAddressURL).href;
+  return new URL(parts.join('/'), externalAddressURL).href.replace(/\/$/, '');
 };
 
 export const parseUrlFromIncomingMessage = (req: IncomingMessage) => {

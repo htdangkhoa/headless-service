@@ -1,28 +1,22 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="env">
   <head>
-    <title>Headless Service</title>
-    <!-- needed for adaptive design -->
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-
-    <!--
-    Redoc doesn't change outer page styles
-    -->
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-      }
-    </style>
-    <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
+    <title>Headless Server API Reference</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1" />
   </head>
   <body>
-    <div id="redoc-container"></div>
+    <script id="api-reference" data-url="./swagger.json" data-proxy-url="https://proxy.scalar.com"></script>
     <script>
-      const options = {}
-      Redoc.init('./swagger.json', options, document.getElementById('redoc-container'))
+      var configuration = {
+        theme: 'bluePlanet',
+      }
+
+      var apiReference = document.getElementById('api-reference')
+      apiReference.dataset.configuration = JSON.stringify(configuration)
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
 </html>
