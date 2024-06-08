@@ -30,6 +30,7 @@ export const RequestDefaultQuerySchema = z
     ).optional(),
     proxy: z.string().describe('The proxy server to use').optional(),
     block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
+    unblock: BooleanOrStringSchema.describe('Whether to bypass the bot detection').optional(),
   })
   .strict();
 

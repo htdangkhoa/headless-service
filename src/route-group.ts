@@ -7,7 +7,6 @@ import { createProxyServer } from 'http-proxy';
 
 import { Omit, Optional } from '@/types';
 import { PuppeteerProvider } from './puppeteer-provider';
-import { parseUrlFromIncomingMessage } from './utils';
 
 export enum Method {
   GET = 'get',

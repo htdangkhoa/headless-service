@@ -6,8 +6,9 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
 
-import { DEFAULT_LAUNCH_ARGS, DEFAULT_VIEWPORT } from '@/constants';
+import { DEFAULT_LAUNCH_ARGS } from '@/constants';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
+import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 
 export class PuppeteerProvider {
   private runnings: Browser[] = [];
@@ -25,17 +26,22 @@ export class PuppeteerProvider {
       stealth?: boolean;
       proxy?: string;
       block_ads?: boolean;
+      unblock?: boolean;
     }
   ) {
     const puppeteer = addExtra(vanillaPuppeteer);
 
     // internal plugins for puppeteer extra
-    const { ws, browserId, ...restOfOptions } = options ?? {};
-    if (ws) {
-      puppeteer.use(LiveUrlPlugin(ws));
-    }
+    const {
+      browserId,
+      ws,
+      stealth,
+      unblock,
+      block_ads: blockAds,
+      proxy,
+      launch: launchOptions,
+    } = options ?? {};
 
-    // if (req.url?.includes('devtools/browser') || req.url?.includes('/live')) {
     if (browserId) {
       const found = this.runnings.find((browser) => browser.wsEndpoint().includes(browserId!));
 
@@ -46,10 +52,16 @@ export class PuppeteerProvider {
       return found;
     }
 
-    const { launch: launchOptions, stealth, proxy, block_ads: blockAds } = restOfOptions ?? {};
+    if (ws) {
+      puppeteer.use(LiveUrlPlugin(ws));
+    }
 
     if (stealth) {
       puppeteer.use(StealthPlugin());
+    }
+
+    if (unblock) {
+      puppeteer.use(UnblockPlugin());
     }
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
@@ -60,7 +72,11 @@ export class PuppeteerProvider {
       setOfArgs.add(`--proxy-server=${proxy}`);
     }
 
+    const _launchOptions = Object.assign({}, launchOptions);
     if (blockAds) {
+      if (_launchOptions.headless === 'shell') {
+        _launchOptions.headless = false;
+      }
       const uBlock0Path = resolve(process.cwd(), 'extensions', 'ublock0.chromium');
 
       setOfArgs.add(`--disable-extensions-except=${uBlock0Path}`);
@@ -70,10 +86,10 @@ export class PuppeteerProvider {
     const launchArgs = Array.from(setOfArgs);
 
     const opts: PuppeteerLaunchOptions = {
-      ...(launchOptions ?? {}),
+      ..._launchOptions,
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
-      defaultViewport: DEFAULT_VIEWPORT,
+      defaultViewport: null,
       handleSIGINT: false,
       handleSIGTERM: false,
       handleSIGHUP: false,
