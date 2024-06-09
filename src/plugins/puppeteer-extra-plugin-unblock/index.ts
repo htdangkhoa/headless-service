@@ -7,11 +7,6 @@ import {
 } from 'fingerprint-generator';
 import { FingerprintInjector } from 'fingerprint-injector';
 
-const DATA = {
-  UNMASKED_VENDOR_WEBGL: 'Intel Inc.',
-  UNMASKED_RENDERER_WEBGL: 'Intel Iris OpenGL Engine',
-};
-
 export interface UnblockOptions {
   fingerprint?: BrowserFingerprintWithHeaders;
   fingerprintOptions?: Partial<FingerprintGeneratorOptions>;
@@ -35,23 +30,6 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
 
     const injector = new FingerprintInjector();
     await injector.attachFingerprintToPuppeteer(page, fingerprintWithHeaders);
-
-    await page.evaluateOnNewDocument((data) => {
-      // @ts-expect-error
-      const getParameter = WebGLRenderingContext.getParameter;
-      WebGLRenderingContext.prototype.getParameter = function (parameter) {
-        // UNMASKED_VENDOR_WEBGL
-        if (parameter === 37445) {
-          return data.UNMASKED_VENDOR_WEBGL;
-        }
-        // UNMASKED_RENDERER_WEBGL
-        if (parameter === 37446) {
-          return data.UNMASKED_RENDERER_WEBGL;
-        }
-
-        return getParameter(parameter);
-      };
-    }, DATA);
   }
 
   async beforeLaunch(options: any): Promise<void> {
