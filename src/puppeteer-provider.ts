@@ -77,7 +77,7 @@ export class PuppeteerProvider {
       if (_launchOptions.headless === 'shell') {
         _launchOptions.headless = false;
       }
-      const uBlock0Path = resolve(process.cwd(), 'extensions', 'ublock0.chromium');
+      const uBlock0Path = resolve(process.cwd(), 'extensions', 'uBlock0.chromium');
 
       setOfArgs.add(`--disable-extensions-except=${uBlock0Path}`);
       setOfArgs.add(`--load-extension=${uBlock0Path}`);
@@ -94,6 +94,7 @@ export class PuppeteerProvider {
       handleSIGTERM: false,
       handleSIGHUP: false,
       waitForInitialPage: false,
+      ignoreHTTPSErrors: true,
     };
 
     const browser = await puppeteer.launch(opts);

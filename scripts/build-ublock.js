@@ -9,7 +9,7 @@ const tmpdir = os.tmpdir();
 
 const browser = 'chromium';
 
-const extensionName = ['ublock0', browser].join('.');
+const extensionName = ['uBlock0', browser].join('.');
 
 const zipFileName = `${tmpdir}/${extensionName}.zip`;
 

@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer-core';
 
 async function main() {
-  const browserWSURL = new URL('ws://127.0.0.1:3000');
+  const browserWSURL = new URL('ws://127.0.0.1:3000/?unblock=true');
   browserWSURL.searchParams.set('live', 'true');
 
   const browserWSEndpoint = browserWSURL.href;
@@ -19,9 +19,12 @@ async function main() {
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   await page.setViewport({ width: 1920, height: 1080 });
-  await page.goto('https://youtube.com', {
-    waitUntil: 'domcontentloaded',
-  });
+  await page.goto(
+    'https://accounts.google.com/v3/signin/identifier?passive=true&flowName=GlifWebSignIn&flowEntry=ServiceLogin',
+    {
+      waitUntil: 'domcontentloaded',
+    }
+  );
 
   const title = await page.title();
   console.log(title);
