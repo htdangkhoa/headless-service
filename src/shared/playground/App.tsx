@@ -1,9 +1,24 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import dedent from 'dedent';
+
 import { Editor } from './components';
+import { Optional } from '@/types';
 
 const WIDTH_OFFSET = 375;
 
+const INITIAL_CODE = dedent`
+  export default async function ({ page }: { page: Page }) {
+    await page.goto('https://example.com', {
+      waitUntil: 'domcontentloaded',
+    });
+    const title = await page.title();
+    return { title };
+  };
+`;
+
 export const App = () => {
+  const [code, setCode] = useState<Optional<string>>(INITIAL_CODE);
+
   const editorRef = useRef<HTMLDivElement>(null);
   const resizerRef = useRef<HTMLDivElement>(null);
   const liveViewRef = useRef<HTMLIFrameElement>(null);
@@ -60,6 +75,10 @@ export const App = () => {
     };
   }, [resizerRef]);
 
+  const handleRun = useCallback(async () => {
+    console.log('Run code', code);
+  }, [code]);
+
   return (
     <>
       <header className="h-14 flex justify-between p-3">
@@ -67,13 +86,19 @@ export const App = () => {
         <button
           type="button"
           className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm p-2.5 text-center inline-flex items-center me-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+          onClick={handleRun}
         >
           Run
         </button>
       </header>
 
       <main className="flex flex-1 flex-row h-full">
-        <Editor ref={editorRef} className="w-1/2 h-full relative" />
+        <Editor
+          ref={editorRef}
+          className="w-1/2 h-full relative"
+          value={code}
+          onChange={(v) => setCode(v)}
+        />
 
         <div ref={resizerRef} className="w-1 h-full bg-[#555] cursor-col-resize"></div>
 
