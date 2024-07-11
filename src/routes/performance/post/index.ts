@@ -14,9 +14,8 @@ import {
   parseSearchParams,
   writeResponse,
 } from '@/utils';
+import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
-import { OPENAPI_TAGS } from '@/constants';
-import { StatusCodes } from 'http-status-codes';
 
 const RequestPerformanceBodySchema = z
   .object({
@@ -84,7 +83,7 @@ export class PerformancePostRoute implements Route {
     const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (!queryValidation.success) {
-      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+      return writeResponse(res, HttpStatus.BAD_REQUEST, {
         body: queryValidation.error.errors,
       });
     }
@@ -92,7 +91,7 @@ export class PerformancePostRoute implements Route {
     const bodyValidation = zu.useTypedParsers(RequestPerformanceBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
-      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+      return writeResponse(res, HttpStatus.BAD_REQUEST, {
         body: bodyValidation.error.errors,
       });
     }
@@ -133,7 +132,7 @@ export class PerformancePostRoute implements Route {
 
     child.on('error', (error) => {
       console.error(error);
-      return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+      return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
         body: error,
       });
     });
@@ -150,20 +149,20 @@ export class PerformancePostRoute implements Route {
         }
         case Events.COMPLETE: {
           close(child.pid);
-          return writeResponse(res, StatusCodes.OK, {
+          return writeResponse(res, HttpStatus.OK, {
             body: { data: message.data },
           });
         }
         case Events.ERROR: {
           close(child.pid);
-          return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+          return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
             body: message.error,
           });
         }
         default: {
           close(child.pid);
           const error = new Error('Something went wrong');
-          return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+          return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
             body: error,
           });
         }

@@ -6,13 +6,13 @@ import consolidate from 'consolidate';
 import cors from 'cors';
 import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
-import { StatusCodes } from 'http-status-codes';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { FunctionPostRoute, PerformancePostRoute, IndexWsRoute } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
+import { HttpStatus } from '@/constants';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -74,14 +74,14 @@ export class HeadlessServer {
     }));
     this.app.use(<ErrorRequestHandler>((err, req, res, next) => {
       if (req.timedout)
-        return writeResponse(res, StatusCodes.REQUEST_TIMEOUT, {
+        return writeResponse(res, HttpStatus.REQUEST_TIMEOUT, {
           body: new Error('Request Timeout'),
         });
       if (req.xhr)
-        return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+        return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
           body: new Error('Something went wrong'),
         });
-      return writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+      return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
         body: err,
       });
     }));

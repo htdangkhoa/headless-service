@@ -7,7 +7,6 @@ import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 import { zu } from 'zod_utilz';
 import dedent from 'dedent';
-import { StatusCodes } from 'http-status-codes';
 
 import { Method, ApiRoute as Route } from '@/route-group';
 import {
@@ -17,7 +16,7 @@ import {
   parseSearchParams,
   writeResponse,
 } from '@/utils';
-import { OPENAPI_TAGS } from '@/constants';
+import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
@@ -98,7 +97,7 @@ export class FunctionPostRoute implements Route {
     const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
-      return writeResponse(res, StatusCodes.BAD_REQUEST, {
+      return writeResponse(res, HttpStatus.BAD_REQUEST, {
         body: queryValidation.error.errors,
       });
     }
@@ -199,12 +198,12 @@ export class FunctionPostRoute implements Route {
         } as IPageFunctionArguments
       )
       .then((result) =>
-        writeResponse(res, StatusCodes.OK, {
+        writeResponse(res, HttpStatus.OK, {
           body: { data: result },
         })
       )
       .catch((err) =>
-        writeResponse(res, StatusCodes.INTERNAL_SERVER_ERROR, {
+        writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
           body: err,
         })
       )

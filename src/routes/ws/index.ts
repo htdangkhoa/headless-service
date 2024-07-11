@@ -1,6 +1,6 @@
 import { zu } from 'zod_utilz';
-import { StatusCodes } from 'http-status-codes';
 import dedent from 'dedent';
+import type { IncomingMessage } from 'node:http';
 
 import { WsRoute, WsHandler } from '@/route-group';
 import {
@@ -11,8 +11,7 @@ import {
   parseUrlFromIncomingMessage,
   writeResponse,
 } from '@/utils';
-import { OPENAPI_TAGS } from '@/constants';
-import { IncomingMessage } from 'http';
+import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 
 // /devtools/browser/00000000-0000-0000-0000-000000000000
 const DEVTOOLS_PATH_REGEX = /\/devtools\/browser\/([a-f0-9-]+)$/;
@@ -120,7 +119,7 @@ export class IndexWsRoute implements WsRoute {
     if (queryValidation.error) {
       const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
 
-      return writeResponse(socket, StatusCodes.BAD_REQUEST, {
+      return writeResponse(socket, HttpStatus.BAD_REQUEST, {
         message: `Bad Request: ${errorDetails}`,
       });
     }

@@ -1,10 +1,11 @@
 import { Duplex } from 'node:stream';
+import { STATUS_CODES } from 'node:http';
 import { Request, Response } from 'express';
-import { StatusCodes, getReasonPhrase } from 'http-status-codes';
 import { ZodIssue, ZodError, z } from 'zod';
 import qs from 'qs';
 
 import { Dictionary } from '@/types';
+import { HttpStatus } from '@/constants';
 import { ResponseBody } from './schema';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
@@ -22,14 +23,14 @@ export const parseSearchParams = <Schema extends z.ZodType<any, z.ZodTypeDef, an
 
 export const writeResponse = async (
   writable: Duplex | Response,
-  status: StatusCodes = StatusCodes.OK,
+  status: HttpStatus = HttpStatus.OK,
   options?: {
     contentType?: string;
     message?: string;
     body?: ResponseBody | Error | Array<Error> | ZodIssue[];
   }
 ) => {
-  const httpMessage = getReasonPhrase(status);
+  const httpMessage = STATUS_CODES[status];
 
   if (isHTTP(writable) && options?.body) {
     const response = writable as Response;
