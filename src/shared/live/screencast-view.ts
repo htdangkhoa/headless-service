@@ -131,7 +131,7 @@ export class ScreencastView {
     const x = isScroll ? evt.clientX : evt.offsetX;
     const y = isScroll ? evt.clientY : evt.offsetY;
 
-    const params: Dictionary<any> = {
+    const params: Dictionary = {
       type: MOUSE_EVENTS[evt.type],
       x,
       y,
@@ -148,7 +148,7 @@ export class ScreencastView {
     this.sendCommand(LIVE_COMMANDS.INPUT_EMULATE_TOUCH_FROM_MOUSE_EVENT, params);
   }
 
-  private sendCommand(command: string, params: Dictionary<any> = {}) {
+  private sendCommand(command: string, params: Dictionary = {}) {
     this.ws.send(JSON.stringify({ command, params }));
   }
 

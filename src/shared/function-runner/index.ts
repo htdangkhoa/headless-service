@@ -6,7 +6,7 @@ import { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 import { Dictionary } from '@/types';
 
 export interface ICodeRunner {
-  (params: { page: Page; context?: Dictionary<any> }): Promise<any>;
+  (params: { page: Page; context?: Dictionary }): Promise<any>;
 }
 
 export class FunctionRunner {

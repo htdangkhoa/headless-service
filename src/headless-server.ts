@@ -8,7 +8,12 @@ import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionPostRoute, PerformancePostRoute, IndexWsRoute } from '@/routes';
+import {
+  FunctionPostRoute,
+  PerformancePostRoute,
+  ScreenshotPostRoute,
+  IndexWsRoute,
+} from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
@@ -66,6 +71,7 @@ export class HeadlessServer {
     // API Routes
     this.apiGroup.registerRoute(FunctionPostRoute);
     this.apiGroup.registerRoute(PerformancePostRoute);
+    this.apiGroup.registerRoute(ScreenshotPostRoute);
 
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
