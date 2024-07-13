@@ -1,5 +1,7 @@
 import dedent from 'dedent';
 import { z } from 'zod';
+import _ from 'lodash-es';
+import { NumberOrStringSchema } from './common';
 
 export const PuppeteerUrlSchema = z.string().describe('The URL to take a screenshot of.');
 
@@ -198,6 +200,8 @@ export const PuppeteerRequestInterceptionSchema = z
   )
   .strict();
 
+// export const setJavaScriptEnabled
+
 export const PuppeteerLifeCycleEventSchema = z.enum([
   'load',
   'domcontentloaded',
@@ -303,6 +307,133 @@ export const PuppeteerWaitForSelectorOptionsSchema = z
       .optional()
       .describe(
         'Maximum time to wait in milliseconds. Pass `0` to disable timeout. Defaults to `30_000` (30 seconds).'
+      ),
+  })
+  .strict();
+
+const pdfFormats = [
+  'letter',
+  'legal',
+  'tabloid',
+  'ledger',
+  'a0',
+  'a1',
+  'a2',
+  'a3',
+  'a4',
+  'a5',
+  'a6',
+]
+  .map((s) => [s.toUpperCase(), s.toLowerCase(), _.capitalize(s)])
+  .flat();
+
+const setPDFFormats = new Set(pdfFormats);
+
+const PuppeteerPDFFormatsSchema = z
+  .enum(Array.from(setPDFFormats) as [string, ...string[]])
+  .describe(
+    'If set, this takes priority over the `width` and `height` options. Defaults to `letter`.'
+  );
+
+export const PuppeteerPDFOptionsSchema = z
+  .object({
+    scale: z
+      .number()
+      .optional()
+      .describe(
+        'Scales the rendering of the web page. Amount must be between `0.1` and `2`. Defaults to `1`.'
+      ),
+    display_header_footer: z
+      .boolean()
+      .optional()
+      .describe('Whether to show the header and footer. Defaults to `false`.'),
+    header_template: z
+      .string()
+      .optional()
+      .describe(
+        dedent`
+        HTML template for the print header. Should be valid HTML with the following classes used to inject values into them:
+
+        - \`date\` formatted print date
+        - \`title\` document title
+        - \`url\` document location
+        - \`pageNumber\` current page number
+        - \`totalPages\` total pages in the document
+        `
+      ),
+    footer_template: z
+      .string()
+      .optional()
+      .describe(
+        'HTML template for the print footer. Has the same constraints and support for special classes as [PDFOptions.headerTemplate](https://pptr.dev/api/puppeteer.pdfoptions).'
+      ),
+    print_background: z
+      .boolean()
+      .optional()
+      .describe('et to `true` to print background graphics. Defaults to `false`.'),
+    landscape: z
+      .boolean()
+      .optional()
+      .describe('Whether to print in landscape orientation. Defaults to `false`.'),
+    page_ranges: z
+      .string()
+      .optional()
+      .describe(
+        'Paper ranges to print, e.g. `1-5, 8, 11-13`. Defaults to the empty string, which means all pages are printed.'
+      ),
+    format: PuppeteerPDFFormatsSchema.optional(),
+    width: NumberOrStringSchema.optional().describe(
+      'Sets the width of paper. You can pass in a number or a string with a unit.'
+    ),
+    height: NumberOrStringSchema.optional().describe(
+      'Sets the height of paper. You can pass in a number or a string with a unit.'
+    ),
+    prefer_css_page_size: z
+      .boolean()
+      .optional()
+      .describe(
+        'Give any CSS `@page` size declared in the page priority over what is declared in the `width` or `height` or `format` option. Defaults to `false`, which will scale the content to fit the paper size.'
+      ),
+    margin: z
+      .object({
+        top: NumberOrStringSchema.optional().describe('Top margin in inches.'),
+        right: NumberOrStringSchema.optional().describe('Right margin in inches.'),
+        bottom: NumberOrStringSchema.optional().describe('Bottom margin in inches.'),
+        left: NumberOrStringSchema.optional().describe('Left margin in inches.'),
+      })
+      .optional()
+      .describe('Set the PDF margins. Defaults to `undefined` no margins are set.'),
+    omit_background: z
+      .boolean()
+      .optional()
+      .describe(
+        'Hides default white background and allows generating pdfs with transparency. Defaults to `false`.'
+      ),
+    tagged: z
+      .boolean()
+      .optional()
+      .describe('Generate tagged (accessible) PDF. Defaults to `true`.'),
+    outline: z
+      .boolean()
+      .optional()
+      .describe(
+        dedent`
+        Generate document outline.
+
+        > If this is enabled the PDF will also be tagged (accessible)
+
+        > Currently only works in old Headless (headless = 'shell')
+         
+        > [Chromium feature request](https://issues.chromium.org/issues/41387522#comment48)
+
+        Defaults to \`false\`.
+        `
+      ),
+    timeout: z
+      .number()
+      .optional()
+      .describe(
+        'Timeout in milliseconds. Pass `0` to disable timeout. Defaults to `30_000` (30 seconds).'
       ),
   })
   .strict();

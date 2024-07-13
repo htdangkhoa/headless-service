@@ -90,6 +90,10 @@ export class RouteGroup {
     }
   }
 
+  registerRoutes(zClasses: Array<new () => Route>) {
+    zClasses.forEach(this.registerRoute.bind(this));
+  }
+
   getRoutes() {
     return this.routes;
   }
