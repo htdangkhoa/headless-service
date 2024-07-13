@@ -1,108 +1,54 @@
 import type { Handler, Request, Response } from 'express';
+import { z } from 'zod';
+import zu from 'zod_utilz';
+import type {
+  Viewport,
+  CookieParam,
+  GoToOptions,
+  WaitForOptions,
+  ScreenshotOptions,
+} from 'puppeteer-core';
+import type { Protocol } from 'devtools-protocol';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ApiRoute, Method } from '@/route-group';
-import { z } from 'zod';
-import zu from 'zod_utilz';
+import { parseSearchParams, sleep, transformKeysToCamelCase, writeResponse } from '@/utils';
 import {
+  PuppeteerAddScriptTagsSchema,
+  PuppeteerAddStyleTagsSchema,
+  PuppeteerCookiesSchema,
+  PuppeteerCredentialsSchema,
+  PuppeteerEmulateMediaTypeSchema,
+  PuppeteerGoToOptionsSchema,
+  PuppeteerHtmlSchema,
+  PuppeteerRequestInterceptionSchema,
+  PuppeteerScreenshotOptionsSchema,
+  PuppeteerSelectorSchema,
+  PuppeteerUrlSchema,
+  PuppeteerUserAgentSchema,
+  PuppeteerViewportSchema,
+  PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
-  parseSearchParams,
-  transformKeysToCamelCase,
-  writeResponse,
-} from '@/utils';
+} from '@/schemas';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 
-const ScreenshotOptionsSchema = z.object({
-  optimize_for_speed: z.boolean().optional().default(false),
-  type: z
-    .enum(['png', 'jpeg', 'webp'])
-    .optional()
-    .default('png')
-    .describe('The content type of the image. Defaults to `png`.'),
-  quality: z
-    .number()
-    .optional()
-    .describe('Quality of the image, between 0-100. Not applicable to `png` images.'),
-  from_surface: z
-    .boolean()
-    .optional()
-    .default(true)
-    .describe('Capture the screenshot from the surface, rather than the view. Defaults to `true`.'),
-  full_page: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe('When `true`, takes a screenshot of the full page. Defaults to `false`.'),
-  omit_background: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe(
-      'Hides default white background and allows capturing screenshots with transparency. Defaults to `false`.'
-    ),
-  clip: z
-    .object({
-      width: z.number().describe('The width of the element in pixels.'),
-      height: z.number().describe('The height of the element in pixels.'),
-      x: z.number().describe('The x-coordinate of the top-left corner of the clip area.'),
-      y: z.number().describe('The y-coordinate of the top-left corner of the clip area.'),
-      scale: z.number().optional().default(1).describe('The scale of the screenshot.'),
-    })
-    .optional()
-    .describe('Specifies the region of the page/element to clip.'),
-  encoding: z
-    .enum(['base64', 'binary'])
-    .optional()
-    .default('binary')
-    .describe('Encoding of the image. Defaults to `binary`.'),
-  capture_beyond_viewport: z
-    .boolean()
-    .optional()
-    .default(false)
-    .describe(
-      'Capture the screenshot beyond the viewport. Defaults to `false` if there is no `clip`. `true` otherwise.'
-    ),
-});
-
-const PuppeteerLifeCycleEventSchema = z.enum([
-  'load',
-  'domcontentloaded',
-  'networkidle0',
-  'networkidle2',
-]);
-
 const RequestScreenshotBodySchema = z.object({
-  url: z.string().optional().describe('The URL to take a screenshot of.'),
-  html: z.string().optional().describe('The HTML content to take a screenshot of.'),
-  options: ScreenshotOptionsSchema.optional(),
-  go_to_options: z
-    .object({
-      referer: z
-        .string()
-        .optional()
-        .describe(
-          'If provided, it will take preference over the referer header value set by [Page.setExtraHTTPHeaders | page.setExtraHTTPHeaders()](https://pptr.dev/api/puppeteer.page.setextrahttpheaders)'
-        ),
-      referrer_policy: z
-        .string()
-        .optional()
-        .describe(
-          'If provided, it will take preference over the referer-policy header value set by [Page.setExtraHTTPHeaders | page.setExtraHTTPHeaders()](https://pptr.dev/api/puppeteer.page.setextrahttpheaders)'
-        ),
-      timeout: z
-        .number()
-        .optional()
-        .describe(
-          'Maximum wait time in milliseconds. Pass 0 to disable the timeout. Default is 30 seconds.'
-        ),
-      wait_until: PuppeteerLifeCycleEventSchema.or(z.array(PuppeteerLifeCycleEventSchema))
-        .optional()
-        .describe(
-          'When to consider waiting succeeds. Given an array of event strings, waiting is considered to be successful after all events have been fired.'
-        ),
-    })
-    .optional(),
-  selector: z.string().optional().describe('A CSS selector of an element to take a screenshot of.'),
+  url: PuppeteerUrlSchema.optional(),
+  html: PuppeteerHtmlSchema.optional(),
+  options: PuppeteerScreenshotOptionsSchema.optional(),
+  authenticate: PuppeteerCredentialsSchema.optional(),
+  cookies: PuppeteerCookiesSchema.optional(),
+  emulate_media_type: PuppeteerEmulateMediaTypeSchema.optional(),
+  user_agent: PuppeteerUserAgentSchema.optional(),
+  viewport: PuppeteerViewportSchema.optional(),
+  block_urls: z.array(z.string()).optional(),
+  request_interception: PuppeteerRequestInterceptionSchema.optional(),
+  go_to_options: PuppeteerGoToOptionsSchema.optional(),
+  add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
+  add_style_tags: PuppeteerAddStyleTagsSchema.optional(),
+  wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
+  wait_for_timeout: z.number().optional(),
+  selector: PuppeteerSelectorSchema.optional(),
 });
 
 export class ScreenshotPostRoute implements ApiRoute {
@@ -151,7 +97,18 @@ export class ScreenshotPostRoute implements ApiRoute {
       url,
       html,
       options: screenshotOptions = {},
+      authenticate,
+      cookies,
+      emulate_media_type: emulateMediaType,
+      user_agent: userAgent,
+      viewport,
+      block_urls: blockUrls,
+      request_interception: requestInterception,
       go_to_options: goToOptions = {},
+      add_script_tags: addScriptTags,
+      add_style_tags: addStyleTags,
+      wait_for_selector: waitForSelector,
+      wait_for_timeout: waitForTimeout,
       selector,
     } = bodyValidation.data;
 
@@ -161,7 +118,49 @@ export class ScreenshotPostRoute implements ApiRoute {
 
     const page = await browser.newPage();
 
-    const parsedGoToOptions = transformKeysToCamelCase(goToOptions);
+    const cdp = await page.createCDPSession();
+
+    if (authenticate) {
+      await page.authenticate(authenticate);
+    }
+
+    if (Array.isArray(cookies) && cookies.length) {
+      const parsedCookies = cookies.map((cookie) => transformKeysToCamelCase<CookieParam>(cookie));
+      page.setCookie(...parsedCookies);
+    }
+
+    if (emulateMediaType) {
+      await page.emulateMediaType(emulateMediaType);
+    }
+
+    if (userAgent) {
+      await page.setUserAgent(userAgent);
+    }
+
+    if (viewport) {
+      const parsedViewport = transformKeysToCamelCase<Viewport>(viewport);
+      await page.setViewport(parsedViewport);
+    }
+
+    if (Array.isArray(blockUrls) && blockUrls.length) {
+      await cdp.send('Network.setBlockedURLs', {
+        urls: blockUrls,
+      });
+    }
+
+    if (
+      requestInterception &&
+      Array.isArray(requestInterception.patterns) &&
+      requestInterception.patterns.length
+    ) {
+      const parsedRequestInterception =
+        transformKeysToCamelCase<Protocol.Network.SetRequestInterceptionRequest>(
+          requestInterception
+        );
+      await cdp.send('Network.setRequestInterception', parsedRequestInterception);
+    }
+
+    const parsedGoToOptions = transformKeysToCamelCase<GoToOptions | WaitForOptions>(goToOptions);
 
     const performGoTo = url ? page.goto.bind(page) : page.setContent.bind(page);
 
@@ -175,6 +174,29 @@ export class ScreenshotPostRoute implements ApiRoute {
     }
 
     const pageResponse = await performGoTo(content, parsedGoToOptions);
+
+    if (Array.isArray(addScriptTags) && addScriptTags.length) {
+      for (const script of addScriptTags) {
+        await page.addScriptTag(script);
+      }
+    }
+
+    if (Array.isArray(addStyleTags) && addStyleTags.length) {
+      for (const style of addStyleTags) {
+        await page.addStyleTag(style);
+      }
+    }
+
+    if (waitForSelector) {
+      const { selector, ...waitForSelectorOptions } = waitForSelector;
+      const parsedWaitForSelector =
+        transformKeysToCamelCase<WaitForOptions>(waitForSelectorOptions);
+      await page.waitForSelector(selector, parsedWaitForSelector);
+    }
+
+    if (waitForTimeout) {
+      await sleep(waitForTimeout);
+    }
 
     const headers = {
       'X-Response-Code': pageResponse?.status(),
@@ -199,7 +221,7 @@ export class ScreenshotPostRoute implements ApiRoute {
       });
     }
 
-    const parsedScreenshotOptions = transformKeysToCamelCase(screenshotOptions);
+    const parsedScreenshotOptions = transformKeysToCamelCase<ScreenshotOptions>(screenshotOptions);
 
     const screenshot: string | Buffer = await target.screenshot(parsedScreenshotOptions);
 

@@ -44,6 +44,7 @@
     "consolidate": "^1.0.3",
     "cors": "^2.8.5",
     "dedent": "^1.5.3",
+    "devtools-protocol": "^0.0.1327118",
     "express": "^4.19.2",
     "fingerprint-generator": "^2.1.52",
     "fingerprint-injector": "^2.1.52",

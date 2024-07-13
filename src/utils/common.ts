@@ -1,7 +1,7 @@
 import _ from 'lodash-es';
 import { Dictionary } from '@/types';
 
-export const transformKeysToCamelCase = (obj: any) => {
+export const transformKeysToCamelCase = <T>(obj: any): T => {
   return Object.entries(obj).reduce((acc, [key, value]) => {
     const camelCaseKey = _.camelCase(key);
 
@@ -20,5 +20,7 @@ export const transformKeysToCamelCase = (obj: any) => {
     }
 
     return acc;
-  }, {} as Dictionary);
+  }, {} as Dictionary) as T;
 };
+
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

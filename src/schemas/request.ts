@@ -1,17 +1,5 @@
 import { z } from 'zod';
-
-export const BooleanOrStringSchema = z
-  .boolean()
-  .or(z.enum(['true', 'false']).transform((value) => value === 'true'));
-
-export const NumberOrStringSchema = z.number().or(
-  z
-    .string()
-    .refine((value) => !Number.isNaN(Number(value)), {
-      message: 'Value must be a number',
-    })
-    .transform((value) => Number(value))
-);
+import { BooleanOrStringSchema, NumberOrStringSchema } from './common';
 
 export const RequestLaunchQuerySchema = z.object({
   headless: BooleanOrStringSchema.or(z.enum(['shell']))
@@ -33,10 +21,3 @@ export const RequestDefaultQuerySchema = z
     unblock: BooleanOrStringSchema.describe('Whether to bypass the bot detection').optional(),
   })
   .strict();
-
-export const ResponseBodySchema = z.object({
-  data: z.unknown().optional(),
-  errors: z.array(z.unknown()).optional(),
-});
-
-export type ResponseBody = z.infer<typeof ResponseBodySchema>;

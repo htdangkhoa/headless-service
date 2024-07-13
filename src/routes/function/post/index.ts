@@ -9,13 +9,8 @@ import { zu } from 'zod_utilz';
 import dedent from 'dedent';
 
 import { Method, ApiRoute as Route } from '@/route-group';
-import {
-  RequestDefaultQuerySchema,
-  ResponseBodySchema,
-  makeExternalUrl,
-  parseSearchParams,
-  writeResponse,
-} from '@/utils';
+import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
+import { makeExternalUrl, parseSearchParams, writeResponse } from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';

@@ -6,14 +6,8 @@ import treeKill from 'tree-kill';
 
 import { Method, ApiRoute as Route } from '@/route-group';
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import {
-  NumberOrStringSchema,
-  RequestDefaultQuerySchema,
-  ResponseBodySchema,
-  env,
-  parseSearchParams,
-  writeResponse,
-} from '@/utils';
+import { env, parseSearchParams, writeResponse } from '@/utils';
+import { NumberOrStringSchema, RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
 

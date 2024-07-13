@@ -4,13 +4,12 @@ import type { IncomingMessage } from 'node:http';
 
 import { WsRoute, WsHandler } from '@/route-group';
 import {
-  BooleanOrStringSchema,
-  RequestDefaultQuerySchema,
   makeExternalUrl,
   parseSearchParams,
   parseUrlFromIncomingMessage,
   writeResponse,
 } from '@/utils';
+import { BooleanOrStringSchema, RequestDefaultQuerySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 
 // /devtools/browser/00000000-0000-0000-0000-000000000000
