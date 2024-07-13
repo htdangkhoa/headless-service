@@ -14,7 +14,7 @@ export interface IChildProcessInput {
   browserWSEndpoint: string;
   payload: {
     url: string;
-    config?: Dictionary<any>;
+    config?: Dictionary;
   };
 }
 

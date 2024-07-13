@@ -6,9 +6,15 @@ import consolidate from 'consolidate';
 import cors from 'cors';
 import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
+import dedent from 'dedent';
 
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { FunctionPostRoute, PerformancePostRoute, IndexWsRoute } from '@/routes';
+import {
+  FunctionPostRoute,
+  PerformancePostRoute,
+  ScreenshotPostRoute,
+  IndexWsRoute,
+} from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
@@ -66,6 +72,7 @@ export class HeadlessServer {
     // API Routes
     this.apiGroup.registerRoute(FunctionPostRoute);
     this.apiGroup.registerRoute(PerformancePostRoute);
+    this.apiGroup.registerRoute(ScreenshotPostRoute);
 
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
@@ -104,8 +111,17 @@ export class HeadlessServer {
     const { host, port } = this.options;
 
     this.server.listen(port, host, () => {
-      console.log(`Server running at http://${host}:${port}`);
-      console.log(`WS Proxy running at ws://${host}:${port}`);
+      const baseUrl = makeExternalUrl();
+      const wsUrl = baseUrl.replace(/^http/, 'ws');
+      const docsLink = makeExternalUrl('docs');
+      const info = dedent`
+      --------------------------------------------
+      | Host:           ${baseUrl}
+      | WS Proxy:       ${wsUrl}
+      | Documentation:  ${docsLink}
+      --------------------------------------------
+      `;
+      console.log(info);
     });
   }
 

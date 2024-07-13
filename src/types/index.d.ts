@@ -1,4 +1,4 @@
-export interface Dictionary<T> extends Record<string, T> {}
+export interface Dictionary<T = any> extends Record<string, T> {}
 
 export type Optional<T> = T | undefined;
 

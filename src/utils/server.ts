@@ -13,7 +13,7 @@ const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 export const parseSearchParams = <Schema extends z.ZodType<any, z.ZodTypeDef, any>>(
   searchParams: string | Request['query']
 ) => {
-  let query: Dictionary<any> = searchParams as Dictionary<any>;
+  let query: Dictionary = searchParams as Dictionary;
   if (typeof searchParams === 'string') {
     query = qs.parse(searchParams, { ignoreQueryPrefix: true }) as object;
   }
