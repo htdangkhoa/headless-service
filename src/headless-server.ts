@@ -19,6 +19,7 @@ import { makeExternalUrl, writeResponse } from '@/utils';
 import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
+import { PdfPostRoute } from './routes/pdf/post';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -70,9 +71,13 @@ export class HeadlessServer {
     this.app.use(timeout('30s'));
 
     // API Routes
-    this.apiGroup.registerRoute(FunctionPostRoute);
-    this.apiGroup.registerRoute(PerformancePostRoute);
-    this.apiGroup.registerRoute(ScreenshotPostRoute);
+
+    this.apiGroup.registerRoutes([
+      FunctionPostRoute,
+      PerformancePostRoute,
+      ScreenshotPostRoute,
+      PdfPostRoute,
+    ]);
 
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {

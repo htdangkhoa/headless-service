@@ -6,7 +6,7 @@ import type {
   CookieParam,
   GoToOptions,
   WaitForOptions,
-  ScreenshotOptions,
+  PDFOptions,
 } from 'puppeteer-core';
 import type { Protocol } from 'devtools-protocol';
 
@@ -22,7 +22,7 @@ import {
   PuppeteerGoToOptionsSchema,
   PuppeteerHtmlSchema,
   PuppeteerRequestInterceptionSchema,
-  PuppeteerScreenshotOptionsSchema,
+  PuppeteerPDFOptionsSchema,
   PuppeteerSelectorSchema,
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
@@ -35,7 +35,7 @@ import { PuppeteerProvider } from '@/puppeteer-provider';
 const RequestScreenshotBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),
   html: PuppeteerHtmlSchema.optional(),
-  options: PuppeteerScreenshotOptionsSchema.optional(),
+  options: PuppeteerPDFOptionsSchema.optional(),
   authenticate: PuppeteerCredentialsSchema.optional(),
   cookies: PuppeteerCookiesSchema.optional(),
   emulate_media_type: PuppeteerEmulateMediaTypeSchema.optional(),
@@ -50,17 +50,16 @@ const RequestScreenshotBodySchema = z.object({
   add_style_tags: PuppeteerAddStyleTagsSchema.optional(),
   wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
   wait_for_timeout: z.number().optional(),
-  selector: PuppeteerSelectorSchema.optional(),
 });
 
-export class ScreenshotPostRoute implements ApiRoute {
+export class PdfPostRoute implements ApiRoute {
   method = Method.POST;
-  path = '/screenshot';
+  path = '/pdf';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,
     description:
-      'A JSON-based API for getting a screenshot binary from either a supplied "url" or "html" payload in your request. Many options exist including cookies, user-agents, setting timers and network mocks.',
+      'A JSON-based API for getting a PDF binary from either a supplied "url" or "html" payload in your request. Many options exist for injecting cookies, request interceptors, user-agents and waiting for selectors, timers and more.',
     request: {
       query: RequestDefaultQuerySchema,
       body: {
@@ -99,7 +98,7 @@ export class ScreenshotPostRoute implements ApiRoute {
     const {
       url,
       html,
-      options: screenshotOptions = {},
+      options: pdfOptions = {},
       authenticate,
       cookies,
       emulate_media_type: emulateMediaType,
@@ -114,7 +113,6 @@ export class ScreenshotPostRoute implements ApiRoute {
       add_style_tags: addStyleTags,
       wait_for_selector: waitForSelector,
       wait_for_timeout: waitForTimeout,
-      selector,
     } = bodyValidation.data;
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
@@ -225,29 +223,12 @@ export class ScreenshotPostRoute implements ApiRoute {
       }
     }
 
-    const target = selector ? await page.$(selector) : page;
+    const parsedPDFOptions = transformKeysToCamelCase<PDFOptions>(pdfOptions);
 
-    if (!target) {
-      const error = new Error(`Element with selector "${selector}" not found`);
-      return writeResponse(res, HttpStatus.NOT_FOUND, {
-        body: error,
-      });
-    }
-
-    const parsedScreenshotOptions = transformKeysToCamelCase<ScreenshotOptions>(screenshotOptions);
-
-    const screenshot: string | Buffer = await target.screenshot(parsedScreenshotOptions);
+    const pdf = await page.pdf(parsedPDFOptions);
 
     await browser.close();
 
-    if (Buffer.isBuffer(screenshot)) {
-      return res.setHeader('Content-Type', 'image/*').status(HttpStatus.OK).send(screenshot);
-    }
-
-    return writeResponse(res, HttpStatus.BAD_REQUEST, {
-      body: {
-        data: screenshot as string,
-      },
-    });
+    return res.setHeader('Content-Type', 'application/pdf').status(HttpStatus.OK).send(pdf);
   };
 }
