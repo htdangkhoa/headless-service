@@ -121,7 +121,7 @@ export class PerformancePostRoute implements Route {
       timeoutId && clearTimeout(timeoutId);
       closed = true;
       timeoutId = null;
-      await puppeteerProvider.closeBrowser(browser);
+      await puppeteerProvider.complete(browser);
     };
 
     child.on('error', (error) => {

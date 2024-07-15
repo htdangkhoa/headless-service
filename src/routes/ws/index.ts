@@ -138,7 +138,7 @@ export class IndexWsRoute implements WsRoute {
         console.log('socket closed');
 
         try {
-          await puppeteerProvider.closeBrowser(browser);
+          await puppeteerProvider.complete(browser);
         } catch (error) {
           console.warn('Error closing browser', error);
         }
@@ -167,7 +167,7 @@ export class IndexWsRoute implements WsRoute {
           changeOrigin: true,
         },
         (error) => {
-          puppeteerProvider.closeBrowser(browser);
+          puppeteerProvider.complete(browser);
           return reject(error);
         }
       );

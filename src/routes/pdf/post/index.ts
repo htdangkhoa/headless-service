@@ -227,7 +227,7 @@ export class PdfPostRoute implements ApiRoute {
 
     const pdf = await page.pdf(parsedPDFOptions);
 
-    await browser.close();
+    await puppeteerProvider.complete(browser);
 
     return res.setHeader('Content-Type', 'application/pdf').status(HttpStatus.OK).send(pdf);
   };
