@@ -204,7 +204,7 @@ export class FunctionPostRoute implements Route {
       )
       .finally(async () => {
         await page.setRequestInterception(false);
-        await puppeteerProvider.closeBrowser(browser);
+        await puppeteerProvider.complete(browser);
       });
   };
 }

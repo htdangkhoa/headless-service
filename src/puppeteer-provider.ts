@@ -106,7 +106,7 @@ export class PuppeteerProvider {
     return browser;
   }
 
-  async closeBrowser(browser: Browser) {
+  async complete(browser: Browser) {
     const sessionId = browser.wsEndpoint().split('/').pop();
     const foundIndex = this.runnings.findIndex((b) => b.wsEndpoint().includes(sessionId!));
     const [found] = this.runnings.splice(foundIndex, 1);
@@ -141,6 +141,6 @@ export class PuppeteerProvider {
   }
 
   async close() {
-    await Promise.all(this.runnings.map((browser) => this.closeBrowser(browser)));
+    await Promise.all(this.runnings.map((browser) => this.complete(browser)));
   }
 }

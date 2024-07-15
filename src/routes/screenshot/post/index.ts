@@ -238,7 +238,7 @@ export class ScreenshotPostRoute implements ApiRoute {
 
     const screenshot: string | Buffer = await target.screenshot(parsedScreenshotOptions);
 
-    await browser.close();
+    await puppeteerProvider.complete(browser);
 
     if (Buffer.isBuffer(screenshot)) {
       return res.setHeader('Content-Type', 'image/*').status(HttpStatus.OK).send(screenshot);
