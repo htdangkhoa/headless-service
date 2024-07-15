@@ -6,13 +6,11 @@ import qs from 'qs';
 
 import { Dictionary } from '@/types';
 import { HttpStatus } from '@/constants';
-import { ResponseBody } from './schema';
+import { ResponseBody } from '@/schemas';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 
-export const parseSearchParams = <Schema extends z.ZodType<any, z.ZodTypeDef, any>>(
-  searchParams: string | Request['query']
-) => {
+export const parseSearchParams = (searchParams: string | Request['query']) => {
   let query: Dictionary = searchParams as Dictionary;
   if (typeof searchParams === 'string') {
     query = qs.parse(searchParams, { ignoreQueryPrefix: true }) as object;
