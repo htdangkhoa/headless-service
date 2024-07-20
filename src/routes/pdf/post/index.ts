@@ -29,6 +29,8 @@ import {
   PuppeteerViewportSchema,
   PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
+  PuppeteerWaitForEventSchema,
+  PuppeteerWaitForFunctionSchema,
 } from '@/schemas';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 
@@ -48,8 +50,10 @@ const RequestScreenshotBodySchema = z.object({
   go_to_options: PuppeteerGoToOptionsSchema.optional(),
   add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
   add_style_tags: PuppeteerAddStyleTagsSchema.optional(),
-  wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
   wait_for_timeout: z.number().optional(),
+  wait_for_function: PuppeteerWaitForFunctionSchema.optional(),
+  wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
+  wait_for_event: PuppeteerWaitForEventSchema.optional(),
 });
 
 export class PdfPostRoute implements ApiRoute {
@@ -111,8 +115,10 @@ export class PdfPostRoute implements ApiRoute {
       go_to_options: goToOptions = {},
       add_script_tags: addScriptTags,
       add_style_tags: addStyleTags,
-      wait_for_selector: waitForSelector,
       wait_for_timeout: waitForTimeout,
+      wait_for_function: waitForFunction,
+      wait_for_selector: waitForSelector,
+      wait_for_event: waitForEvent,
     } = bodyValidation.data;
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
@@ -198,6 +204,15 @@ export class PdfPostRoute implements ApiRoute {
       }
     }
 
+    if (waitForTimeout) {
+      await sleep(waitForTimeout);
+    }
+
+    if (waitForFunction) {
+      const { page_function: pageFunction, ...waitForFunctionOptions } = waitForFunction;
+      await page.waitForFunction(pageFunction, waitForFunctionOptions);
+    }
+
     if (waitForSelector) {
       const { selector, ...waitForSelectorOptions } = waitForSelector;
       const parsedWaitForSelector =
@@ -205,8 +220,9 @@ export class PdfPostRoute implements ApiRoute {
       await page.waitForSelector(selector, parsedWaitForSelector);
     }
 
-    if (waitForTimeout) {
-      await sleep(waitForTimeout);
+    if (waitForEvent) {
+      const { event_name: eventName, timeout } = waitForEvent;
+      await page.waitForEvent(eventName, timeout);
     }
 
     const headers = {

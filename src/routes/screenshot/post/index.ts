@@ -14,6 +14,7 @@ import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ApiRoute, Method } from '@/route-group';
 import { parseSearchParams, sleep, transformKeysToCamelCase, writeResponse } from '@/utils';
 import {
+  BooleanOrStringSchema,
   PuppeteerAddScriptTagsSchema,
   PuppeteerAddStyleTagsSchema,
   PuppeteerCookiesSchema,
@@ -27,6 +28,8 @@ import {
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
   PuppeteerViewportSchema,
+  PuppeteerWaitForEventSchema,
+  PuppeteerWaitForFunctionSchema,
   PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
 } from '@/schemas';
@@ -48,8 +51,11 @@ const RequestScreenshotBodySchema = z.object({
   go_to_options: PuppeteerGoToOptionsSchema.optional(),
   add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
   add_style_tags: PuppeteerAddStyleTagsSchema.optional(),
-  wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
   wait_for_timeout: z.number().optional(),
+  wait_for_function: PuppeteerWaitForFunctionSchema.optional(),
+  wait_for_selector: PuppeteerWaitForSelectorOptionsSchema.optional(),
+  wait_for_event: PuppeteerWaitForEventSchema.optional(),
+  scroll_page: BooleanOrStringSchema.optional(),
   selector: PuppeteerSelectorSchema.optional(),
 });
 
@@ -112,8 +118,11 @@ export class ScreenshotPostRoute implements ApiRoute {
       go_to_options: goToOptions = {},
       add_script_tags: addScriptTags,
       add_style_tags: addStyleTags,
-      wait_for_selector: waitForSelector,
       wait_for_timeout: waitForTimeout,
+      wait_for_function: waitForFunction,
+      wait_for_selector: waitForSelector,
+      wait_for_event: waitForEvent,
+      scroll_page: scrollPage,
       selector,
     } = bodyValidation.data;
 
@@ -200,6 +209,15 @@ export class ScreenshotPostRoute implements ApiRoute {
       }
     }
 
+    if (waitForTimeout) {
+      await sleep(waitForTimeout);
+    }
+
+    if (waitForFunction) {
+      const { page_function: pageFunction, ...waitForFunctionOptions } = waitForFunction;
+      await page.waitForFunction(pageFunction, waitForFunctionOptions);
+    }
+
     if (waitForSelector) {
       const { selector, ...waitForSelectorOptions } = waitForSelector;
       const parsedWaitForSelector =
@@ -207,8 +225,13 @@ export class ScreenshotPostRoute implements ApiRoute {
       await page.waitForSelector(selector, parsedWaitForSelector);
     }
 
-    if (waitForTimeout) {
-      await sleep(waitForTimeout);
+    if (waitForEvent) {
+      const { event_name: eventName, timeout } = waitForEvent;
+      await page.waitForEvent(eventName, timeout);
+    }
+
+    if (scrollPage) {
+      await page.scrollThroughPage();
     }
 
     const headers = {

@@ -283,6 +283,27 @@ export const PuppeteerAddStyleTagSchema = z
 
 export const PuppeteerAddStyleTagsSchema = z.array(PuppeteerAddStyleTagSchema);
 
+export const PuppeteerWaitForFunctionSchema = z.object({
+  page_function: z.string(),
+  polling: z.enum(['raf', 'mutation']).or(z.number()).optional().describe(dedent`
+      An interval at which the \`pageFunction\` is executed, defaults to \`raf\`.
+      If \`polling\` is a number, then it is treated as an interval in milliseconds at which the function would be executed.
+      If \`polling\` is a string, then it can be one of the following values:
+
+      - \`raf\` - to constantly execute \`pageFunction\` in \`requestAnimationFrame\`
+      callback. This is the tightest polling mode which is suitable to observe
+      styling changes.
+      
+      - \`mutation\` - to execute \`pageFunction\` on every DOM mutation.
+      `),
+  timeout: z
+    .number()
+    .optional()
+    .describe(
+      'Maximum time to wait in milliseconds. Pass `0` to disable timeout. Defaults to `30_000` (30 seconds).'
+    ),
+});
+
 export const PuppeteerSelectorSchema = z
   .string()
   .describe('A CSS selector of an element to take a screenshot of.');
@@ -310,6 +331,16 @@ export const PuppeteerWaitForSelectorOptionsSchema = z
       ),
   })
   .strict();
+
+export const PuppeteerWaitForEventSchema = z.object({
+  event_name: z.string().describe('The name of the event to wait for.'),
+  timeout: z
+    .number()
+    .optional()
+    .describe(
+      'Maximum time to wait in milliseconds. Pass `0` to disable timeout. Defaults to `30_000` (30 seconds).'
+    ),
+});
 
 const pdfFormats = [
   'letter',

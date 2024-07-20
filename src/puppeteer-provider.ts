@@ -7,6 +7,7 @@ import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
+import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 
@@ -30,6 +31,7 @@ export class PuppeteerProvider {
     }
   ) {
     const puppeteer = addExtra(vanillaPuppeteer);
+    puppeteer.use(HelperPlugin());
 
     // internal plugins for puppeteer extra
     const {
