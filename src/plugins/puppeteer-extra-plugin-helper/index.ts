@@ -1,8 +1,8 @@
-import { sleep } from '@/utils';
-import { Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
+import { Page } from 'puppeteer';
 
-const DEFAULT_TIMEOUT = 30000;
+import { DEFAULT_TIMEOUT } from '@/constants';
+import { sleep } from '@/utils';
 
 export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
   get name(): string {

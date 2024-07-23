@@ -20,6 +20,7 @@ import { RouteGroup } from '@/route-group';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
 import { PdfPostRoute } from './routes/pdf/post';
+import { ScrapePostRoute } from './routes/scrape/post';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -77,6 +78,7 @@ export class HeadlessServer {
       PerformancePostRoute,
       ScreenshotPostRoute,
       PdfPostRoute,
+      ScrapePostRoute,
     ]);
 
     // Error handling
