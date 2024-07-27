@@ -1,6 +1,5 @@
 import type { Handler, Request, Response } from 'express';
 import { z } from 'zod';
-import zu from 'zod_utilz';
 import type {
   Viewport,
   CookieParam,
@@ -12,7 +11,13 @@ import type { Protocol } from 'devtools-protocol';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ApiRoute, Method } from '@/route-group';
-import { parseSearchParams, sleep, transformKeysToCamelCase, writeResponse } from '@/utils';
+import {
+  parseSearchParams,
+  sleep,
+  transformKeysToCamelCase,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
 import {
   BooleanOrStringSchema,
   PuppeteerAddScriptTagsSchema,
@@ -86,7 +91,7 @@ export class ScreenshotPostRoute implements ApiRoute {
   handler?: Handler = async (req: Request, res: Response) => {
     const query = parseSearchParams(req.query);
 
-    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
@@ -94,7 +99,7 @@ export class ScreenshotPostRoute implements ApiRoute {
       });
     }
 
-    const bodyValidation = zu.useTypedParsers(RequestScreenshotBodySchema).safeParse(req.body);
+    const bodyValidation = useTypedParsers(RequestScreenshotBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

@@ -1,12 +1,11 @@
 import { Handler } from 'express';
 import { z } from 'zod';
-import { zu } from 'zod_utilz';
 import { fork } from 'node:child_process';
 import treeKill from 'tree-kill';
 
 import { Method, ApiRoute as Route } from '@/route-group';
 import { PuppeteerProvider } from '@/puppeteer-provider';
-import { env, parseSearchParams, writeResponse } from '@/utils';
+import { env, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { NumberOrStringSchema, RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
@@ -74,7 +73,7 @@ export class PerformancePostRoute implements Route {
   handler?: Handler = async (req, res) => {
     const query = parseSearchParams(req.query);
 
-    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
@@ -82,7 +81,7 @@ export class PerformancePostRoute implements Route {
       });
     }
 
-    const bodyValidation = zu.useTypedParsers(RequestPerformanceBodySchema).safeParse(req.body);
+    const bodyValidation = useTypedParsers(RequestPerformanceBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

@@ -5,12 +5,11 @@ import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
 import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
-import { zu } from 'zod_utilz';
 import dedent from 'dedent';
 
 import { Method, ApiRoute as Route } from '@/route-group';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
-import { makeExternalUrl, parseSearchParams, writeResponse } from '@/utils';
+import { makeExternalUrl, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
@@ -89,7 +88,7 @@ export class FunctionPostRoute implements Route {
   handler: Handler = async (req, res) => {
     const query = parseSearchParams(req.query);
 
-    const queryValidation = zu.useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

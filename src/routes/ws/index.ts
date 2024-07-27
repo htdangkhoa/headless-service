@@ -1,4 +1,3 @@
-import { zu } from 'zod_utilz';
 import dedent from 'dedent';
 import type { IncomingMessage } from 'node:http';
 
@@ -7,6 +6,7 @@ import {
   makeExternalUrl,
   parseSearchParams,
   parseUrlFromIncomingMessage,
+  useTypedParsers,
   writeResponse,
 } from '@/utils';
 import { BooleanOrStringSchema, RequestDefaultQuerySchema } from '@/schemas';
@@ -113,7 +113,7 @@ export class IndexWsRoute implements WsRoute {
 
     const query = parseSearchParams(url.search);
 
-    const queryValidation = zu.useTypedParsers(RequestQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
       const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
