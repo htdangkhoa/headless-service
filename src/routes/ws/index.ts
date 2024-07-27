@@ -1,7 +1,7 @@
 import dedent from 'dedent';
 import type { IncomingMessage } from 'node:http';
 
-import { WsRoute, WsHandler } from '@/route-group';
+import { ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
   makeExternalUrl,
   parseSearchParams,
@@ -12,14 +12,11 @@ import {
 import { BooleanOrStringSchema, RequestDefaultQuerySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 
-// /devtools/browser/00000000-0000-0000-0000-000000000000
-const DEVTOOLS_PATH_REGEX = /\/devtools\/browser\/([a-f0-9-]+)$/;
-
 const RequestQuerySchema = RequestDefaultQuerySchema.extend({
   live: BooleanOrStringSchema.describe('Whether to launch the browser in live mode').optional(),
 });
 
-export class IndexWsRoute implements WsRoute {
+export class IndexWsRoute extends ProxyWebSocketRoute {
   path = '/';
   swagger = {
     tags: [OPENAPI_TAGS.WS_APIS],
@@ -102,14 +99,12 @@ export class IndexWsRoute implements WsRoute {
   shouldUpgrade = (req: IncomingMessage) => {
     const url = parseUrlFromIncomingMessage(req);
 
-    return DEVTOOLS_PATH_REGEX.test(url.pathname) || url.pathname === this.path;
+    return url.pathname === this.path;
   };
-  handler: WsHandler = async (req, socket, head, context) => {
-    const { wsServer, puppeteerProvider, proxy } = context;
+  handler: WsHandler = async (req, socket, head) => {
+    const { wsServer, puppeteerProvider, proxy } = this.context;
 
     const url = parseUrlFromIncomingMessage(req);
-
-    const [, browserId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
 
     const query = parseSearchParams(url.search);
 
@@ -127,50 +122,11 @@ export class IndexWsRoute implements WsRoute {
 
     const launchBrowserOptions = Object.assign({}, queryOptions, {
       ws: isLiveMode && wsServer,
-      browserId,
     });
     const browser = await puppeteerProvider.launchBrowser(req, launchBrowserOptions);
 
     const browserWSEndpoint = browser.wsEndpoint();
 
-    return new Promise<void>((resolve, reject) => {
-      const close = async () => {
-        console.log('socket closed');
-
-        try {
-          await puppeteerProvider.complete(browser);
-        } catch (error) {
-          console.warn('Error closing browser', error);
-        }
-
-        browser.off('close', close);
-        browser.process()?.off('close', close);
-        socket.off('close', close);
-        return resolve();
-      };
-
-      browser?.once('close', close);
-      browser?.process()?.once('close', close);
-      socket.once('close', close);
-
-      req.url = '';
-
-      // Delete headers known to cause issues
-      delete req.headers.origin;
-
-      proxy.ws(
-        req,
-        socket,
-        head,
-        {
-          target: browserWSEndpoint,
-          changeOrigin: true,
-        },
-        (error) => {
-          puppeteerProvider.complete(browser);
-          return reject(error);
-        }
-      );
-    });
+    return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint);
   };
 }

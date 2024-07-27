@@ -10,7 +10,7 @@ import type {
 import type { Protocol } from 'devtools-protocol';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ApiRoute, Method } from '@/route-group';
+import { ProxyHttpRoute, Method } from '@/router';
 import {
   parseSearchParams,
   sleep,
@@ -28,7 +28,6 @@ import {
   PuppeteerHtmlSchema,
   PuppeteerRequestInterceptionSchema,
   PuppeteerPDFOptionsSchema,
-  PuppeteerSelectorSchema,
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
   PuppeteerViewportSchema,
@@ -61,7 +60,7 @@ const RequestScreenshotBodySchema = z.object({
   wait_for_event: PuppeteerWaitForEventSchema.optional(),
 });
 
-export class PdfPostRoute implements ApiRoute {
+export class PdfPostRoute extends ProxyHttpRoute {
   method = Method.POST;
   path = '/pdf';
   swagger = {

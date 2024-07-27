@@ -16,11 +16,12 @@ import {
   IndexWsRoute,
 } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
-import { RouteGroup } from '@/route-group';
+import { Group } from '@/router';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
 import { PdfPostRoute } from './routes/pdf/post';
 import { ScrapePostRoute } from './routes/scrape/post';
+import { DevtoolsBrowserWsRoute } from './routes/ws/devtools';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -42,13 +43,19 @@ export class HeadlessServer {
 
   private wsServer = new WebSocketServer({ noServer: true });
 
-  private apiGroup: RouteGroup = new RouteGroup(this.app, '/api');
-
-  private wsGroup: RouteGroup = new RouteGroup(this.server, '/', {
-    wsServer: this.wsServer,
+  private headlessServerContext = {
     puppeteerProvider: this.puppeteerProvider,
     proxy: this.proxy,
-  });
+  };
+
+  private headlessServerWebSocketContext = {
+    ...this.headlessServerContext,
+    wsServer: this.wsServer,
+  };
+
+  private apiGroup: Group = new Group(this.app, this.headlessServerContext, '/api');
+
+  private wsGroup: Group = new Group(this.server, this.headlessServerWebSocketContext, '/');
 
   private openApi = new OpenAPI([this.apiGroup, this.wsGroup]);
 
@@ -100,7 +107,7 @@ export class HeadlessServer {
       });
     }));
 
-    this.wsGroup.registerRoute(IndexWsRoute);
+    this.wsGroup.registerRoutes([DevtoolsBrowserWsRoute, IndexWsRoute]);
   }
 
   async start() {
