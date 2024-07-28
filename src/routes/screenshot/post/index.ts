@@ -10,7 +10,7 @@ import type {
 import type { Protocol } from 'devtools-protocol';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ApiRoute, Method } from '@/route-group';
+import { ProxyHttpRoute, Method } from '@/router';
 import {
   parseSearchParams,
   sleep,
@@ -64,7 +64,7 @@ const RequestScreenshotBodySchema = z.object({
   selector: PuppeteerSelectorSchema.optional(),
 });
 
-export class ScreenshotPostRoute implements ApiRoute {
+export class ScreenshotPostRoute extends ProxyHttpRoute {
   method = Method.POST;
   path = '/screenshot';
   swagger = {

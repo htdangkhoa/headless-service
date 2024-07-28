@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { fork } from 'node:child_process';
 import treeKill from 'tree-kill';
 
-import { Method, ApiRoute as Route } from '@/route-group';
+import { ProxyHttpRoute, Method } from '@/router';
 import { PuppeteerProvider } from '@/puppeteer-provider';
 import { env, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { NumberOrStringSchema, RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
@@ -18,7 +18,7 @@ const RequestPerformanceBodySchema = z
   })
   .strict();
 
-export class PerformancePostRoute implements Route {
+export class PerformancePostRoute extends ProxyHttpRoute {
   method = Method.POST;
   path = '/performance';
   swagger = {

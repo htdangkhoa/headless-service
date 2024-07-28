@@ -7,7 +7,7 @@ import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 import dedent from 'dedent';
 
-import { Method, ApiRoute as Route } from '@/route-group';
+import { ProxyHttpRoute, Method } from '@/router';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
 import { makeExternalUrl, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
@@ -27,7 +27,7 @@ declare global {
 
 const RequestFunctionBodySchema = z.string().describe('The user code to run');
 
-export class FunctionPostRoute implements Route {
+export class FunctionPostRoute extends ProxyHttpRoute {
   method = Method.POST;
   path = '/function';
   swagger = {

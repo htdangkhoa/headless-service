@@ -4,7 +4,7 @@ import type { Viewport, CookieParam, GoToOptions, WaitForOptions } from 'puppete
 import type { Protocol } from 'devtools-protocol';
 
 import { DEFAULT_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ApiRoute, Method } from '@/route-group';
+import { ProxyHttpRoute, Method } from '@/router';
 import {
   parseSearchParams,
   sleep,
@@ -131,7 +131,7 @@ const scrape = async (elements: IElementsSelector) => {
   });
 };
 
-export class ScrapePostRoute implements ApiRoute {
+export class ScrapePostRoute extends ProxyHttpRoute {
   method = Method.POST;
   path = '/scrape';
   swagger = {
