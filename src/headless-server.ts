@@ -116,7 +116,7 @@ export class HeadlessServer {
       jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'swagger.json'),
       title: 'Headless Server',
       version: '1.0.0',
-      servers: [{ url: makeExternalUrl() }],
+      servers: [{ url: makeExternalUrl('http') }],
     });
 
     this.server.timeout = 0;
@@ -125,9 +125,9 @@ export class HeadlessServer {
     const { host, port } = this.options;
 
     this.server.listen(port, host, () => {
-      const baseUrl = makeExternalUrl();
-      const wsUrl = baseUrl.replace(/^http/, 'ws');
-      const docsLink = makeExternalUrl('docs');
+      const baseUrl = makeExternalUrl('http');
+      const wsUrl = makeExternalUrl('ws');
+      const docsLink = makeExternalUrl('http', 'docs');
       const info = dedent`
       --------------------------------------------
       | Host:           ${baseUrl}

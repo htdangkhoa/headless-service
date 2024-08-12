@@ -1,20 +1,28 @@
 import { IncomingMessage } from 'node:http';
 import { resolve } from 'node:path';
-import vanillaPuppeteer, { Browser, PuppeteerLaunchOptions } from 'puppeteer';
-import { addExtra, PuppeteerExtra } from 'puppeteer-extra';
+import vanillaPuppeteer from 'puppeteer';
+import type { Browser, PuppeteerLaunchOptions } from 'puppeteer';
+import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
+import dayjs from 'dayjs';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
+import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
 import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
+import { getBrowserId } from '@/utils/puppeteer';
+
+export interface Session {
+  browserId: string;
+  browser: Browser;
+  expires_at: Date | null;
+}
 
 export class PuppeteerProvider {
-  private runnings: Browser[] = [];
-
-  private puppeteers = new WeakMap<Browser, PuppeteerExtra>();
+  private readonly sessionMap = new Map<string, Session>();
 
   async launchBrowser(
     req: IncomingMessage,
@@ -31,6 +39,7 @@ export class PuppeteerProvider {
     }
   ) {
     const puppeteer = addExtra(vanillaPuppeteer);
+    puppeteer.use(SessionPlugin(this));
     puppeteer.use(HelperPlugin());
 
     // internal plugins for puppeteer extra
@@ -45,13 +54,21 @@ export class PuppeteerProvider {
     } = options ?? {};
 
     if (browserId) {
-      const found = this.runnings.find((browser) => browser.wsEndpoint().includes(browserId!));
+      const found = this.sessionMap.get(browserId);
 
       if (!found) {
         throw new Error(`Could't locate browser "${browserId}" for request "${req.url}"`);
       }
 
-      return found;
+      if (dayjs(found.expires_at).isValid()) {
+        const now = dayjs();
+
+        if (dayjs(found.expires_at).isAfter(now)) {
+          throw new Error("Browser's session has expired");
+        }
+      }
+
+      return found.browser;
     }
 
     if (ws) {
@@ -101,48 +118,75 @@ export class PuppeteerProvider {
 
     const browser = await puppeteer.launch(opts);
 
-    this.runnings.push(browser);
+    const sessionId = getBrowserId(browser);
 
-    this.puppeteers.set(browser, puppeteer);
+    this.sessionMap.set(sessionId, {
+      browserId: sessionId,
+      browser,
+      expires_at: null,
+    });
 
     return browser;
   }
 
-  async complete(browser: Browser) {
-    const sessionId = browser.wsEndpoint().split('/').pop();
-    const foundIndex = this.runnings.findIndex((b) => b.wsEndpoint().includes(sessionId!));
-    const [found] = this.runnings.splice(foundIndex, 1);
+  async exit(browser: Browser) {
+    const pages = await browser.pages();
 
-    if (found) {
-      const puppeteer = this.puppeteers.get(found);
-      if (puppeteer) {
-        this.puppeteers.delete(found);
-      }
+    pages.forEach((page) => {
+      page.removeAllListeners();
 
-      const pages = await found.pages();
+      // @ts-ignore
+      page = null;
+    });
+    browser.removeAllListeners();
 
-      pages.forEach((page) => {
-        page.removeAllListeners();
-
-        // @ts-ignore
-        page = null;
-      });
-      found.removeAllListeners();
-
-      try {
-        await found.close();
-      } catch (error) {
-        console.error('Error closing browser', error);
-      } finally {
-        const proc = found.process();
-        if (proc && proc.pid) {
-          treeKill(proc.pid, 'SIGKILL');
-        }
+    try {
+      await browser.close();
+    } catch (error) {
+      console.error('Error closing browser', error);
+    } finally {
+      const proc = browser.process();
+      if (proc && proc.pid) {
+        treeKill(proc.pid, 'SIGKILL');
       }
     }
   }
 
+  async complete(browser: Browser) {
+    const sessionId = getBrowserId(browser);
+    const found = this.sessionMap.get(sessionId);
+
+    let shouldExit = true;
+
+    if (found && dayjs(found.expires_at).isValid()) {
+      const now = dayjs();
+
+      if (dayjs(found.expires_at).isBefore(now)) {
+        shouldExit = false;
+      }
+    }
+
+    if (shouldExit) {
+      await this.exit(browser);
+      this.sessionMap.delete(sessionId);
+    }
+  }
+
   async close() {
-    await Promise.all(this.runnings.map((browser) => this.complete(browser)));
+    const sessions = this.sessionMap.values();
+
+    const browsers = Array.from(sessions, (session) => session.browser);
+
+    await Promise.all(browsers.map((browser) => this.exit(browser)));
+  }
+
+  setExpiresAt(browserId: string, expiresAt: Date) {
+    const found = this.sessionMap.get(browserId);
+
+    if (found) {
+      found.expires_at = expiresAt;
+
+      this.sessionMap.set(browserId, found);
+    }
   }
 }

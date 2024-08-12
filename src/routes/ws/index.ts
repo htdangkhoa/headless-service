@@ -22,7 +22,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     tags: [OPENAPI_TAGS.WS_APIS],
     servers: [
       {
-        url: makeExternalUrl().replace('http', 'ws'),
+        url: makeExternalUrl('ws'),
       },
     ],
     summary: this.path,
@@ -102,7 +102,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     return url.pathname === this.path;
   };
   handler: WsHandler = async (req, socket, head) => {
-    const { wsServer, puppeteerProvider, proxy } = this.context;
+    const { wsServer, puppeteerProvider } = this.context;
 
     const url = parseUrlFromIncomingMessage(req);
 
