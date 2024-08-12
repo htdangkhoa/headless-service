@@ -6,9 +6,9 @@
   "scripts": {
     "predev": "pnpm run /^build:.*/",
     "dev": "nodemon",
-    "build:function": "node scripts/build-function.js",
-    "build:live": "node scripts/build-live.js",
-    "build:ublock": "node scripts/build-ublock.js",
+    "build:function": "node scripts/build/function.js",
+    "build:live": "node scripts/build/live.js",
+    "build:ublock": "node scripts/build/ublock.js",
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.build.json",
     "postbuild": "tsc-alias -p tsconfig.build.json -f true -fe .js",
