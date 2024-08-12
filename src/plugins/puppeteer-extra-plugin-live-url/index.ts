@@ -66,7 +66,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       });
     };
 
-    const liveUrl = makeExternalUrl(`/live?t=${targetInfo.targetId}`);
+    const liveUrl = makeExternalUrl('http', `/live?t=${targetInfo.targetId}`);
 
     await Promise.all([
       page.evaluate(setupEmbeddedAPI, liveUrl),

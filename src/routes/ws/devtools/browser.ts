@@ -1,8 +1,8 @@
 import { IncomingMessage } from 'node:http';
 
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
-import { makeExternalUrl, parseUrlFromIncomingMessage } from '@/utils';
-import { OPENAPI_TAGS } from '@/constants';
+import { makeExternalUrl, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 
 // /devtools/browser/00000000-0000-0000-0000-000000000000
 const DEVTOOLS_PATH_REGEX = /\/devtools\/browser\/([a-f0-9-]+)$/;
@@ -13,7 +13,7 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
     tags: [OPENAPI_TAGS.WS_APIS],
     servers: [
       {
-        url: makeExternalUrl().replace('http', 'ws'),
+        url: makeExternalUrl('ws'),
       },
     ],
     summary: this.path,
@@ -36,12 +36,19 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
 
     const [, browserId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
 
-    const browser = await puppeteerProvider.launchBrowser(req, {
-      browserId,
-    });
+    try {
+      const browser = await puppeteerProvider.launchBrowser(req, {
+        browserId,
+      });
 
-    const browserWSEndpoint = browser.wsEndpoint();
+      const browserWSEndpoint = browser.wsEndpoint();
 
-    return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint);
+      return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint);
+    } catch (error: any) {
+      return writeResponse(socket, HttpStatus.LOGIN_TIMEOUT, {
+        body: error,
+        message: error.message,
+      });
+    }
   };
 }

@@ -96,7 +96,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
       });
     }
 
-    const functionRequestUrl = makeExternalUrl('function');
+    const functionRequestUrl = makeExternalUrl('http', 'function');
 
     const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
 
@@ -108,12 +108,9 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     const browserWSEndpoint = browser.wsEndpoint();
     const browserWebSocketURL = new URL(browserWSEndpoint);
 
-    let externalWSEndpoint = makeExternalUrl(browserWebSocketURL.pathname);
-    externalWSEndpoint.startsWith('https')
-      ? (externalWSEndpoint = externalWSEndpoint.replace('https', 'wss'))
-      : (externalWSEndpoint = externalWSEndpoint.replace('http', 'ws'));
+    const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketURL.pathname);
 
-    const functionIndexHTML = makeExternalUrl('function', 'index.html');
+    const functionIndexHTML = makeExternalUrl('http', 'function', 'index.html');
 
     const userCode = Buffer.from(req.body).toString('utf8');
 
