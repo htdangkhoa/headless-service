@@ -42,12 +42,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       const close = async () => {
         console.log('socket closed');
 
-        // try {
-        //   await browserManager.complete(browser);
-        // } catch (error) {
-        //   console.warn('Error closing browser', error);
-        // }
-
         browser.off('close', close);
         browser.process()?.off('close', close);
         socket.off('close', close);

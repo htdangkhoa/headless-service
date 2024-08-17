@@ -33,12 +33,6 @@ export class Group {
         if (_route.shouldUpgrade(req)) {
           return _route.handler(req, socket, head);
         }
-
-        // const { wsServer } = this.serverContext as HeadlessServerWebSocketContext;
-
-        // return wsServer.handleUpgrade(req, socket, head, (ws) => {
-        //   wsServer.emit('connection', ws, req);
-        // });
       });
     } else if (route instanceof ProxyHttpRoute) {
       const _route = route;

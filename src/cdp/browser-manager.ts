@@ -195,27 +195,7 @@ export class BrowserManager {
       const response = await fetch(`http://${host}/json/protocol`);
       const protocol = await response.json();
 
-      this.protocol = {
-        version: protocol.version,
-        domains: protocol.domains.concat({
-          domain: 'HeadlessService',
-          dependencies: [],
-          types: [],
-          commands: [
-            {
-              name: 'liveURL',
-              parameters: [],
-              returns: [
-                {
-                  name: 'protocol',
-                  type: 'string',
-                  description: 'The protocol as a string.',
-                },
-              ],
-            },
-          ],
-        }),
-      };
+      this.protocol = protocol;
 
       return this.protocol;
     } catch (error) {

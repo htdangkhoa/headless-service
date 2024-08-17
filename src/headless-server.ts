@@ -76,7 +76,7 @@ export class HeadlessServer {
 
     // Middleware
     this.app.use(express.static(publicDir));
-    this.app.use(cors());
+    this.app.use(cors({ origin: '*' }));
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.raw({ type: 'application/javascript' }));

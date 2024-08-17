@@ -7,7 +7,7 @@ async function bootstrap() {
   const { env } = await import('@/utils');
   const { HeadlessServer } = await import('@/headless-server');
 
-  const host = env<string>('HOST', '0.0.0.0');
+  const host = env<string>('HOST', 'localhost');
   const port = env<number>('PORT', 3000);
 
   const headlessServer = new HeadlessServer({
