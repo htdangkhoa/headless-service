@@ -8,6 +8,7 @@ import type {
   ScreenshotOptions,
 } from 'puppeteer-core';
 import type { Protocol } from 'devtools-protocol';
+import dedent from 'dedent';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ProxyHttpRoute, Method } from '@/router';
@@ -38,7 +39,6 @@ import {
   PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
 } from '@/schemas';
-import { PuppeteerProvider } from '@/puppeteer-provider';
 
 const RequestScreenshotBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),
@@ -70,8 +70,11 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,
-    description:
-      'A JSON-based API for getting a screenshot binary from either a supplied "url" or "html" payload in your request. Many options exist including cookies, user-agents, setting timers and network mocks.',
+    description: dedent`
+      A JSON-based API for getting a screenshot binary from either a supplied "url" or "html" payload in your request.
+      
+      Many options exist including cookies, user-agents, setting timers and network mocks.
+    `,
     request: {
       query: RequestDefaultQuerySchema,
       body: {
@@ -89,6 +92,8 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
     responses: {},
   };
   handler?: Handler = async (req: Request, res: Response) => {
+    const { browserManager } = this.context;
+
     const query = parseSearchParams(req.query);
 
     const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
@@ -131,9 +136,7 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
       selector,
     } = bodyValidation.data;
 
-    const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
-
-    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data);
+    const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
     const page = await browser.newPage();
 
@@ -266,7 +269,7 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
     const screenshot: string | Buffer = await target.screenshot(parsedScreenshotOptions);
 
-    await puppeteerProvider.complete(browser);
+    await browserManager.complete(browser);
 
     if (Buffer.isBuffer(screenshot)) {
       return res.setHeader('Content-Type', 'image/*').status(HttpStatus.OK).send(screenshot);

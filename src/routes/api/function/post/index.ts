@@ -3,7 +3,6 @@ import tsc from 'typescript';
 import { randomUUID } from 'node:crypto';
 import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
-import { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 import dedent from 'dedent';
 
@@ -11,7 +10,6 @@ import { ProxyHttpRoute, Method } from '@/router';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
 import { makeExternalUrl, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
-import { PuppeteerProvider } from '@/puppeteer-provider';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
 interface IPageFunctionArguments {
@@ -35,7 +33,9 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     summary: this.path,
     description: dedent`
       A JSON or JavaScript content-type API for running puppeteer code in the browser's context.
-      Browserless sets up a blank page, injects your puppeteer code, and runs it.
+
+      Headless Service sets up a blank page, injects your puppeteer code, and runs it.
+      
       You can optionally load external libraries via the "import" module that are meant for browser usage. Values returned from the function are checked and an appropriate content-type and response is sent back to your HTTP call.
     `,
     request: {
@@ -86,6 +86,8 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     },
   };
   handler: Handler = async (req, res) => {
+    const { browserManager } = this.context;
+
     const query = parseSearchParams(req.query);
 
     const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
@@ -98,15 +100,10 @@ export class FunctionPostRoute extends ProxyHttpRoute {
 
     const functionRequestUrl = makeExternalUrl('http', 'function');
 
-    const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
-
-    const browser = await puppeteerProvider.launchBrowser(
-      req as IncomingMessage,
-      queryValidation.data
-    );
+    const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
     const browserWSEndpoint = browser.wsEndpoint();
-    const browserWebSocketURL = new URL(browserWSEndpoint);
+    const browserWebSocketURL = new URL(browserWSEndpoint!);
 
     const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketURL.pathname);
 
@@ -200,7 +197,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
       )
       .finally(async () => {
         await page.setRequestInterception(false);
-        await puppeteerProvider.complete(browser);
+        await browserManager.complete(browser);
       });
   };
 }

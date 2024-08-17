@@ -9,12 +9,8 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { BooleanOrStringSchema, RequestDefaultQuerySchema } from '@/schemas';
+import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
-
-const RequestQuerySchema = RequestDefaultQuerySchema.extend({
-  live: BooleanOrStringSchema.describe('Whether to launch the browser in live mode').optional(),
-});
 
 export class IndexWsRoute extends ProxyWebSocketRoute {
   path = '/';
@@ -27,9 +23,9 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     ],
     summary: this.path,
     description:
-      'Launch and connect to Chromium with a library like puppeteer or others that work over chrome-devtools-protocol.',
+      'Launch and connect to Browser with a library like puppeteer or others that work over chrome-devtools-protocol.',
     request: {
-      query: RequestQuerySchema,
+      query: WSDefaultQuerySchema,
     },
     responses: {
       101: {
@@ -102,13 +98,13 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     return url.pathname === this.path;
   };
   handler: WsHandler = async (req, socket, head) => {
-    const { wsServer, puppeteerProvider } = this.context;
+    const { wsServer, browserManager } = this.context;
 
     const url = parseUrlFromIncomingMessage(req);
 
     const query = parseSearchParams(url.search);
 
-    const queryValidation = useTypedParsers(RequestQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
       const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
@@ -123,10 +119,16 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     const launchBrowserOptions = Object.assign({}, queryOptions, {
       ws: isLiveMode && wsServer,
     });
-    const browser = await puppeteerProvider.launchBrowser(req, launchBrowserOptions);
+    const browser = await browserManager.requestBrowser(req, launchBrowserOptions);
 
     const browserWSEndpoint = browser.wsEndpoint();
 
-    return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint);
+    try {
+      await this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
+    } finally {
+      console.log(`WebSocket Request handler has finished.`);
+
+      browserManager.complete(browser);
+    }
   };
 }

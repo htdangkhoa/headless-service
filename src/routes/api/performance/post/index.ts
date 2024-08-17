@@ -4,7 +4,6 @@ import { fork } from 'node:child_process';
 import treeKill from 'tree-kill';
 
 import { ProxyHttpRoute, Method } from '@/router';
-import { PuppeteerProvider } from '@/puppeteer-provider';
 import { env, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { NumberOrStringSchema, RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
@@ -71,6 +70,8 @@ export class PerformancePostRoute extends ProxyHttpRoute {
     },
   };
   handler?: Handler = async (req, res) => {
+    const { browserManager } = this.context;
+
     const query = parseSearchParams(req.query);
 
     const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
@@ -91,11 +92,9 @@ export class PerformancePostRoute extends ProxyHttpRoute {
 
     const { timeout, ...childData } = bodyValidation.data;
 
-    const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
+    const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
-    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data);
-
-    const browserWSEndpoint = browser.wsEndpoint();
+    const browserWSEndpoint = browser.wsEndpoint()!;
 
     let ext = 'ts';
     if (env('NODE_ENV') === 'production') {
@@ -120,7 +119,7 @@ export class PerformancePostRoute extends ProxyHttpRoute {
       timeoutId && clearTimeout(timeoutId);
       closed = true;
       timeoutId = null;
-      await puppeteerProvider.complete(browser);
+      await browserManager.complete(browser);
     };
 
     child.on('error', (error) => {

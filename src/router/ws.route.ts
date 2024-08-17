@@ -3,9 +3,8 @@ import type { Duplex } from 'node:stream';
 import type { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import type { WebSocketServer } from 'ws';
 import type ProxyServer from 'http-proxy';
-import type { Browser } from 'puppeteer';
 
-import type { PuppeteerProvider } from '@/puppeteer-provider';
+import type { BrowserManager, BrowserCDP } from '@/cdp';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -18,7 +17,7 @@ export interface WsRoute {
 
 export interface HeadlessServerWebSocketContext {
   wsServer: WebSocketServer;
-  puppeteerProvider: PuppeteerProvider;
+  browserManager: BrowserManager;
   proxy: ProxyServer;
 }
 
@@ -34,20 +33,20 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     req: IncomingMessage,
     socket: Duplex,
     head: Buffer,
-    browser: Browser,
+    browser: BrowserCDP,
     endpoint: string
   ) {
-    const { puppeteerProvider, proxy } = this.context;
+    const { browserManager, proxy } = this.context;
 
     return new Promise<void>((resolve, reject) => {
       const close = async () => {
         console.log('socket closed');
 
-        try {
-          await puppeteerProvider.complete(browser);
-        } catch (error) {
-          console.warn('Error closing browser', error);
-        }
+        // try {
+        //   await browserManager.complete(browser);
+        // } catch (error) {
+        //   console.warn('Error closing browser', error);
+        // }
 
         browser.off('close', close);
         browser.process()?.off('close', close);
@@ -73,7 +72,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
           changeOrigin: true,
         },
         (error) => {
-          puppeteerProvider.complete(browser);
+          browserManager.close(browser);
           return reject(error);
         }
       );

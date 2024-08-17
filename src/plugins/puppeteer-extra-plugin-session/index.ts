@@ -2,14 +2,14 @@ import { Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import dayjs from 'dayjs';
 
-import { PuppeteerProvider } from '@/puppeteer-provider';
 import { getBrowserId } from '@/utils/puppeteer';
 import { makeExternalUrl } from '@/utils';
+import type { BrowserCDP } from '@/cdp';
 
 const CUSTOM_EVENT_NAME = 'headless:keepalive';
 
 export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
-  constructor(private readonly puppeteerProvider: PuppeteerProvider) {
+  constructor(private readonly browserCDP: BrowserCDP) {
     super();
   }
 
@@ -62,11 +62,10 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     const now = dayjs();
     const expiresAt = now.add(keepAlive, 'ms');
 
-    this.puppeteerProvider.setExpiresAt(sessionId, expiresAt.toDate());
+    this.browserCDP.setExpiresAt(expiresAt.toDate());
   }
 }
 
-const SessionPlugin = (puppeteerProvider: PuppeteerProvider) =>
-  new PuppeteerExtraPluginSession(puppeteerProvider);
+const SessionPlugin = (browserCDP: BrowserCDP) => new PuppeteerExtraPluginSession(browserCDP);
 
 export default SessionPlugin;

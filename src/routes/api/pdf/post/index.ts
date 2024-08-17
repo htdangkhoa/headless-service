@@ -1,9 +1,16 @@
 import type { Handler, Request, Response } from 'express';
 import { z } from 'zod';
-import type { Viewport, CookieParam, GoToOptions, WaitForOptions } from 'puppeteer-core';
+import type {
+  Viewport,
+  CookieParam,
+  GoToOptions,
+  WaitForOptions,
+  PDFOptions,
+} from 'puppeteer-core';
 import type { Protocol } from 'devtools-protocol';
+import dedent from 'dedent';
 
-import { DEFAULT_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ProxyHttpRoute, Method } from '@/router';
 import {
   parseSearchParams,
@@ -21,6 +28,7 @@ import {
   PuppeteerGoToOptionsSchema,
   PuppeteerHtmlSchema,
   PuppeteerRequestInterceptionSchema,
+  PuppeteerPDFOptionsSchema,
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
   PuppeteerViewportSchema,
@@ -29,35 +37,11 @@ import {
   PuppeteerWaitForEventSchema,
   PuppeteerWaitForFunctionSchema,
 } from '@/schemas';
-import { PuppeteerProvider } from '@/puppeteer-provider';
-import { BoundRequest } from './interfaces';
-
-const ElementSelectorSchema = z
-  .object({
-    selector: z.string(),
-    timeout: z.number().optional(),
-  })
-  .strict();
-
-const ElementsSelectorSchema = z.array(ElementSelectorSchema).min(1);
-
-interface IElementsSelector extends z.infer<typeof ElementsSelectorSchema> {}
-
-const DebugOptionsSchema = z
-  .object({
-    console: z.boolean().optional(),
-    network: z.boolean().optional(),
-    cookies: z.boolean().optional(),
-    html: z.boolean().optional(),
-    screenshot: z.boolean().optional(),
-  })
-  .strict();
 
 const RequestScreenshotBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),
   html: PuppeteerHtmlSchema.optional(),
-  elements: ElementsSelectorSchema,
-  debug_options: DebugOptionsSchema,
+  options: PuppeteerPDFOptionsSchema.optional(),
   authenticate: PuppeteerCredentialsSchema.optional(),
   cookies: PuppeteerCookiesSchema.optional(),
   emulate_media_type: PuppeteerEmulateMediaTypeSchema.optional(),
@@ -76,69 +60,17 @@ const RequestScreenshotBodySchema = z.object({
   wait_for_event: PuppeteerWaitForEventSchema.optional(),
 });
 
-const scrape = async (elements: IElementsSelector) => {
-  const wait = async (selector: string, timeout = DEFAULT_TIMEOUT) => {
-    return new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        clearTimeout(timeoutId);
-        clearInterval(intervalId);
-        return reject(new Error(`Timeout of ${timeout}ms exceeded for selector: ${selector}`));
-      }, timeout);
-      const intervalId = setInterval(() => {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length) {
-          clearTimeout(timeoutId);
-          clearInterval(intervalId);
-          return resolve();
-        }
-      }, 100);
-    });
-  };
-
-  await Promise.all(
-    elements.map(async ({ selector, timeout }) => {
-      await wait(selector, timeout);
-    })
-  );
-
-  return elements.map(({ selector }) => {
-    const $els = Array.from<HTMLElement>(document.querySelectorAll(selector));
-
-    const results = $els.map(($el) => {
-      const attributes = Array.from($el.attributes).map((attr) => ({
-        name: attr.name,
-        value: attr.value,
-      }));
-      const rect = $el.getBoundingClientRect();
-
-      return {
-        attributes,
-        left: rect.left,
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        width: $el.offsetWidth,
-        height: $el.offsetHeight,
-        text: $el.innerText,
-        html: $el.innerHTML,
-      };
-    });
-
-    return {
-      selector,
-      results,
-    };
-  });
-};
-
-export class ScrapePostRoute extends ProxyHttpRoute {
+export class PdfPostRoute extends ProxyHttpRoute {
   method = Method.POST;
-  path = '/scrape';
+  path = '/pdf';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,
-    description:
-      'A JSON-based API that returns text, html, and meta-data from a given list of selectors. Debugging information is available by sending in the appropriate flags in the "debugOpts" property. Responds with an array of JSON objects.',
+    description: dedent`
+      A JSON-based API for getting a PDF binary from either a supplied "url" or "html" payload in your request.
+      
+      Many options exist for injecting cookies, request interceptors, user-agents and waiting for selectors, timers and more.
+    `,
     request: {
       query: RequestDefaultQuerySchema,
       body: {
@@ -148,15 +80,6 @@ export class ScrapePostRoute extends ProxyHttpRoute {
             schema: RequestScreenshotBodySchema,
             example: {
               url: 'https://example.com',
-              elements: [
-                {
-                  selector: 'h1',
-                },
-                {
-                  selector: 'h2',
-                  timeout: 5000,
-                },
-              ],
             },
           },
         },
@@ -165,6 +88,8 @@ export class ScrapePostRoute extends ProxyHttpRoute {
     responses: {},
   };
   handler?: Handler = async (req: Request, res: Response) => {
+    const { browserManager } = this.context;
+
     const query = parseSearchParams(req.query);
 
     const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
@@ -186,8 +111,7 @@ export class ScrapePostRoute extends ProxyHttpRoute {
     const {
       url,
       html,
-      elements,
-      debug_options: debugOptions,
+      options: pdfOptions = {},
       authenticate,
       cookies,
       emulate_media_type: emulateMediaType,
@@ -206,43 +130,9 @@ export class ScrapePostRoute extends ProxyHttpRoute {
       wait_for_event: waitForEvent,
     } = bodyValidation.data;
 
-    const puppeteerProvider = req.app.get('puppeteerProvider') as PuppeteerProvider;
-
-    const browser = await puppeteerProvider.launchBrowser(req, queryValidation.data);
+    const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
     const page = await browser.newPage();
-
-    const messages: string[] = [];
-    const outbound: BoundRequest[] = [];
-    const inbound: BoundRequest[] = [];
-
-    if (debugOptions?.console) {
-      page.on('console', (msg) => {
-        messages.push(msg.text());
-      });
-    }
-
-    if (debugOptions?.network) {
-      await page.setRequestInterception(true);
-
-      page.on('request', (request) => {
-        outbound.push({
-          url: request.url(),
-          method: request.method(),
-          headers: request.headers(),
-        });
-
-        request.continue();
-      });
-
-      page.on('response', (response) => {
-        inbound.push({
-          url: response.url(),
-          method: response.request().method(),
-          headers: response.headers(),
-        });
-      });
-    }
 
     const cdp = await page.createCDPSession();
 
@@ -356,49 +246,12 @@ export class ScrapePostRoute extends ProxyHttpRoute {
       }
     }
 
-    const scrapeResult = await page.evaluate(scrape, elements);
+    const parsedPDFOptions = transformKeysToCamelCase<PDFOptions>(pdfOptions);
 
-    let debugCookies: Protocol.Network.Cookie[] | null = null;
-    if (debugOptions?.cookies) {
-      const cdpResult = await cdp.send('Network.getAllCookies');
-      debugCookies = cdpResult?.cookies as Protocol.Network.Cookie[];
-    }
+    const pdf = await page.pdf(parsedPDFOptions);
 
-    let debugHtml: string | null = null;
-    if (debugOptions?.html) {
-      debugHtml = await page.content();
-    }
+    await browserManager.complete(browser);
 
-    let debugScreenshot: string | null = null;
-    if (debugOptions?.screenshot) {
-      debugScreenshot = await page.screenshot({
-        encoding: 'base64',
-        quality: 20,
-        type: 'jpeg',
-        fullPage: true,
-      });
-    }
-
-    const debugResult = {
-      messages,
-      network: {
-        outbound,
-        inbound,
-      },
-      cookies: debugCookies,
-      html: debugHtml,
-      screenshot: debugScreenshot,
-    };
-
-    await puppeteerProvider.complete(browser);
-
-    return writeResponse(res, HttpStatus.OK, {
-      body: {
-        data: {
-          scrape_result: scrapeResult,
-          debug_result: debugResult,
-        },
-      },
-    });
+    return res.setHeader('Content-Type', 'application/pdf').status(HttpStatus.OK).send(pdf);
   };
 }

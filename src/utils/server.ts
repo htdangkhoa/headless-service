@@ -26,6 +26,7 @@ export const writeResponse = async (
     contentType?: string;
     message?: string;
     body?: ResponseBody | Error | Array<Error> | ZodIssue[];
+    skipValidateBody?: boolean;
   }
 ) => {
   const httpMessage = STATUS_CODES[status];
@@ -33,7 +34,7 @@ export const writeResponse = async (
   if (isHTTP(writable) && options?.body) {
     const response = writable as Response;
 
-    const { body } = options;
+    const { body, skipValidateBody } = options;
 
     if (body instanceof ZodError) {
       return response.status(status).send({
@@ -44,7 +45,7 @@ export const writeResponse = async (
       });
     }
 
-    if (['data', 'errors'].some((key) => key in body)) {
+    if (['data', 'errors'].some((key) => key in body) || skipValidateBody) {
       return response.status(status).send(body);
     }
 

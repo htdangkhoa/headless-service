@@ -30,25 +30,26 @@ export class OpenAPI {
 
         const fullPath = getFullPath(path, groupRouter.prefix);
 
-        if (method !== Method.ALL) {
-          const swaggerRouteConfig = {
-            ...swagger,
-            method,
-            path: fullPath,
-          };
+        const swaggerRouteConfig = {
+          ...swagger,
+          method,
+          path: fullPath,
+        };
 
+        if (swaggerRouteConfig.summary === path) {
+          swaggerRouteConfig.summary = fullPath;
+        }
+
+        if (method !== Method.ALL) {
           this.registry.registerPath(swaggerRouteConfig as RouteConfig);
         } else {
           const methods = Object.values(Method).filter((m) => m !== Method.ALL);
 
           methods.forEach((m) => {
-            const swaggerRouteConfig = {
-              ...swagger,
+            this.registry.registerPath({
+              ...swaggerRouteConfig,
               method: m,
-              path: fullPath,
-            };
-
-            this.registry.registerPath(swaggerRouteConfig as RouteConfig);
+            } as RouteConfig);
           });
         }
       });

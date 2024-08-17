@@ -2,7 +2,7 @@ import type { Handler } from 'express';
 import type { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import type ProxyServer from 'http-proxy';
 
-import type { PuppeteerProvider } from '@/puppeteer-provider';
+import type { BrowserManager } from '@/cdp';
 
 export enum Method {
   GET = 'get',
@@ -25,7 +25,7 @@ export interface HttpRoute {
 }
 
 export interface HeadlessServerContext {
-  puppeteerProvider: PuppeteerProvider;
+  browserManager: BrowserManager;
   proxy: ProxyServer;
 }
 

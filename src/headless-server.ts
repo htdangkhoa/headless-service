@@ -8,20 +8,25 @@ import httpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
 
-import { PuppeteerProvider } from '@/puppeteer-provider';
 import {
   FunctionPostRoute,
+  PdfPostRoute,
   PerformancePostRoute,
+  ScrapePostRoute,
   ScreenshotPostRoute,
+  JSONListGetRoute,
+  JSONNewPutRoute,
+  JSONProtocolGetRoute,
+  JSONVersionGetRoute,
+  DevtoolsBrowserWsRoute,
+  DevtoolsPageWsRoute,
   IndexWsRoute,
 } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { Group } from '@/router';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
-import { PdfPostRoute } from './routes/pdf/post';
-import { ScrapePostRoute } from './routes/scrape/post';
-import { DevtoolsBrowserWsRoute } from './routes/ws/devtools';
+import { BrowserManager } from './cdp';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -39,12 +44,12 @@ export class HeadlessServer {
 
   private proxy = httpProxy.createProxyServer({});
 
-  private puppeteerProvider = new PuppeteerProvider();
-
   private wsServer = new WebSocketServer({ noServer: true });
 
+  private browserManager = new BrowserManager();
+
   private headlessServerContext = {
-    puppeteerProvider: this.puppeteerProvider,
+    browserManager: this.browserManager,
     proxy: this.proxy,
   };
 
@@ -55,15 +60,14 @@ export class HeadlessServer {
 
   private apiGroup: Group = new Group(this.app, this.headlessServerContext, '/api');
 
+  private jsonGroup: Group = new Group(this.app, this.headlessServerContext, '/json');
+
   private wsGroup: Group = new Group(this.server, this.headlessServerWebSocketContext, '/');
 
-  private openApi = new OpenAPI([this.apiGroup, this.wsGroup]);
+  private openApi = new OpenAPI([this.apiGroup, this.jsonGroup, this.wsGroup]);
 
   constructor(options: HeadlessServerOptions) {
     this.options = options;
-
-    // Add puppeteer provider as a variable into the app settings
-    this.app.set('puppeteerProvider', this.puppeteerProvider);
 
     // Set up views
     this.app.set('views', publicDir);
@@ -79,13 +83,20 @@ export class HeadlessServer {
     this.app.use(timeout('30s'));
 
     // API Routes
-
     this.apiGroup.registerRoutes([
       FunctionPostRoute,
       PerformancePostRoute,
       ScreenshotPostRoute,
       PdfPostRoute,
       ScrapePostRoute,
+    ]);
+
+    // JSON Routes
+    this.jsonGroup.registerRoutes([
+      JSONListGetRoute,
+      JSONNewPutRoute,
+      JSONVersionGetRoute,
+      JSONProtocolGetRoute,
     ]);
 
     // Error handling
@@ -107,7 +118,7 @@ export class HeadlessServer {
       });
     }));
 
-    this.wsGroup.registerRoutes([DevtoolsBrowserWsRoute, IndexWsRoute]);
+    this.wsGroup.registerRoutes([DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, IndexWsRoute]);
   }
 
   async start() {
@@ -143,7 +154,7 @@ export class HeadlessServer {
     process.removeAllListeners();
     this.proxy.removeAllListeners();
 
-    await this.puppeteerProvider.close();
+    await this.browserManager.shutdown();
 
     setTimeout(() => {
       console.error('Could not close connections in time, forcefully shutting down');
