@@ -1,9 +1,11 @@
 import type { Express, Handler } from 'express';
-import { Server } from 'node:http';
+import type { Server } from 'node:http';
 
+import { Optional } from '@/types';
+import { writeResponse } from '@/utils';
+import { HttpStatus } from '@/constants';
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
-import { Optional } from '@/types';
 
 export type Route = ProxyHttpRoute | ProxyWebSocketRoute;
 
@@ -15,40 +17,53 @@ export class Group {
   private routes: Route[] = [];
 
   constructor(
+    readonly rClasses: Array<RouteClass>,
     private app: Express | Server,
     private serverContext: HeadlessServerContext | HeadlessServerWebSocketContext,
     public prefix?: string
-  ) {}
+  ) {
+    rClasses.forEach((clz) => {
+      const route = new clz(this.serverContext);
+      this.routes.push(route);
+    });
 
-  registerRoute(zClass: RouteClass) {
-    const route = new zClass(this.serverContext);
+    const httpRoutes = this.routes.filter((route) => route instanceof ProxyHttpRoute);
 
-    this.routes.push(route);
+    const wsRoutes = this.routes.filter((route) => route instanceof ProxyWebSocketRoute);
 
-    const fullPath = `${this.prefix ?? ''}${route.path}`.replace(/\/{2,}/g, '/');
+    this.handleHttpRoutes(httpRoutes);
 
-    if (this.app instanceof Server && route instanceof ProxyWebSocketRoute) {
-      const _route = route;
-      this.app.on('upgrade', (req, socket, head) => {
-        if (_route.shouldUpgrade(req)) {
-          return _route.handler(req, socket, head);
-        }
-      });
-    } else if (route instanceof ProxyHttpRoute) {
-      const _route = route;
-
-      const handlers = Array<Optional<Handler>>()
-        .concat(_route.handler, _route.handlers)
-        .filter(Boolean);
-
-      (this.app as Express)[_route.method](fullPath, handlers as Array<Handler>);
-    } else {
-      throw new Error('Unsupported route type');
-    }
+    this.handleWebSocketRoutes(wsRoutes);
   }
 
-  registerRoutes(zClasses: Array<RouteClass>) {
-    zClasses.forEach(this.registerRoute.bind(this));
+  private getFullPath(route: Route) {
+    return `${this.prefix ?? ''}${route.path}`.replace(/\/{2,}/g, '/');
+  }
+
+  private handleHttpRoutes(routes: ProxyHttpRoute[]) {
+    routes.forEach((route) => {
+      const fullPath = this.getFullPath(route);
+
+      const handlers = Array<Optional<Handler>>()
+        .concat(route.handler, route.handlers)
+        .filter(Boolean);
+
+      (this.app as Express)[route.method](fullPath, handlers as Array<Handler>);
+    });
+  }
+
+  private handleWebSocketRoutes(routes: ProxyWebSocketRoute[]) {
+    this.app.on('upgrade', (req, socket, head) => {
+      const route = routes.find((r) => r.shouldUpgrade(req));
+
+      if (route) {
+        return route.handler(req, socket, head);
+      }
+
+      return writeResponse(socket, HttpStatus.NOT_FOUND, {
+        message: 'Not found',
+      });
+    });
   }
 
   getRoutes() {

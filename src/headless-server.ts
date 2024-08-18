@@ -58,11 +58,26 @@ export class HeadlessServer {
     wsServer: this.wsServer,
   };
 
-  private apiGroup: Group = new Group(this.app, this.headlessServerContext, '/api');
+  private apiGroup: Group = new Group(
+    [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
+    this.app,
+    this.headlessServerContext,
+    '/api'
+  );
 
-  private jsonGroup: Group = new Group(this.app, this.headlessServerContext, '/json');
+  private jsonGroup: Group = new Group(
+    [JSONListGetRoute, JSONNewPutRoute, JSONVersionGetRoute, JSONProtocolGetRoute],
+    this.app,
+    this.headlessServerContext,
+    '/json'
+  );
 
-  private wsGroup: Group = new Group(this.server, this.headlessServerWebSocketContext, '/');
+  private wsGroup: Group = new Group(
+    [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, IndexWsRoute],
+    this.server,
+    this.headlessServerWebSocketContext,
+    '/'
+  );
 
   private openApi = new OpenAPI([this.apiGroup, this.jsonGroup, this.wsGroup]);
 
@@ -82,23 +97,6 @@ export class HeadlessServer {
     this.app.use(express.raw({ type: 'application/javascript' }));
     this.app.use(timeout('30s'));
 
-    // API Routes
-    this.apiGroup.registerRoutes([
-      FunctionPostRoute,
-      PerformancePostRoute,
-      ScreenshotPostRoute,
-      PdfPostRoute,
-      ScrapePostRoute,
-    ]);
-
-    // JSON Routes
-    this.jsonGroup.registerRoutes([
-      JSONListGetRoute,
-      JSONNewPutRoute,
-      JSONVersionGetRoute,
-      JSONProtocolGetRoute,
-    ]);
-
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
       console.error(err);
@@ -117,8 +115,6 @@ export class HeadlessServer {
         body: err,
       });
     }));
-
-    this.wsGroup.registerRoutes([DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, IndexWsRoute]);
   }
 
   async start() {
