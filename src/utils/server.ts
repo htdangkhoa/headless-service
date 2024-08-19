@@ -80,7 +80,11 @@ export const writeResponse = async (
 };
 
 export const getFullPath = (path: string, prefix?: string) =>
-  [prefix, path]
+  ([] as string[])
+    .concat(prefix ?? '', path)
     .filter(Boolean)
     .join('')
-    .replace(/\/{2,}/g, '/');
+    // Replace multiple slashes with a single slash
+    .replace(/\/{2,}/g, '/')
+    // Remove trailing slash
+    .replace(/\/$/, '') || '/';

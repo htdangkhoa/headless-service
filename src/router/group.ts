@@ -2,7 +2,7 @@ import type { Express, Handler } from 'express';
 import type { Server } from 'node:http';
 
 import { Optional } from '@/types';
-import { writeResponse } from '@/utils';
+import { getFullPath, writeResponse } from '@/utils';
 import { HttpStatus } from '@/constants';
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
@@ -36,13 +36,9 @@ export class Group {
     this.handleWebSocketRoutes(wsRoutes);
   }
 
-  private getFullPath(route: Route) {
-    return `${this.prefix ?? ''}${route.path}`.replace(/\/{2,}/g, '/');
-  }
-
   private handleHttpRoutes(routes: ProxyHttpRoute[]) {
     routes.forEach((route) => {
-      const fullPath = this.getFullPath(route);
+      const fullPath = getFullPath(route.path, this.prefix);
 
       const handlers = Array<Optional<Handler>>()
         .concat(route.handler, route.handlers)

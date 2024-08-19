@@ -103,7 +103,7 @@ export class JSONProtocolGetRoute extends ProxyHttpRoute {
     const meta = await browserManager.getJSONProtocol();
 
     return writeResponse(res, HttpStatus.OK, {
-      body: meta,
+      body: meta!,
       skipValidateBody: true,
     });
   };

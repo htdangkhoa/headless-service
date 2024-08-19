@@ -3,6 +3,7 @@ export * from './api/pdf/post';
 export * from './api/performance/post';
 export * from './api/scrape/post';
 export * from './api/screenshot/post';
+export * from './json/get';
 export * from './json/list/get';
 export * from './json/new/put';
 export * from './json/protocol/get';
