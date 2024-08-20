@@ -91,8 +91,6 @@ export class ScreencastView {
 
   private resizeWindow = debounce(
     () => {
-      console.log('resize window');
-
       const { width, height } = window.document.body.getBoundingClientRect();
 
       this.$canvas.width = width;
@@ -175,8 +173,6 @@ export class ScreencastView {
   }
 
   async onOpen(event: Event) {
-    console.log('on open');
-
     // hide notification
     this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
@@ -280,8 +276,6 @@ export class ScreencastView {
   }
 
   async onMessage(event: MessageEvent) {
-    console.log('on message');
-
     const text = event.data;
 
     const { command, data } = JSON.parse(text);
@@ -304,8 +298,6 @@ export class ScreencastView {
   }
 
   async onClose(event: CloseEvent) {
-    console.log('on close');
-
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 
@@ -318,8 +310,6 @@ export class ScreencastView {
   }
 
   async onError(event: Event) {
-    console.log('on error', event);
-
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 

@@ -10,4 +10,5 @@ export * from './json/protocol/get';
 export * from './json/version/get';
 export * from './ws/devtools/browser';
 export * from './ws/devtools/page';
+export * from './ws/live';
 export * from './ws';

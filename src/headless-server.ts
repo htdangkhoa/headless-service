@@ -21,6 +21,7 @@ import {
   JSONVersionGetRoute,
   DevtoolsBrowserWsRoute,
   DevtoolsPageWsRoute,
+  LiveIndexWsRoute,
   IndexWsRoute,
 } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
@@ -74,7 +75,7 @@ export class HeadlessServer {
   );
 
   private wsGroup: Group = new Group(
-    [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, IndexWsRoute],
+    [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, LiveIndexWsRoute, IndexWsRoute],
     this.server,
     this.headlessServerWebSocketContext,
     '/'

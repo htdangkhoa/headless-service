@@ -1,5 +1,5 @@
-import dedent from 'dedent';
 import type { IncomingMessage } from 'node:http';
+import dedent from 'dedent';
 
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
@@ -9,7 +9,7 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
+import { WSDefaultQuerySchema } from '@/schemas';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 
 export class IndexWsRoute extends ProxyWebSocketRoute {
@@ -40,7 +40,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     },
     'x-codeSamples': [
       {
-        lang: 'JavaScript',
+        lang: 'TypeScript',
         label: 'Example',
         source: dedent`
           import puppeteer from 'puppeteer-core';

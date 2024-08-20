@@ -78,13 +78,3 @@ export const writeResponse = async (
   response.write(httpResponse);
   return response.end();
 };
-
-export const getFullPath = (path: string, prefix?: string) =>
-  ([] as string[])
-    .concat(prefix ?? '', path)
-    .filter(Boolean)
-    .join('')
-    // Replace multiple slashes with a single slash
-    .replace(/\/{2,}/g, '/')
-    // Remove trailing slash
-    .replace(/\/$/, '') || '/';
