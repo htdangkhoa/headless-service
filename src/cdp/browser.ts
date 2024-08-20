@@ -110,9 +110,7 @@ export class BrowserCDP extends EventEmitter {
   }
 
   id() {
-    if (!this.browser) {
-      throw new Error(`${this.constructor.name} is not launched yet`);
-    }
+    if (!this.browser) return '';
 
     return getBrowserId(this.browser);
   }
@@ -121,10 +119,12 @@ export class BrowserCDP extends EventEmitter {
     if (this.browser) {
       this.emit('close');
       this.browser.removeAllListeners();
+      this.removeAllListeners();
       this.browser.close();
       this.browser = null;
       this.browserWSEndpoint = null;
       this.wsServer = null;
+      this.expiresAt = null;
     }
   }
 

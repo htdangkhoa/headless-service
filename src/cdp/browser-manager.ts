@@ -55,6 +55,8 @@ export class BrowserManager {
   }
 
   async close(browser: BrowserCDP) {
+    const sessionId = browser.id();
+
     const pages = await browser.pages();
 
     pages.forEach((page) => {
@@ -67,13 +69,13 @@ export class BrowserManager {
 
     try {
       browser.close();
-    } catch (error) {
-      console.error('Error closing browser', error);
     } finally {
       const proc = browser.process();
       if (proc && proc.pid) {
         treeKill(proc.pid, 'SIGKILL');
       }
+
+      this.browsers.delete(sessionId);
     }
   }
 
@@ -94,7 +96,6 @@ export class BrowserManager {
 
     if (shouldExit) {
       await this.close(browser);
-      this.browsers.delete(sessionId);
     }
   }
 
@@ -102,6 +103,10 @@ export class BrowserManager {
     const browsers = Array.from(this.browsers.values()).filter(Boolean);
 
     await Promise.all(browsers.map((browser) => this.close(browser)));
+
+    this.browsers.clear();
+
+    this.protocol = null;
   }
 
   async getJSONList() {

@@ -65,4 +65,8 @@ export class Group {
   getRoutes() {
     return this.routes;
   }
+
+  shutdown() {
+    this.routes = [];
+  }
 }

@@ -1,10 +1,10 @@
 import path from 'node:path';
-import { createServer } from 'node:http';
+import { createServer, type Server } from 'node:http';
 import express, { ErrorRequestHandler } from 'express';
 import timeout from 'connect-timeout';
 import consolidate from 'consolidate';
 import cors from 'cors';
-import httpProxy from 'http-proxy';
+import HttpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
 
@@ -42,9 +42,9 @@ export class HeadlessServer {
 
   private app = express();
 
-  private server = createServer(this.app);
+  private server: Server | null = createServer(this.app);
 
-  private proxy = httpProxy.createProxyServer({});
+  private proxy: HttpProxy | null = HttpProxy.createProxyServer({});
 
   private wsServer = new WebSocketServer({ noServer: true });
 
@@ -52,7 +52,7 @@ export class HeadlessServer {
 
   private headlessServerContext = {
     browserManager: this.browserManager,
-    proxy: this.proxy,
+    proxy: this.proxy!,
   };
 
   private headlessServerWebSocketContext = {
@@ -76,7 +76,7 @@ export class HeadlessServer {
 
   private wsGroup: Group = new Group(
     [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, LiveIndexWsRoute, IndexWsRoute],
-    this.server,
+    this.server!,
     this.headlessServerWebSocketContext,
     '/'
   );
@@ -128,12 +128,12 @@ export class HeadlessServer {
       servers: [{ url: makeExternalUrl('http') }],
     });
 
-    this.server.timeout = 0;
-    this.server.keepAliveTimeout = 0;
+    this.server!.timeout = 0;
+    this.server!.keepAliveTimeout = 0;
 
     const { host, port } = this.options;
 
-    this.server.listen(port, host, () => {
+    this.server!.listen(port, host, () => {
       const baseUrl = makeExternalUrl('http');
       const wsUrl = makeExternalUrl('ws');
       const docsLink = makeExternalUrl('http', 'docs');
@@ -148,25 +148,34 @@ export class HeadlessServer {
     });
   }
 
-  async close() {
-    process.removeAllListeners();
-    this.proxy.removeAllListeners();
+  private async shutdownServer() {
+    await new Promise((resolve) => this.server!.close(resolve));
+    this.server?.removeAllListeners();
+    this.server = null;
+  }
 
+  private async shutdownProxy() {
+    await new Promise<void>((resolve) => this.proxy!.close(resolve));
+    this.proxy?.removeAllListeners();
+    this.proxy = null;
+  }
+
+  async shutdownRouteGroups() {
+    await Promise.all([
+      [this.apiGroup, this.jsonGroup, this.wsGroup].map((group) => group.shutdown()),
+    ]);
+  }
+
+  async shutdownBrowserManager() {
     await this.browserManager.shutdown();
+  }
 
-    setTimeout(() => {
-      console.error('Could not close connections in time, forcefully shutting down');
-      return process.exit(1);
-    }, 5000);
-
-    return this.server.close((err) => {
-      if (err) {
-        console.error(err);
-        return process.exit(1);
-      }
-
-      console.log('Server closed');
-      return process.exit(0);
-    });
+  async stop() {
+    await Promise.all([
+      this.shutdownServer(),
+      this.shutdownProxy(),
+      this.shutdownBrowserManager(),
+      this.shutdownRouteGroups(),
+    ]);
   }
 }
