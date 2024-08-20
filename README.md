@@ -11,9 +11,13 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 
 ## Environment Variables
 
-- `HOST`: The host where the service will be listening. Default: `0.0.0.0`
-- `PORT`: The port where the service will be listening. Default: `3000`
-- `EXTERNAL_ADDRESS` The external address that will be used to connect to the service.
+| Name                        | Description                                                      | Default     |
+|-----------------------------|------------------------------------------------------------------|-------------|
+| `HOST`                      | The host where the service will be listening                     | `localhost` |
+| `PORT`                      | The port where the service will be listening                     | `3000`      |
+| `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service |             |
+| `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                | `false`     |
+| `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   |             |
 
 ## Usage
 
@@ -52,7 +56,7 @@ import puppeteer from 'puppeteer-core';
 
 async function main() {
   const browser = await puppeteer.connect({
-    browserWSEndpoint: 'ws://127.0.0.1:3000',
+    browserWSEndpoint: 'ws://localhost:3000',
   });
 
   const page = await browser.newPage();
