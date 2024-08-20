@@ -68,6 +68,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const liveUrl = makeExternalUrl('http', `/live?t=${targetInfo.targetId}`);
 
+    await page.waitForNetworkIdle({ idleTime: 500 });
     await Promise.all([
       page.evaluate(setupEmbeddedAPI, liveUrl),
       page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl),
