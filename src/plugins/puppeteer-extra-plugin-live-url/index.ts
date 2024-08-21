@@ -6,6 +6,14 @@ import { IncomingMessage } from 'node:http';
 import { makeExternalUrl, parseUrlFromIncomingMessage } from '@/utils';
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 
+declare global {
+  interface Window {
+    liveURL: () => string;
+
+    liveComplete: () => void;
+  }
+}
+
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
 
@@ -152,8 +160,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           await client.send(payload.command);
 
           await page.evaluate(() => {
-            // @ts-ignore
-            window.liveComplete();
+            window && typeof window.liveComplete === 'function' && window.liveComplete();
           });
 
           break;
