@@ -2,6 +2,7 @@ import os from 'node:os';
 import { createWriteStream, ReadStream, renameSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import extractZip from 'extract-zip';
+import { downloadFile } from './utils/download.js';
 
 const API_RELEASE_URL = 'https://api.github.com/repos/gorhill/uBlock/releases/latest';
 
@@ -18,17 +19,6 @@ const extractedDir = `${tmpdir}/${extensionName}`;
 const extensionDir = `${process.cwd()}/extensions`;
 
 const extensionPath = join(extensionDir, extensionName);
-
-async function downloadFile(url, path) {
-  return fetch(url).then((response) => {
-    return new Promise((resolve, reject) => {
-      return ReadStream.fromWeb(response.body)
-        .pipe(createWriteStream(path))
-        .on('error', reject)
-        .on('finish', resolve);
-    });
-  });
-}
 
 async function main() {
   if (existsSync(extensionPath)) {
@@ -52,6 +42,7 @@ async function main() {
   renameSync(extractedDir, extensionPath);
 
   rmSync(zipFileName, { recursive: true, force: true });
+  rmSync(extractedDir, { recursive: true, force: true });
 }
 
 main().catch((e) => {
