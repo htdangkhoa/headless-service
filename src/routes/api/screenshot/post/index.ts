@@ -267,17 +267,24 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
     const parsedScreenshotOptions = transformKeysToCamelCase<ScreenshotOptions>(screenshotOptions);
 
-    const screenshot: string | Buffer = await target.screenshot(parsedScreenshotOptions);
+    const screenshot: string | Uint8Array = await target.screenshot(parsedScreenshotOptions);
 
     await browserManager.complete(browser);
 
-    if (Buffer.isBuffer(screenshot)) {
-      return res.setHeader('Content-Type', 'image/*').status(HttpStatus.OK).send(screenshot);
+    if (screenshot instanceof Uint8Array) {
+      const buffer = Buffer.alloc(screenshot.length);
+      screenshot.forEach((byte, index) => {
+        buffer[index] = byte;
+      });
+
+      const mimeType = ['image', parsedScreenshotOptions.type ?? 'png'].join('/');
+
+      return res.setHeader('Content-Type', mimeType).status(HttpStatus.OK).send(buffer);
     }
 
     return writeResponse(res, HttpStatus.BAD_REQUEST, {
       body: {
-        data: screenshot as string,
+        data: 'done',
       },
     });
   };
