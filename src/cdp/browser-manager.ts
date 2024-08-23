@@ -15,7 +15,9 @@ export interface IRequestBrowserOptions extends BrowserCDPOptions {
 }
 
 export class BrowserManager {
-  private readonly browsers = new Map<string, BrowserCDP>();
+  private browsers = new Map<string, BrowserCDP>();
+
+  private timers = new Map<string, NodeJS.Timeout>();
 
   private protocol: Dictionary | null = null;
 
@@ -76,6 +78,12 @@ export class BrowserManager {
       }
 
       this.browsers.delete(sessionId);
+
+      const timer = this.timers.get(sessionId);
+      if (timer) {
+        clearTimeout(timer);
+        this.timers.delete(sessionId);
+      }
     }
   }
 
@@ -89,8 +97,20 @@ export class BrowserManager {
     if (found && dayjs(found.expiresAt).isValid()) {
       const now = dayjs();
 
-      if (dayjs(found.expiresAt).isBefore(now)) {
+      const expiresAt = dayjs(found.expiresAt);
+
+      if (expiresAt.isBefore(now)) {
         shouldExit = false;
+        const timeout = now.diff(expiresAt);
+
+        const timer = setTimeout(() => {
+          const browser = this.browsers.get(sessionId);
+          if (browser) {
+            this.close(browser);
+          }
+        }, timeout);
+
+        this.timers.set(sessionId, timer);
       }
     }
 
@@ -103,8 +123,10 @@ export class BrowserManager {
     const browsers = Array.from(this.browsers.values()).filter(Boolean);
 
     await Promise.all(browsers.map((browser) => this.close(browser)));
-
     this.browsers.clear();
+
+    this.timers.forEach((timer) => clearTimeout(timer));
+    this.timers.clear();
 
     this.protocol = null;
   }
