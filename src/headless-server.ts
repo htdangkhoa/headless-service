@@ -29,6 +29,7 @@ import { Group } from '@/router';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
 import { BrowserManager } from './cdp';
+import { Logger } from './logger';
 
 export interface HeadlessServerOptions {
   port?: number;
@@ -38,6 +39,8 @@ export interface HeadlessServerOptions {
 const publicDir = path.resolve(process.cwd(), 'public');
 
 export class HeadlessServer {
+  private readonly logger = new Logger(this.constructor.name);
+
   private options: HeadlessServerOptions;
 
   private app = express();
@@ -101,7 +104,7 @@ export class HeadlessServer {
 
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
-      console.error(err);
+      this.logger.error(err);
       return next(err);
     }));
     this.app.use(<ErrorRequestHandler>((err, req, res, next) => {
@@ -144,7 +147,7 @@ export class HeadlessServer {
       | Documentation:  ${docsLink}
       --------------------------------------------
       `;
-      console.log(info);
+      this.logger.info(`\n${info}`);
     });
   }
 

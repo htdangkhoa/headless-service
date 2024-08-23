@@ -5,6 +5,7 @@ import { IncomingMessage } from 'node:http';
 
 import { makeExternalUrl, parseUrlFromIncomingMessage } from '@/utils';
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
+import { Logger } from '@/logger';
 
 declare global {
   interface Window {
@@ -15,13 +16,15 @@ declare global {
 }
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
+  private readonly logger = new Logger(this.constructor.name);
+
   private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
 
   constructor(private ws: WebSocketServer) {
     super();
 
     this.ws.once('connection', async (socket, req) => {
-      console.log('connected from plugins');
+      this.logger.info('connected from plugins');
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
     });
@@ -155,7 +158,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_COMMANDS.STOP_SCREENCAST: {
-          console.log('Stopping screencast');
+          this.logger.info('Stopping screencast');
 
           await client.send(payload.command);
 
@@ -170,7 +173,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
             ['Delete', 'Backspace'].includes(payload.params.code) &&
             payload.params.type === 'keyDown'
           ) {
-            console.log('Backspace detected');
+            this.logger.info('Backspace detected');
 
             await page.keyboard.press('Backspace');
           } else {
@@ -186,8 +189,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         }
       }
     } catch (error) {
-      console.error('Error sending command', error);
-      console.debug('Payload params', payload.params);
+      this.logger.error('Error sending command', error);
+      this.logger.debug('Payload params', payload.params);
     }
   }
 }

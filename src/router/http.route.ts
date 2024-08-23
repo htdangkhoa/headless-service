@@ -3,6 +3,7 @@ import type { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager } from '@/cdp';
+import { Logger } from '@/logger';
 
 export enum Method {
   GET = 'get',
@@ -30,6 +31,8 @@ export interface HeadlessServerContext {
 }
 
 export abstract class ProxyHttpRoute implements HttpRoute {
+  readonly logger = new Logger(this.constructor.name);
+
   constructor(protected context: HeadlessServerContext) {}
 
   abstract method: Method;

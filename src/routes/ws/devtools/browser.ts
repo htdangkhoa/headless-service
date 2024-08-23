@@ -53,7 +53,7 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
         message: error.message,
       });
     } finally {
-      console.log(`WebSocket Request handler has finished.`);
+      this.logger.info(`WebSocket Request handler has finished.`);
 
       browserManager.complete(browser);
     }

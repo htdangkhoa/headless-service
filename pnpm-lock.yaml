@@ -68,6 +68,9 @@ dependencies:
   tree-kill:
     specifier: ^1.2.2
     version: 1.2.2
+  tslog:
+    specifier: ^4.9.3
+    version: 4.9.3
   typescript:
     specifier: ^5.5.4
     version: 5.5.4
@@ -3522,6 +3525,11 @@ packages:
 
   /tslib@2.6.3:
     resolution: {integrity: sha512-xNvxJEOUiWPGhUuUdQgAJPKOOJfGnIyKySOc09XkKsgdUV/3E2zvwZYdejjmRgPCgcym1juLH3226yA7sEFJKQ==}
+    dev: false
+
+  /tslog@4.9.3:
+    resolution: {integrity: sha512-oDWuGVONxhVEBtschLf2cs/Jy8i7h1T+CpdkTNWQgdAF7DhRo2G8vMCgILKe7ojdEkLhICWgI1LYSSKaJsRgcw==}
+    engines: {node: '>=16'}
     dev: false
 
   /tsx@4.10.3:

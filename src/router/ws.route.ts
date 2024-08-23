@@ -5,6 +5,7 @@ import type { WebSocketServer } from 'ws';
 import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager, BrowserCDP } from '@/cdp';
+import { Logger } from '@/logger';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -22,6 +23,8 @@ export interface HeadlessServerWebSocketContext {
 }
 
 export abstract class ProxyWebSocketRoute implements WsRoute {
+  readonly logger = new Logger(this.constructor.name);
+
   constructor(protected context: HeadlessServerWebSocketContext) {}
 
   abstract path: string;
@@ -40,7 +43,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
     return new Promise<void>((resolve, reject) => {
       const close = async () => {
-        console.log('socket closed');
+        this.logger.info('socket closed');
 
         browser.off('close', close);
         browser.process()?.off('close', close);

@@ -123,7 +123,7 @@ export class PerformancePostRoute extends ProxyHttpRoute {
     };
 
     child.on('error', (error) => {
-      console.error(error);
+      this.logger.error(error);
       return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
         body: error,
       });

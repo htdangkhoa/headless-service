@@ -43,7 +43,7 @@ export class BrowserCDP extends EventEmitter {
   async launch() {
     const puppeteer = addExtra(vanillaPuppeteer);
 
-    // // internal plugins for puppeteer extra
+    // internal plugins for puppeteer extra
     puppeteer.use(SessionPlugin(this));
     puppeteer.use(HelperPlugin());
 
@@ -98,7 +98,7 @@ export class BrowserCDP extends EventEmitter {
       handleSIGTERM: false,
       handleSIGHUP: false,
       waitForInitialPage: false,
-      ignoreHTTPSErrors: true,
+      acceptInsecureCerts: true,
     };
 
     const vanillaBrowser = await puppeteer.launch(opts);

@@ -92,7 +92,7 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
     try {
       await this.proxyWebSocket(req, socket, head, browser, pageWSEndpoint);
     } finally {
-      console.log(`WebSocket Request handler has finished.`);
+      this.logger.info(`WebSocket Request handler has finished.`);
 
       browserManager.complete(browser);
     }

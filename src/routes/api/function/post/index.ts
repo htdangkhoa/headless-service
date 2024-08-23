@@ -145,12 +145,12 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     const onResponse = (response: HTTPResponse) => {
       if (!response.ok()) {
         const requestUrl = response.url();
-        console.error(`Received a non-200 response for request ${requestUrl}`);
+        this.logger.error(`Received a non-200 response for request ${requestUrl}`);
       }
     };
 
     const onConsole = (message: ConsoleMessage) => {
-      console.log(`${message.type()}: ${message.text()}`);
+      this.logger.info(`${message.type()}: ${message.text()}`);
     };
 
     page.on('request', onRequest);
