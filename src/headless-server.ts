@@ -60,28 +60,13 @@ export class HeadlessServer {
     wsServer: this.wsServer,
   };
 
-  private apiGroup: Group = new Group(
-    [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
-    this.app,
-    this.headlessServerContext,
-    '/api'
-  );
+  private apiGroup: Group;
 
-  private jsonGroup: Group = new Group(
-    [JSONGetRoute, JSONListGetRoute, JSONNewPutRoute, JSONVersionGetRoute, JSONProtocolGetRoute],
-    this.app,
-    this.headlessServerContext,
-    '/json'
-  );
+  private jsonGroup: Group;
 
-  private wsGroup: Group = new Group(
-    [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, LiveIndexWsRoute, IndexWsRoute],
-    this.server!,
-    this.headlessServerWebSocketContext,
-    '/'
-  );
+  private wsGroup: Group;
 
-  private openApi = new OpenAPI([this.apiGroup, this.jsonGroup, this.wsGroup]);
+  private openApi: OpenAPI;
 
   constructor(options: HeadlessServerOptions) {
     this.options = options;
@@ -98,6 +83,28 @@ export class HeadlessServer {
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.raw({ type: 'application/javascript' }));
     this.app.use(timeout('30s'));
+
+    // Routes
+    this.apiGroup = new Group(
+      [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
+      this.app,
+      this.headlessServerContext,
+      '/api'
+    );
+
+    this.jsonGroup = new Group(
+      [JSONGetRoute, JSONListGetRoute, JSONNewPutRoute, JSONVersionGetRoute, JSONProtocolGetRoute],
+      this.app,
+      this.headlessServerContext,
+      '/json'
+    );
+
+    this.wsGroup = new Group(
+      [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, LiveIndexWsRoute, IndexWsRoute],
+      this.server!,
+      this.headlessServerWebSocketContext,
+      '/'
+    );
 
     // Error handling
     this.app.use(<ErrorRequestHandler>((err, _req, _res, next) => {
@@ -117,6 +124,8 @@ export class HeadlessServer {
         body: err,
       });
     }));
+
+    this.openApi = new OpenAPI([this.apiGroup, this.jsonGroup, this.wsGroup]);
   }
 
   async start() {
