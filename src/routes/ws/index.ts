@@ -126,7 +126,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     try {
       await this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
     } finally {
-      console.log(`WebSocket Request handler has finished.`);
+      this.logger.info(`WebSocket Request handler has finished.`);
 
       browserManager.complete(browser);
     }

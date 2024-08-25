@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
+import { Logger } from './logger';
 
 extendZodWithOpenApi(z);
 
 async function bootstrap() {
+  const logger = new Logger();
+
   const { env } = await import('@/utils');
   const { HeadlessServer } = await import('@/headless-server');
 
@@ -18,35 +21,35 @@ async function bootstrap() {
 
   process
     .on('unhandledRejection', async (reason, promise) => {
-      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
     })
     .once('uncaughtException', async (err, origin) => {
-      console.error('Unhandled exception at:', origin, 'error:', err);
+      logger.error('Unhandled exception at:', origin, 'error:', err);
       await headlessServer.stop();
       process.exit(1);
     })
     .once('SIGTERM', async () => {
-      console.log(`SIGTERM received, saving and closing down`);
+      logger.info(`SIGTERM received, saving and closing down`);
       await headlessServer.stop();
       process.exit(0);
     })
     .once('SIGINT', async () => {
-      console.log(`SIGINT received, saving and closing down`);
+      logger.info(`SIGINT received, saving and closing down`);
       await headlessServer.stop();
       process.exit(0);
     })
     .once('SIGHUP', async () => {
-      console.log(`SIGHUP received, saving and closing down`);
+      logger.info(`SIGHUP received, saving and closing down`);
       await headlessServer.stop();
       process.exit(0);
     })
     .once('SIGUSR2', async () => {
-      console.log(`SIGUSR2 received, saving and closing down`);
+      logger.info(`SIGUSR2 received, saving and closing down`);
       await headlessServer.stop();
       process.exit(0);
     })
     .once('exit', () => {
-      console.log(`Process is finished, exiting`);
+      logger.info(`Process is finished, exiting`);
       process.exit(0);
     });
 }

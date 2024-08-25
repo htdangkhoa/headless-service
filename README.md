@@ -11,13 +11,15 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 
 ## Environment Variables
 
-| Name                        | Description                                                      | Default     |
-|-----------------------------|------------------------------------------------------------------|-------------|
-| `HOST`                      | The host where the service will be listening                     | `localhost` |
-| `PORT`                      | The port where the service will be listening                     | `3000`      |
-| `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service |             |
-| `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                | `false`     |
-| `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   |             |
+| Name                        | Description                                                      | Default                         |
+|-----------------------------|------------------------------------------------------------------|---------------------------------|
+| `SERVICE_NAME`              | The name of the service                                          | `headless-service`              |
+| `HOST`                      | The host where the service will be listening                     | `localhost`                     |
+| `PORT`                      | The port where the service will be listening                     | `3000`                          |
+| `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service |                                 |
+| `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                | `false`                         |
+| `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   |                                 |
+| `DEBUG`                     | Enable the debug mode                                            | `headless-service*,-**:verbose` |
 
 ## Usage
 

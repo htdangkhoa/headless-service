@@ -3,8 +3,13 @@ import { Page, CDPSession, Target } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
-import { makeExternalUrl, parseUrlFromIncomingMessage } from '@/utils';
+import {
+  makeExternalUrl,
+  parseUrlFromIncomingMessage,
+  patchNamedFunctionESBuildIssue2605,
+} from '@/utils';
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
+import { Logger } from '@/logger';
 
 declare global {
   interface Window {
@@ -15,13 +20,18 @@ declare global {
 }
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
+  private readonly logger = new Logger(this.constructor.name);
+
   private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
 
-  constructor(private ws: WebSocketServer) {
+  constructor(
+    private ws: WebSocketServer,
+    private requestId?: string
+  ) {
     super();
 
     this.ws.once('connection', async (socket, req) => {
-      console.log('connected from plugins');
+      this.logger.info('connected from plugins', this.requestId);
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
     });
@@ -59,6 +69,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
+    await patchNamedFunctionESBuildIssue2605(page);
+
     const client = await page.createCDPSession();
 
     const { targetInfo } = await client.send('Target.getTargetInfo');
@@ -74,12 +86,16 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       });
     };
 
-    const liveUrl = makeExternalUrl('http', `/live?t=${targetInfo.targetId}`);
+    const liveUrl = new URL(makeExternalUrl('http', `/live`));
+    liveUrl.searchParams.set('t', targetInfo.targetId);
+    if (this.requestId) {
+      liveUrl.searchParams.set('request_id', this.requestId);
+    }
 
     await page.waitForNetworkIdle({ idleTime: 500 });
     await Promise.all([
-      page.evaluate(setupEmbeddedAPI, liveUrl),
-      page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl),
+      page.evaluate(setupEmbeddedAPI, liveUrl.href),
+      page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href),
     ]);
   }
 
@@ -155,7 +171,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_COMMANDS.STOP_SCREENCAST: {
-          console.log('Stopping screencast');
+          this.logger.info('Stopping screencast');
 
           await client.send(payload.command);
 
@@ -170,7 +186,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
             ['Delete', 'Backspace'].includes(payload.params.code) &&
             payload.params.type === 'keyDown'
           ) {
-            console.log('Backspace detected');
+            this.logger.info('Backspace detected');
 
             await page.keyboard.press('Backspace');
           } else {
@@ -186,12 +202,13 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         }
       }
     } catch (error) {
-      console.error('Error sending command', error);
-      console.debug('Payload params', payload.params);
+      this.logger.error('Error sending command', error);
+      this.logger.debug('Payload params', payload.params);
     }
   }
 }
 
-const LiveUrlPlugin = (ws: WebSocketServer) => new PuppeteerExtraPluginLiveUrl(ws);
+const LiveUrlPlugin = (ws: WebSocketServer, requestId?: string) =>
+  new PuppeteerExtraPluginLiveUrl(ws, requestId);
 
 export default LiveUrlPlugin;

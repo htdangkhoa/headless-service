@@ -1,11 +1,13 @@
 import type { Express, Handler } from 'express';
-import type { Server } from 'node:http';
+import type { Server, IncomingMessage } from 'node:http';
+import type { Duplex } from 'node:stream';
 
-import { Optional } from '@/types';
-import { getFullPath, writeResponse } from '@/utils';
+import { Maybe, Optional } from '@/types';
+import { getFullPath, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
 import { HttpStatus } from '@/constants';
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
+import { RequestIdContext } from '@/request-id-context';
 
 export type Route = ProxyHttpRoute | ProxyWebSocketRoute;
 
@@ -31,12 +33,22 @@ export class Group {
 
     const wsRoutes = this.routes.filter((route) => route instanceof ProxyWebSocketRoute);
 
-    this.handleHttpRoutes(httpRoutes);
+    httpRoutes.length && this.handleHttpRoutes(httpRoutes);
 
-    this.handleWebSocketRoutes(wsRoutes);
+    wsRoutes.length && this.handleWebSocketRoutes(wsRoutes);
   }
 
   private handleHttpRoutes(routes: ProxyHttpRoute[]) {
+    (this.app as Express).use((req, _, next) => {
+      const requestId = req.query.request_id as Maybe<string>;
+
+      return RequestIdContext.getInstance().run({ requestId }, () => {
+        req.requestId = requestId;
+
+        return next();
+      });
+    });
+
     routes.forEach((route) => {
       const fullPath = getFullPath(route.path, this.prefix);
 
@@ -49,15 +61,24 @@ export class Group {
   }
 
   private handleWebSocketRoutes(routes: ProxyWebSocketRoute[]) {
-    this.app.on('upgrade', (req, socket, head) => {
-      const route = routes.find((r) => r.shouldUpgrade(req));
+    this.app.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+      const url = parseUrlFromIncomingMessage(req);
 
-      if (route) {
-        return route.handler(req, socket, head);
-      }
+      const requestId = url.searchParams.get('request_id');
 
-      return writeResponse(socket, HttpStatus.NOT_FOUND, {
-        message: 'Not found',
+      return RequestIdContext.getInstance().run({ requestId }, () => {
+        req.requestId = requestId;
+        socket.requestId = requestId;
+
+        const route = routes.find((r) => r.shouldUpgrade(req));
+
+        if (route) {
+          return route.handler(req, socket, head);
+        }
+
+        return writeResponse(socket, HttpStatus.NOT_FOUND, {
+          message: 'Not found',
+        });
       });
     });
   }

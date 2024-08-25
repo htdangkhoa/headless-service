@@ -8,6 +8,7 @@ import { WebSocketServer } from 'ws';
 import { BrowserCDP, BrowserCDPOptions } from './browser';
 import { Dictionary } from '@/types';
 import { makeExternalUrl } from '@/utils';
+import { Logger } from '@/logger';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -15,6 +16,8 @@ export interface IRequestBrowserOptions extends BrowserCDPOptions {
 }
 
 export class BrowserManager {
+  private readonly logger = new Logger(this.constructor.name);
+
   private browsers = new Map<string, BrowserCDP>();
 
   private timers = new Map<string, NodeJS.Timeout>();
@@ -198,7 +201,7 @@ export class BrowserManager {
         webSocketDebuggerUrl,
       };
     } catch (error) {
-      console.error('Error getting JSON version', error);
+      this.logger.error('Error getting JSON version', error);
 
       throw new Error('Error getting JSON version');
     } finally {
@@ -226,7 +229,7 @@ export class BrowserManager {
 
       return this.protocol;
     } catch (error) {
-      console.error('Error getting JSON protocol', error);
+      this.logger.error('Error getting JSON protocol', error);
 
       throw new Error('Error getting JSON protocol');
     } finally {

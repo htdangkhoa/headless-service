@@ -20,6 +20,7 @@ export interface BrowserCDPOptions {
   proxy?: string;
   block_ads?: boolean;
   unblock?: boolean;
+  request_id?: string;
 }
 
 export class BrowserCDP extends EventEmitter {
@@ -43,7 +44,7 @@ export class BrowserCDP extends EventEmitter {
   async launch() {
     const puppeteer = addExtra(vanillaPuppeteer);
 
-    // // internal plugins for puppeteer extra
+    // internal plugins for puppeteer extra
     puppeteer.use(SessionPlugin(this));
     puppeteer.use(HelperPlugin());
 
@@ -54,10 +55,11 @@ export class BrowserCDP extends EventEmitter {
       block_ads: blockAds,
       proxy,
       launch: launchOptions,
+      request_id: requestId,
     } = this.options ?? {};
 
     if (this.wsServer instanceof WebSocketServer) {
-      puppeteer.use(LiveUrlPlugin(this.wsServer));
+      puppeteer.use(LiveUrlPlugin(this.wsServer, requestId));
     }
 
     if (stealth) {
@@ -98,7 +100,7 @@ export class BrowserCDP extends EventEmitter {
       handleSIGTERM: false,
       handleSIGHUP: false,
       waitForInitialPage: false,
-      ignoreHTTPSErrors: true,
+      acceptInsecureCerts: true,
     };
 
     const vanillaBrowser = await puppeteer.launch(opts);

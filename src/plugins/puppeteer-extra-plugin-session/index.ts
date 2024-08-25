@@ -2,7 +2,7 @@ import { Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import dayjs from 'dayjs';
 
-import { getBrowserId } from '@/utils/puppeteer';
+import { getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
 import { makeExternalUrl } from '@/utils';
 import type { BrowserCDP } from '@/cdp';
 
@@ -18,6 +18,8 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
+    await patchNamedFunctionESBuildIssue2605(page);
+
     const browser = page.browser();
 
     const sessionId = getBrowserId(browser);

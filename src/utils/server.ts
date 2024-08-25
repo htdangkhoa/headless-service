@@ -63,6 +63,8 @@ export const writeResponse = async (
     return response.status(status).send({ errors });
   }
 
+  const socket = writable as Duplex;
+
   const httpResponse = [
     `HTTP/1.1 ${status} ${httpMessage}`,
     `Content-Type: ${options?.contentType ?? 'text/plain'}`,
@@ -71,10 +73,10 @@ export const writeResponse = async (
     'Connection: keep-alive',
     '\r\n',
     options?.message ?? httpMessage,
-  ].join('\r\n');
+  ]
+    .filter(Boolean)
+    .join('\r\n');
 
-  const response = writable as Duplex;
-
-  response.write(httpResponse);
-  return response.end();
+  socket.write(httpResponse);
+  return socket.end();
 };
