@@ -1,4 +1,4 @@
-import type { Browser } from 'puppeteer';
+import type { Browser, Page } from 'puppeteer';
 import { HEADLESS_PAGE_IDENTIFIER } from '@/constants';
 
 export const getBrowserId = (browser: Browser): string => {
@@ -14,4 +14,21 @@ export const generatePageId = (): string => {
     .join('');
 
   return HEADLESS_PAGE_IDENTIFIER.concat(id);
+};
+
+declare global {
+  interface Window {
+    __name: (func: Function) => Function;
+  }
+}
+
+/** Error [ReferenceError]: __name is not defined
+ * Issue: https://github.com/evanw/esbuild/issues/2605
+ * Solution: https://github.com/evanw/esbuild/issues/2605#issuecomment-2050808084 (comment)
+ */
+export const patchNamedFunctionESBuildIssue2605 = (page: Page) => {
+  return Promise.race([
+    page.evaluateOnNewDocument(() => (window.__name = (func: Function) => func)),
+    page.evaluate(() => (window.__name = (func: Function) => func)),
+  ]);
 };

@@ -156,7 +156,7 @@ export class HeadlessServer {
       | Documentation:  ${docsLink}
       --------------------------------------------
       `;
-      this.logger.info(`\n${info}`);
+      console.log(info);
     });
   }
 
@@ -164,6 +164,16 @@ export class HeadlessServer {
     await new Promise((resolve) => this.server!.close(resolve));
     this.server?.removeAllListeners();
     this.server = null;
+  }
+
+  private async shutdownWsServer() {
+    await new Promise<void>((resolve, reject) =>
+      this.wsServer.close((err) => {
+        if (err) return reject(err);
+        return resolve();
+      })
+    );
+    this.wsServer.removeAllListeners();
   }
 
   private async shutdownProxy() {
@@ -184,6 +194,7 @@ export class HeadlessServer {
 
   async stop() {
     await Promise.all([
+      this.shutdownWsServer(),
       this.shutdownServer(),
       this.shutdownProxy(),
       this.shutdownBrowserManager(),

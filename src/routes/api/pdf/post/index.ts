@@ -1,4 +1,4 @@
-import type { Handler, Request, Response } from 'express';
+import type { Handler } from 'express';
 import { z } from 'zod';
 import type {
   Viewport,
@@ -87,7 +87,7 @@ export class PdfPostRoute extends ProxyHttpRoute {
     },
     responses: {},
   };
-  handler?: Handler = async (req: Request, res: Response) => {
+  handler?: Handler = async (req, res) => {
     const { browserManager } = this.context;
 
     const query = parseSearchParams(req.query);

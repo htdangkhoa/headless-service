@@ -1,54 +1,59 @@
-import { BaseLogger } from 'tslog';
-import { env } from './utils';
+import debug from 'debug';
 
-export enum LogLevel {
-  SILLY,
-  TRACE,
-  DEBUG,
-  INFO,
-  WARN,
-  ERROR,
-  FATAL,
-}
+import { env } from './utils';
+import { RequestIdContext } from './request-id-context';
 
 export class Logger {
   private serviceName = env('SERVICE_NAME');
 
-  private readonly instance = new BaseLogger({ name: this.serviceName });
+  private readonly requestIdContext = RequestIdContext.getInstance();
 
-  private logger = this.instance;
+  private _trace: (...args: unknown[]) => void;
+  private _debug: (...args: unknown[]) => void;
+  private _info: (...args: unknown[]) => void;
+  private _warn: (...args: unknown[]) => void;
+  private _error: (...args: unknown[]) => void;
+  private _fatal: (...args: unknown[]) => void;
 
   constructor(domain?: string) {
-    if (domain) {
-      this.logger = this.instance.getSubLogger({ name: domain });
-    }
+    let fullDomain = [this.serviceName, domain].filter(Boolean).join(':');
+
+    const logger = debug(fullDomain);
+
+    this._trace = logger.extend('trace');
+    this._debug = logger.extend('debug');
+    this._info = logger.extend('info');
+    this._warn = logger.extend('warn');
+    this._error = logger.extend('error');
+    this._fatal = logger.extend('fatal');
   }
 
-  silly(...args: unknown[]) {
-    return this.logger.log(LogLevel.SILLY, LogLevel[LogLevel.SILLY], ...args);
+  private requestId() {
+    const id = this.requestIdContext.getStore()?.requestId;
+    return !id ? '[undefined]' : id;
   }
 
   trace(...args: unknown[]) {
-    return this.logger.log(LogLevel.TRACE, LogLevel[LogLevel.TRACE], ...args);
+    return this._trace(this.requestId(), ...args);
   }
 
   debug(...args: unknown[]) {
-    return this.logger.log(LogLevel.DEBUG, LogLevel[LogLevel.DEBUG], ...args);
+    return this._debug(this.requestId(), ...args);
   }
 
   info(...args: unknown[]) {
-    return this.logger.log(LogLevel.INFO, LogLevel[LogLevel.INFO], ...args);
+    return this._info(this.requestId(), ...args);
   }
 
   warn(...args: unknown[]) {
-    return this.logger.log(LogLevel.WARN, LogLevel[LogLevel.WARN], ...args);
+    return this._warn(this.requestId(), ...args);
   }
 
   error(...args: unknown[]) {
-    return this.logger.log(LogLevel.ERROR, LogLevel[LogLevel.ERROR], ...args);
+    return this._error(this.requestId(), ...args);
   }
 
   fatal(...args: unknown[]) {
-    return this.logger.log(LogLevel.FATAL, LogLevel[LogLevel.FATAL], ...args);
+    return this._fatal(this.requestId(), ...args);
   }
 }

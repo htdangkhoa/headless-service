@@ -19,18 +19,10 @@ export const RequestDefaultQuerySchema = z
     proxy: z.string().describe('The proxy server to use').optional(),
     block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
     unblock: BooleanOrStringSchema.describe('Whether to bypass the bot detection').optional(),
+    request_id: z.string().describe('The request ID').optional(),
   })
   .strict();
 
-export const WSDefaultQuerySchema = z
-  .object({
-    launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
-    stealth: BooleanOrStringSchema.describe(
-      'Whether to run the browser in stealth mode'
-    ).optional(),
-    proxy: z.string().describe('The proxy server to use').optional(),
-    block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
-    unblock: BooleanOrStringSchema.describe('Whether to bypass the bot detection').optional(),
-    live: BooleanOrStringSchema.describe('Whether to launch the browser in live mode').optional(),
-  })
-  .strict();
+export const WSDefaultQuerySchema = RequestDefaultQuerySchema.extend({
+  live: BooleanOrStringSchema.describe('Whether to launch the browser in live mode').optional(),
+}).strict();
