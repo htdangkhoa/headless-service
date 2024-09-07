@@ -4,15 +4,10 @@ let desktopMediaRequestId = null;
 
 let recorder = null;
 
-let filename = null;
-
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((msg) => {
     console.log(msg);
     switch (msg.type) {
-      case 'SET_EXPORT_PATH':
-        filename = msg.filename;
-        break;
       case 'REC_STOP':
         recorder.stop();
         break;
@@ -77,13 +72,7 @@ chrome.runtime.onConnect.addListener((port) => {
 
                   const url = URL.createObjectURL(superBuffer);
 
-                  chrome.downloads.download(
-                    {
-                      url: url,
-                      filename: filename,
-                    },
-                    () => {}
-                  );
+                  chrome.downloads.download({ url: url });
                 };
 
                 recorder.start();
@@ -98,14 +87,33 @@ chrome.runtime.onConnect.addListener((port) => {
     }
   });
 
-  chrome.downloads.onChanged.addListener(function (delta) {
+  let blobUrl = null;
+
+  function onDownloadCreated(item) {
+    blobUrl = item.finalUrl;
+  }
+
+  if (!chrome.downloads.onCreated.hasListener(onDownloadCreated)) {
+    chrome.downloads.onCreated.addListener(onDownloadCreated);
+  }
+
+  function onDownloadChanged(delta) {
     if (!delta.state || delta.state.current != 'complete') {
       return;
     }
     try {
+      let filename;
+      if (blobUrl) {
+        const url = new URL(blobUrl);
+        filename = url.pathname.split('/').pop().concat('.webm');
+      }
       const tab = port.sender.tab;
-      chrome.tabs.sendMessage(tab.id, { type: 'DOWNLOAD_COMPLETE' });
+      chrome.tabs.sendMessage(tab.id, { type: 'DOWNLOAD_COMPLETE', data: filename });
       port.postMessage({ downloadComplete: true });
     } catch (e) {}
-  });
+  }
+
+  if (!chrome.downloads.onChanged.hasListener(onDownloadChanged)) {
+    chrome.downloads.onChanged.addListener(onDownloadChanged);
+  }
 });

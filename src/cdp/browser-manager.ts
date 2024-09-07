@@ -13,6 +13,7 @@ import { Logger } from '@/logger';
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
   ws?: WebSocketServer | false;
+  record?: boolean;
 }
 
 export class BrowserManager {
@@ -25,7 +26,7 @@ export class BrowserManager {
   private protocol: Dictionary | null = null;
 
   async requestBrowser(req: IncomingMessage, options?: IRequestBrowserOptions) {
-    const { browserId, ws, ...browserCDPOptions } = options ?? {};
+    const { browserId, ws, record, ...browserCDPOptions } = options ?? {};
 
     if (browserId) {
       const found = this.browsers.get(browserId);
@@ -51,6 +52,7 @@ export class BrowserManager {
     if (ws instanceof WebSocketServer) {
       browser.setWsServer(ws);
     }
+    browser.setRecord(!!record);
     await browser.launch();
 
     const sessionId = browser.id();

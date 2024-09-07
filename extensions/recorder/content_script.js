@@ -1,15 +1,8 @@
 chrome.runtime.onMessage.addListener(function (msg, sender, response) {
-  console.log('🚀 ~ msg:', msg);
-  switch (msg.type) {
-    case 'DOWNLOAD_COMPLETE':
-      const e = new CustomEvent('DOWNLOAD_COMPLETE');
-      window.dispatchEvent(e);
-      break;
-    default:
-      console.warn('Unrecognized message', msg);
-
-      break;
-  }
+  const e = new CustomEvent(msg.type, {
+    detail: msg.data,
+  });
+  window.dispatchEvent(e);
 });
 
 window.onload = () => {
