@@ -45,7 +45,7 @@ export class BrowserCDP extends EventEmitter {
     const puppeteer = addExtra(vanillaPuppeteer);
 
     // internal plugins for puppeteer extra
-    puppeteer.use(SessionPlugin(this));
+    puppeteer.use(SessionPlugin());
     puppeteer.use(HelperPlugin());
 
     const {

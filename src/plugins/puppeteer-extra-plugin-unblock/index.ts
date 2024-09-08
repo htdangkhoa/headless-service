@@ -32,6 +32,9 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
       this.generator.getFingerprint(this.options?.fingerprintOptions ?? {});
 
     const injector = new FingerprintInjector();
+
+    if (page.isClosed()) return;
+
     await injector.attachFingerprintToPuppeteer(page, fingerprintWithHeaders);
   }
 
