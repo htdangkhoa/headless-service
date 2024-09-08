@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page, CDPSession, Target } from 'puppeteer';
+import { Page, CDPSession, Target, Frame } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
@@ -69,13 +69,40 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
+    page.on('framenavigated', this.onFrameNavigated.bind(this));
+
+    this.injectLiveUrlAPI(page);
+  }
+
+  private async onFrameNavigated(frame: Frame) {
+    if (frame.detached) return;
+
+    if (frame.parentFrame()?.detached) return;
+
+    const page = frame.page();
+
+    if (page.isClosed()) return;
+
+    this.injectLiveUrlAPI(frame);
+  }
+
+  private async injectLiveUrlAPI(target: Page | Frame) {
+    if (!(target instanceof Page) && !(target instanceof Frame))
+      throw new Error('Target must be either a Page or a Frame');
+
+    let page: Page;
+
+    if (target instanceof Page) {
+      page = target;
+    } else {
+      page = (<Frame>target).page();
+    }
 
     const client = await page.createCDPSession();
 
-    const { targetInfo } = await client.send('Target.getTargetInfo');
-
-    this.pageMap.set(targetInfo.targetId, { page, cdp: client });
+    const {
+      targetInfo: { targetId },
+    } = await client.send('Target.getTargetInfo');
 
     const setupEmbeddedAPI = (_liveUrl: string) => {
       Object.defineProperty(window, 'liveURL', {
@@ -87,16 +114,21 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     };
 
     const liveUrl = new URL(makeExternalUrl('http', `/live`));
-    liveUrl.searchParams.set('t', targetInfo.targetId);
+    liveUrl.searchParams.set('t', targetId);
     if (this.requestId) {
       liveUrl.searchParams.set('request_id', this.requestId);
     }
 
-    await page.waitForNetworkIdle({ idleTime: 500 });
-    await Promise.all([
-      page.evaluate(setupEmbeddedAPI, liveUrl.href),
-      page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href),
-    ]);
+    const promises: any[] = [
+      target.waitForNavigation(),
+      target.evaluate(setupEmbeddedAPI, liveUrl.href),
+    ];
+
+    if (target instanceof Page) {
+      promises.push(target.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href));
+    }
+
+    await Promise.allSettled(promises);
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
