@@ -1,13 +1,10 @@
-import { env } from '@/utils';
+import { env } from '@/utils/env';
 
 export const EXTENSION_TITLE = env('SERVICE_NAME', '')?.concat('Cam').trim();
 
-export const RECORDER_ACTIONS = {
-  REC_CLIENT_PLAY: 'REC_CLIENT_PLAY',
+export const ACTIONS = {
+  REC_START: 'REC_START',
   REC_STOP: 'REC_STOP',
-  SET_EXPORT_PATH: 'SET_EXPORT_PATH',
 } as const;
 
-export const CUSTOM_EVENT_NAMES = {
-  DOWNLOAD_COMPLETE: 'DOWNLOAD_COMPLETE',
-} as const;
+export const CUSTOM_EVENT_NAME = 'headless:download_complete';

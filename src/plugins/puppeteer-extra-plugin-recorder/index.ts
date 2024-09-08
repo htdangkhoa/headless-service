@@ -1,18 +1,22 @@
 import type { Page, Frame } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import os from 'node:os';
+import path from 'node:path';
 
-import { env, patchNamedFunctionESBuildIssue2605, sleep } from '@/utils';
-import { CUSTOM_EVENT_NAMES, EXTENSION_TITLE, RECORDER_ACTIONS } from '@/constants';
+import { env, getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
+import { ACTIONS, CUSTOM_EVENT_NAME, EXTENSION_TITLE } from '@/constants';
+import { Logger } from '@/logger';
 
 export interface IEmbeddedAPIMeta {
   extensionTitle: string;
-  actions: typeof RECORDER_ACTIONS;
+  actions: typeof ACTIONS;
   downloadDir: string;
-  customEventNames: typeof CUSTOM_EVENT_NAMES;
+  customEventName: typeof CUSTOM_EVENT_NAME;
 }
 
 export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
+  private logger = new Logger(this.constructor.name);
+
   private readonly defaultDownloadDir: string = env('DOWNLOAD_RECORDER_DIR', os.tmpdir())!;
 
   private pages: Set<Page> = new Set();
@@ -28,10 +32,15 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
   async onPageCreated(page: Page): Promise<void> {
     this.pages.add(page);
 
+    const browser = page.browser();
+    const browserId = getBrowserId(browser);
+
+    this.logger.info(`Browser ID: ${browserId}`);
+
     const cdp = await page.createCDPSession();
     await cdp.send('Browser.setDownloadBehavior', {
       behavior: 'allow',
-      downloadPath: this.defaultDownloadDir,
+      downloadPath: path.join(this.defaultDownloadDir, browserId),
     });
 
     await patchNamedFunctionESBuildIssue2605(page);
@@ -58,7 +67,7 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
     if (frame.detached) return;
 
     const setupEmbeddedAPI = (meta: IEmbeddedAPIMeta) => {
-      const { extensionTitle, actions, downloadDir, customEventNames } = meta;
+      const { extensionTitle, actions, downloadDir, customEventName } = meta;
 
       if (!window.recorder) {
         Object.defineProperty(window, 'recorder', {
@@ -71,7 +80,7 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
               document.title = extensionTitle;
               window.postMessage(
                 {
-                  type: actions.REC_CLIENT_PLAY,
+                  type: actions.REC_START,
                   data: {
                     url: window.location.origin,
                     original_title: originalTitle,
@@ -87,20 +96,14 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
               return new Promise((resolve) => {
                 window.postMessage({ type: actions.REC_STOP }, '*');
 
-                window.addEventListener(
-                  customEventNames.DOWNLOAD_COMPLETE,
-                  function onDownloadComplete(e) {
-                    window.removeEventListener(
-                      customEventNames.DOWNLOAD_COMPLETE,
-                      onDownloadComplete
-                    );
+                window.addEventListener(customEventName, function onDownloadComplete(e) {
+                  window.removeEventListener(customEventName, onDownloadComplete);
 
-                    // @ts-ignore
-                    const filename = [downloadDir, e.detail].join('/');
+                  // @ts-ignore
+                  const filename = [downloadDir, e.detail].join('/');
 
-                    return resolve(filename);
-                  }
-                );
+                  return resolve(filename);
+                });
               });
             },
           },
@@ -112,9 +115,9 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
       frame.waitForNavigation({ timeout: 0 }),
       frame.evaluate(setupEmbeddedAPI, <IEmbeddedAPIMeta>{
         extensionTitle: EXTENSION_TITLE,
-        actions: RECORDER_ACTIONS,
+        actions: ACTIONS,
         downloadDir: this.defaultDownloadDir,
-        customEventNames: CUSTOM_EVENT_NAMES,
+        customEventName: CUSTOM_EVENT_NAME,
       }),
     ]);
   }
