@@ -71,7 +71,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   async onPageCreated(page: Page): Promise<void> {
     page.on('framenavigated', this.onFrameNavigated.bind(this));
 
-    this.injectLiveUrlAPI(page);
+    await Promise.allSettled([page.waitForNavigation({ timeout: 0 }), this.injectLiveUrlAPI(page)]);
   }
 
   private async onFrameNavigated(frame: Frame) {
@@ -83,7 +83,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     if (page.isClosed()) return;
 
-    this.injectLiveUrlAPI(frame);
+    await this.injectLiveUrlAPI(frame);
   }
 
   private async injectLiveUrlAPI(target: Page | Frame) {
@@ -104,6 +104,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       targetInfo: { targetId },
     } = await client.send('Target.getTargetInfo');
 
+    this.pageMap.set(targetId, { page, cdp: client });
+
     const setupEmbeddedAPI = (_liveUrl: string) => {
       Object.defineProperty(window, 'liveURL', {
         configurable: false,
@@ -120,12 +122,12 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
 
     const promises: any[] = [
-      target.waitForNavigation(),
+      target.waitForNavigation({ timeout: 0 }),
       target.evaluate(setupEmbeddedAPI, liveUrl.href),
     ];
 
     if (target instanceof Page) {
-      promises.push(target.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href));
+      promises.push(page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href));
     }
 
     await Promise.allSettled(promises);
