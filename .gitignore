@@ -143,4 +143,3 @@ public/docs/*
 
 extensions/*
 !extensions/.gitkeep
-!extensions/recorder
