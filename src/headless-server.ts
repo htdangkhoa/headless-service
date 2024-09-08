@@ -23,6 +23,7 @@ import {
   DevtoolsPageWsRoute,
   LiveIndexWsRoute,
   IndexWsRoute,
+  InternalBrowserSessionPutRoute,
 } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { Group } from '@/router';
@@ -63,6 +64,8 @@ export class HeadlessServer {
     wsServer: this.wsServer,
   };
 
+  private apiInternalGroup: Group;
+
   private apiGroup: Group;
 
   private jsonGroup: Group;
@@ -88,6 +91,13 @@ export class HeadlessServer {
     this.app.use(timeout('30s'));
 
     // Routes
+    this.apiInternalGroup = new Group(
+      [InternalBrowserSessionPutRoute],
+      this.app,
+      this.headlessServerContext,
+      '/internal'
+    );
+
     this.apiGroup = new Group(
       [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
       this.app,
@@ -128,7 +138,12 @@ export class HeadlessServer {
       });
     }));
 
-    this.openApi = new OpenAPI([this.apiGroup, this.jsonGroup, this.wsGroup]);
+    this.openApi = new OpenAPI([
+      this.apiInternalGroup,
+      this.apiGroup,
+      this.jsonGroup,
+      this.wsGroup,
+    ]);
   }
 
   async start() {
@@ -184,7 +199,9 @@ export class HeadlessServer {
 
   async shutdownRouteGroups() {
     await Promise.all([
-      [this.apiGroup, this.jsonGroup, this.wsGroup].map((group) => group.shutdown()),
+      [this.apiInternalGroup, this.apiGroup, this.jsonGroup, this.wsGroup].map((group) =>
+        group.shutdown()
+      ),
     ]);
   }
 

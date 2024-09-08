@@ -102,9 +102,10 @@ export class BrowserManager {
 
       const expiresAt = dayjs(found.expiresAt);
 
-      if (expiresAt.isBefore(now)) {
+      if (!expiresAt.isBefore(now)) {
         shouldExit = false;
-        const timeout = now.diff(expiresAt);
+
+        const timeout = expiresAt.diff(now);
 
         const timer = setTimeout(() => {
           const browser = this.browsers.get(sessionId);
@@ -235,6 +236,10 @@ export class BrowserManager {
     } finally {
       browser.close();
     }
+  }
+
+  getBrowserById(browserId: string) {
+    return this.browsers.get(browserId);
   }
 
   getPageId(page: Page) {
