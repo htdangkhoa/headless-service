@@ -1,15 +1,23 @@
-import { Page } from 'puppeteer';
+import { Browser, Frame, Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import dayjs from 'dayjs';
 
 import { getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
 import { makeExternalUrl } from '@/utils';
 import type { BrowserCDP } from '@/cdp';
 
-const CUSTOM_EVENT_NAME = 'headless:keepalive';
+export interface IEmbeddedAPIMeta {
+  reconnectUrl: string;
+  api: {
+    endpoint: string;
+    method: string;
+  };
+}
 
 export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
-  constructor(private readonly browserCDP: BrowserCDP) {
+  private reconnectUrl: string | null = null;
+  private apiEndpoint: string | null = null;
+
+  constructor() {
     super();
   }
 
@@ -17,57 +25,90 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     return 'session';
   }
 
-  async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
-
-    const browser = page.browser();
-
+  async onBrowser(browser: Browser, opts: any): Promise<void> {
     const sessionId = getBrowserId(browser);
 
     const reconnectUrl = makeExternalUrl('ws', 'devtools', 'browser', sessionId);
+    this.reconnectUrl = reconnectUrl;
 
-    const setupEmbeddedAPI = (customEventName: string, reconnectUrl: string) => {
+    const apiEndpoint = makeExternalUrl('http', 'internal', 'browser', sessionId, 'session');
+    this.apiEndpoint = apiEndpoint;
+  }
+
+  async onDisconnected(): Promise<void> {
+    this.reconnectUrl = null;
+    this.apiEndpoint = null;
+  }
+
+  async onPageCreated(page: Page): Promise<void> {
+    await patchNamedFunctionESBuildIssue2605(page);
+
+    page.on('framenavigated', this.onFrameNavigated.bind(this));
+    await this.injectSessionAPI(page);
+  }
+
+  private async onFrameNavigated(frame: Frame) {
+    if (frame.detached) return;
+
+    if (frame.parentFrame()?.detached) return;
+
+    const page = frame.page();
+
+    if (page.isClosed()) return;
+
+    await this.injectSessionAPI(frame);
+  }
+
+  private async injectSessionAPI(target: Page | Frame) {
+    if (!(target instanceof Page) && !(target instanceof Frame))
+      throw new Error('Target must be either a Page or a Frame');
+
+    const setupEmbeddedAPI = (meta: IEmbeddedAPIMeta) => {
+      const { reconnectUrl, api } = meta;
+
       Object.defineProperty(window, 'keepAlive', {
         configurable: false,
         enumerable: false,
-        value: (ms: number) => {
-          const evt = new CustomEvent(customEventName, {
-            detail: { ms },
+        value: async (ms: number) => {
+          const response = await fetch(api.endpoint, {
+            method: api.method,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ keep_alive: ms }),
           });
-          window.dispatchEvent(evt);
+
+          if (!response.ok) {
+            throw new Error('Failed to keep alive');
+          }
+
           return reconnectUrl;
         },
         writable: false,
       });
     };
 
-    await Promise.race([
-      page.evaluate(setupEmbeddedAPI, CUSTOM_EVENT_NAME, reconnectUrl),
-      page.evaluateOnNewDocument(setupEmbeddedAPI, CUSTOM_EVENT_NAME, reconnectUrl),
-    ]);
+    const meta: IEmbeddedAPIMeta = {
+      reconnectUrl: this.reconnectUrl!,
+      api: {
+        endpoint: this.apiEndpoint!,
+        method: 'PUT',
+      },
+    };
 
-    const keepAlive = await new Promise<any>(async (resolve) => {
-      await page.exposeFunction('onHeadlessKeepAlive', (ms: number) => {
-        resolve(ms);
-      });
-      await page.evaluateOnNewDocument((customEventName: string) => {
-        // @ts-ignore
-        window.addEventListener(customEventName, (e: CustomEvent) => {
-          const { ms } = e.detail;
+    const promises: any[] = [
+      target.waitForNavigation({ timeout: 0 }),
+      target.evaluate(setupEmbeddedAPI, meta),
+    ];
 
-          // @ts-ignore
-          window.onHeadlessKeepAlive(ms);
-        });
-      }, CUSTOM_EVENT_NAME);
-    });
+    if (target instanceof Page) {
+      promises.push(target.evaluateOnNewDocument(setupEmbeddedAPI, meta));
+    }
 
-    const now = dayjs();
-    const expiresAt = now.add(keepAlive, 'ms');
-
-    this.browserCDP.setExpiresAt(expiresAt.toDate());
+    await Promise.allSettled(promises);
   }
 }
 
-const SessionPlugin = (browserCDP: BrowserCDP) => new PuppeteerExtraPluginSession(browserCDP);
+const SessionPlugin = () => new PuppeteerExtraPluginSession();
 
 export default SessionPlugin;
