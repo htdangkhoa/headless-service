@@ -5,11 +5,12 @@ import vanillaPuppeteer, { type Browser, type PuppeteerLaunchOptions } from 'pup
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-import { DEFAULT_LAUNCH_ARGS } from '@/constants';
+import { DEFAULT_LAUNCH_ARGS, EXTENSION_TITLE } from '@/constants';
 import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
 import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
+import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
 import { getBrowserId } from '@/utils/puppeteer';
 
 export interface BrowserCDPOptions {
@@ -28,6 +29,7 @@ export class BrowserCDP extends EventEmitter {
   private browserWSEndpoint: string | null = null;
   private wsServer: WebSocketServer | null = null;
   expiresAt: Date | null = null;
+  private record: boolean = false;
 
   constructor(private options?: BrowserCDPOptions) {
     super();
@@ -39,6 +41,10 @@ export class BrowserCDP extends EventEmitter {
 
   setExpiresAt(expiresAt: Date) {
     this.expiresAt = expiresAt;
+  }
+
+  setRecord(record: boolean) {
+    this.record = record;
   }
 
   async launch() {
@@ -79,14 +85,41 @@ export class BrowserCDP extends EventEmitter {
     }
 
     const _launchOptions = Object.assign({}, launchOptions);
+
+    const extensionPaths: string[] = [];
+
     if (blockAds) {
+      const uBlock0Path = resolve(process.cwd(), 'extensions', 'uBlock0.chromium');
+      extensionPaths.push(uBlock0Path);
+    }
+
+    if (this.record) {
+      puppeteer.use(RecorderPlugin());
+
+      // Must be false to enable the browser UI
+      _launchOptions.headless = false;
+
+      const args = [
+        '--enable-usermedia-screen-capturing',
+        '--allow-http-screen-capture',
+        '--auto-accept-this-tab-capture',
+        `--auto-select-desktop-capture-source=${EXTENSION_TITLE}`,
+        '--disable-infobars',
+      ];
+
+      args.forEach((arg) => setOfArgs.add(arg));
+
+      const recordPath = resolve(process.cwd(), 'extensions', 'recorder');
+      extensionPaths.push(recordPath);
+    }
+
+    if (extensionPaths.length) {
       if (_launchOptions.headless === 'shell') {
         _launchOptions.headless = false;
       }
-      const uBlock0Path = resolve(process.cwd(), 'extensions', 'uBlock0.chromium');
 
-      setOfArgs.add(`--disable-extensions-except=${uBlock0Path}`);
-      setOfArgs.add(`--load-extension=${uBlock0Path}`);
+      setOfArgs.add(`--disable-extensions-except=${extensionPaths.join(',')}`);
+      setOfArgs.add(`--load-extension=${extensionPaths.join(',')}`);
     }
 
     const launchArgs = Array.from(setOfArgs);
