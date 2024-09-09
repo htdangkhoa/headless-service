@@ -3,7 +3,6 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 
 import { getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
 import { makeExternalUrl } from '@/utils';
-import type { BrowserCDP } from '@/cdp';
 
 export interface IEmbeddedAPIMeta {
   reconnectUrl: string;
