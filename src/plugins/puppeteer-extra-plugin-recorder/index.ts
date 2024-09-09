@@ -1,7 +1,8 @@
-import type { Page, Frame } from 'puppeteer';
+import type { Page, Frame, Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import os from 'node:os';
 import path from 'node:path';
+import fs from 'node:fs';
 
 import { env, getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
 import { ACTIONS, CUSTOM_EVENT_NAME, EXTENSION_TITLE } from '@/constants';
@@ -19,7 +20,11 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
 
   private readonly defaultDownloadDir: string = env('DOWNLOAD_RECORDER_DIR', os.tmpdir())!;
 
+  private downloadDir: string | null = null;
+
   private pages: Set<Page> = new Set();
+
+  private fsWatcher: fs.FSWatcher | null = null;
 
   constructor() {
     super();
@@ -29,18 +34,36 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
     return 'recorder';
   }
 
+  async onBrowser(browser: Browser, opts: any): Promise<void> {
+    const browserId = getBrowserId(browser);
+    this.logger.info(`Browser ID: ${browserId}`);
+
+    const downloadDir = path.join(this.defaultDownloadDir, browserId);
+
+    this.downloadDir = downloadDir;
+
+    if (!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir, { recursive: true });
+    }
+
+    this.fsWatcher = fs.watch(downloadDir, (eventType, filename) => {
+      if (eventType === 'rename' && filename?.endsWith('.webm')) {
+        this.logger.info(`Event: ${eventType}, Filename: ${filename}`);
+
+        // TODO: Implement adapters for different storage services
+
+        this.cleanupFsWatcher();
+      }
+    });
+  }
+
   async onPageCreated(page: Page): Promise<void> {
     this.pages.add(page);
-
-    const browser = page.browser();
-    const browserId = getBrowserId(browser);
-
-    this.logger.info(`Browser ID: ${browserId}`);
 
     const cdp = await page.createCDPSession();
     await cdp.send('Browser.setDownloadBehavior', {
       behavior: 'allow',
-      downloadPath: path.join(this.defaultDownloadDir, browserId),
+      downloadPath: this.downloadDir!,
     });
 
     await patchNamedFunctionESBuildIssue2605(page);
@@ -55,6 +78,12 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
         page.removeAllListeners();
       }
     });
+
+    this.pages.clear();
+
+    this.cleanupFsWatcher();
+
+    this.downloadDir = null;
   }
 
   private async onFrameNavigated(frame: Frame): Promise<void> {
@@ -120,6 +149,11 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
         customEventName: CUSTOM_EVENT_NAME,
       }),
     ]);
+  }
+
+  private cleanupFsWatcher() {
+    this.fsWatcher?.close();
+    this.fsWatcher = null;
   }
 }
 
