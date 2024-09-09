@@ -5,7 +5,7 @@ import vanillaPuppeteer, { type Browser, type PuppeteerLaunchOptions } from 'pup
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-import { DEFAULT_LAUNCH_ARGS, EXTENSION_TITLE } from '@/constants';
+import { DEFAULT_LAUNCH_ARGS } from '@/constants';
 import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
 import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
@@ -98,16 +98,6 @@ export class BrowserCDP extends EventEmitter {
 
       // Must be false to enable the browser UI
       _launchOptions.headless = false;
-
-      const args = [
-        '--enable-usermedia-screen-capturing',
-        '--allow-http-screen-capture',
-        '--auto-accept-this-tab-capture',
-        `--auto-select-desktop-capture-source=${EXTENSION_TITLE}`,
-        '--disable-infobars',
-      ];
-
-      args.forEach((arg) => setOfArgs.add(arg));
 
       const recordPath = resolve(process.cwd(), 'extensions', 'recorder');
       extensionPaths.push(recordPath);

@@ -155,6 +155,17 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
     this.fsWatcher?.close();
     this.fsWatcher = null;
   }
+
+  async beforeLaunch(options: any): Promise<void> {
+    const args = [
+      '--enable-usermedia-screen-capturing',
+      '--allow-http-screen-capture',
+      '--auto-accept-this-tab-capture',
+      `--auto-select-desktop-capture-source=${EXTENSION_TITLE}`,
+    ];
+
+    options.args.push(...args);
+  }
 }
 
 const RecorderPlugin = () => new PuppeteerExtraPluginRecorder();
