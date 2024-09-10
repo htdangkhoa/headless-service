@@ -5,12 +5,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { env, getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
-import { ACTIONS, CUSTOM_EVENT_NAME, EXTENSION_TITLE } from '@/constants';
+import { ACTIONS as SHARED_ACTIONS, CUSTOM_EVENT_NAME, EXTENSION_TITLE } from '@/constants';
 import { Logger } from '@/logger';
 
 export interface IEmbeddedAPIMeta {
   extensionTitle: string;
-  actions: typeof ACTIONS;
+  actions: typeof SHARED_ACTIONS;
   downloadDir: string;
   customEventName: typeof CUSTOM_EVENT_NAME;
 }
@@ -39,6 +39,8 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
     this.logger.info(`Browser ID: ${browserId}`);
 
     const downloadDir = path.join(this.defaultDownloadDir, browserId);
+
+    this.logger.info(`Download directory: ${downloadDir}`);
 
     this.downloadDir = downloadDir;
 
@@ -144,7 +146,7 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
       frame.waitForNavigation({ timeout: 0 }),
       frame.evaluate(setupEmbeddedAPI, <IEmbeddedAPIMeta>{
         extensionTitle: EXTENSION_TITLE,
-        actions: ACTIONS,
+        actions: SHARED_ACTIONS,
         downloadDir: this.defaultDownloadDir,
         customEventName: CUSTOM_EVENT_NAME,
       }),
