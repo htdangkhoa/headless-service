@@ -1,6 +1,7 @@
 /* global chrome, MediaRecorder, FileReader */
 
-import { ACTIONS, CUSTOM_EVENT_NAME } from '../../constants/recorder';
+import { ACTIONS as SHARED_ACTIONS, CUSTOM_EVENT_NAME } from '../../constants/recorder';
+import { ACTIONS as INTERNAL_ACTIONS } from './constants';
 
 export {};
 
@@ -14,89 +15,41 @@ declare global {
 
 let desktopMediaRequestId: number | null = null;
 
-let recorder: any = null;
-
 chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((msg) => {
     console.log(msg);
+
+    const tab = port.sender!.tab!;
+
     switch (msg.type) {
-      case ACTIONS.REC_STOP:
-        recorder.stop();
-        break;
-      case ACTIONS.REC_START:
-        if (recorder) {
-          return;
-        }
-        const tab = port.sender!.tab!;
-        tab.url = msg.data.url;
+      case SHARED_ACTIONS.REC_START: {
         desktopMediaRequestId = chrome.desktopCapture.chooseDesktopMedia(
           ['tab', 'audio'],
+          tab,
           (streamId) => {
-            // Get the stream
-            navigator.webkitGetUserMedia(
-              {
-                // audio: false,
-                audio: {
-                  mandatory: {
-                    chromeMediaSource: 'system',
-                  },
-                },
-                video: {
-                  mandatory: {
-                    chromeMediaSource: 'desktop',
-                    chromeMediaSourceId: streamId,
-                    minWidth: 1280,
-                    maxWidth: 1280,
-                    minHeight: 720,
-                    maxHeight: 720,
-                    minFrameRate: 60,
-                  },
-                },
-              },
-              (stream: any) => {
-                const chunks: any[] = [];
-                recorder = new MediaRecorder(stream, {
-                  videoBitsPerSecond: 2500000,
-                  // @ts-ignore
-                  ignoreMutedMedia: true,
-                  mimeType: 'video/webm',
-                });
-
-                recorder.ondataavailable = function (event: any) {
-                  if (event.data.size > 0) {
-                    chunks.push(event.data);
-                  }
-                };
-
-                recorder.onstop = function () {
-                  const tracks = stream.getTracks();
-
-                  for (let i = 0; i < tracks.length; i += 1) {
-                    tracks[i].stop();
-                  }
-
-                  if (desktopMediaRequestId) {
-                    chrome.desktopCapture.cancelChooseDesktopMedia(desktopMediaRequestId);
-                  }
-
-                  const superBuffer = new Blob(chunks, {
-                    type: 'video/webm',
-                  });
-
-                  const url = URL.createObjectURL(superBuffer);
-
-                  chrome.downloads.download({ url: url });
-                };
-
-                recorder.start();
-              },
-              (error: any) => console.log('Unable to get user media', error)
-            );
+            chrome.tabs.sendMessage(tab.id!, {
+              type: INTERNAL_ACTIONS.START_RECORDING,
+              data: streamId,
+            });
           }
         );
+
         break;
-      default:
-        console.log('Unrecognized message', msg);
+      }
+      case SHARED_ACTIONS.REC_STOP: {
+        if (typeof desktopMediaRequestId === 'number') {
+          chrome.desktopCapture.cancelChooseDesktopMedia(desktopMediaRequestId!);
+          desktopMediaRequestId = null;
+        }
+
+        chrome.tabs.sendMessage(tab.id!, { type: INTERNAL_ACTIONS.STOP_RECORDING });
+      }
+      case INTERNAL_ACTIONS.BEGIN_DOWNLOAD: {
+        console.log('Download begin', msg.data);
+
+        chrome.downloads.download({ url: msg.data });
+        break;
+      }
     }
   });
 
@@ -121,7 +74,13 @@ chrome.runtime.onConnect.addListener((port) => {
         filename = url.pathname.split('/').pop()!.concat('.webm');
       }
       const tab = port.sender!.tab!;
-      chrome.tabs.sendMessage(tab.id!, { type: CUSTOM_EVENT_NAME, data: filename });
+      chrome.tabs.sendMessage(tab.id!, {
+        type: INTERNAL_ACTIONS.COMPLETE_DOWNLOAD,
+        data: {
+          eventName: CUSTOM_EVENT_NAME,
+          filename,
+        },
+      });
       port.postMessage({ downloadComplete: true });
     } catch (e) {}
   }

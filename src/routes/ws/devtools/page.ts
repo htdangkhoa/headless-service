@@ -10,7 +10,7 @@ import {
 } from '@/utils';
 import { HEADLESS_PAGE_IDENTIFIER, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { BrowserCDP } from '@/cdp';
-import { WSDefaultQuerySchema } from '@/schemas';
+import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
 import dedent from 'dedent';
 
 // /devtools/page/9D8F0DE47A20F0181D65B251A6F59ACC
@@ -32,7 +32,11 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
       You can get this unique URL by calling the /json/list API or by finding the page's unique ID from your library of choice
     `,
     request: {
-      query: WSDefaultQuerySchema,
+      query: WSDefaultQuerySchema.extend({
+        record: BooleanOrStringSchema.describe(
+          'Record the page with audio. Work only with the page id is created by the API `/json/new`'
+        ).optional(),
+      }),
     },
     responses: {},
   };
