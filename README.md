@@ -20,6 +20,7 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 | `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                | `false`                         |
 | `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   |                                 |
 | `DEBUG`                     | Enable the debug mode                                            | `headless-service*,-**:verbose` |
+| `DOWNLOAD_RECORDER_DIR`     | The directory where the downloaded recordings will be stored     | None (`os.tmpdir()`)            |
 
 ## Usage
 
