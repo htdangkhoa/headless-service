@@ -1,7 +1,13 @@
 import { IncomingMessage } from 'node:http';
 
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
-import { makeExternalUrl, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
+import {
+  makeExternalUrl,
+  parseSearchParams,
+  parseUrlFromIncomingMessage,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { WSDefaultQuerySchema } from '@/schemas';
 import dedent from 'dedent';
@@ -35,13 +41,32 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
     return DEVTOOLS_PATH_REGEX.test(url.pathname);
   };
   handler: WsHandler = async (req, socket, head) => {
-    const { browserManager } = this.context;
+    const { wsServer, browserManager } = this.context;
 
     const url = parseUrlFromIncomingMessage(req);
 
     const [, browserId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
 
-    const browser = await browserManager.requestBrowser(req, { browserId });
+    const query = parseSearchParams(url.search);
+
+    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
+
+    if (queryValidation.error) {
+      const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
+
+      return writeResponse(socket, HttpStatus.BAD_REQUEST, {
+        message: `Bad Request: ${errorDetails}`,
+      });
+    }
+
+    const { live: isLiveMode, ...queryOptions } = queryValidation.data;
+
+    const launchBrowserOptions = Object.assign({}, queryOptions, {
+      ws: isLiveMode && wsServer,
+      browserId,
+    });
+
+    const browser = await browserManager.requestBrowser(req, launchBrowserOptions);
 
     try {
       const browserWSEndpoint = browser.wsEndpoint();

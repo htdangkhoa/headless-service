@@ -25,5 +25,5 @@ export const RequestDefaultQuerySchema = z
 
 export const WSDefaultQuerySchema = RequestDefaultQuerySchema.extend({
   live: BooleanOrStringSchema.describe('Whether to launch the browser in live mode').optional(),
-  record: BooleanOrStringSchema.describe('Whether to record the browser').optional(),
+  record: BooleanOrStringSchema.describe('Record the page with audio').optional(),
 }).strict();
