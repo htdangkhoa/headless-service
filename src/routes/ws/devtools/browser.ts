@@ -68,6 +68,16 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
 
     const browser = await browserManager.requestBrowser(req, launchBrowserOptions);
 
+    const self = this;
+
+    socket.once('close', function onSocketClose() {
+      socket.off('close', onSocketClose);
+
+      self.logger.info(`WebSocket Request handler has finished.`);
+
+      browserManager.close(browser);
+    });
+
     try {
       const browserWSEndpoint = browser.wsEndpoint();
 
@@ -77,10 +87,6 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
         body: error,
         message: error.message,
       });
-    } finally {
-      this.logger.info(`WebSocket Request handler has finished.`);
-
-      browserManager.complete(browser);
     }
   };
 }
