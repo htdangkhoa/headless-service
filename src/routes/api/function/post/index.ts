@@ -1,27 +1,11 @@
 import { Handler } from 'express';
-import tsc from 'typescript';
-import { randomUUID } from 'node:crypto';
-import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
-import path from 'node:path';
 import { z } from 'zod';
 import dedent from 'dedent';
 
 import { ProxyHttpRoute, Method } from '@/router';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
-import { makeExternalUrl, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
+import { functionHandler, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
-import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
-
-interface IPageFunctionArguments {
-  browserWSEndpoint: string;
-  runtimeFunction: string;
-}
-
-declare global {
-  interface Window {
-    BrowserFunctionRunner: typeof FunctionRunner;
-  }
-}
 
 const RequestFunctionBodySchema = z.string().describe('The user code to run');
 
@@ -98,94 +82,13 @@ export class FunctionPostRoute extends ProxyHttpRoute {
       });
     }
 
-    const functionRequestUrl = makeExternalUrl('http', 'function');
-
     const browser = await browserManager.requestBrowser(req, queryValidation.data);
-
-    const browserWSEndpoint = browser.wsEndpoint();
-    const browserWebSocketURL = new URL(browserWSEndpoint!);
-
-    const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketURL.pathname);
-
-    const functionIndexHTML = makeExternalUrl('http', 'function', 'index.html');
-
     const userCode = Buffer.from(req.body).toString('utf8');
 
-    const { outputText: compiledCode } = tsc.transpileModule(userCode, {
-      compilerOptions: {
-        target: tsc.ScriptTarget.ESNext,
-        module: tsc.ModuleKind.ESNext,
-      },
-    });
+    const handler = functionHandler(browser, this.logger);
 
-    const runtimeFunction = `${randomUUID()}.js`;
-
-    const page = await browser.newPage();
-
-    await page.setRequestInterception(true);
-
-    const onRequest = (request: HTTPRequest) => {
-      const requestUrl = request.url();
-
-      if (requestUrl.startsWith(functionRequestUrl)) {
-        const filename = path.basename(requestUrl);
-
-        if (filename === runtimeFunction) {
-          return request.respond({
-            body: compiledCode,
-            contentType: 'application/javascript',
-            status: 200,
-          });
-        }
-      }
-
-      return request.continue();
-    };
-
-    const onResponse = (response: HTTPResponse) => {
-      if (!response.ok()) {
-        const requestUrl = response.url();
-        this.logger.error(`Received a non-200 response for request ${requestUrl}`);
-      }
-    };
-
-    const onConsole = (message: ConsoleMessage) => {
-      this.logger.info(`${message.type()}: ${message.text()}`);
-    };
-
-    page.on('request', onRequest);
-    page.on('response', onResponse);
-    page.on('console', onConsole);
-
-    await page.goto(functionIndexHTML);
-
-    return page
-      .evaluate(
-        async (args: IPageFunctionArguments) => {
-          const { browserWSEndpoint, runtimeFunction } = args;
-
-          const mod = await import('./' + runtimeFunction);
-
-          let handler;
-
-          if (typeof mod.default === 'function') {
-            handler = mod.default;
-          } else if (typeof mod.handler === 'function') {
-            handler = mod.handler;
-          } else {
-            throw new Error('No default export or handler function found');
-          }
-
-          const runner = new window.BrowserFunctionRunner(browserWSEndpoint);
-
-          return runner.start(handler as ICodeRunner);
-        },
-        {
-          browserWSEndpoint: externalWSEndpoint,
-          runtimeFunction,
-        } as IPageFunctionArguments
-      )
-      .then((result) =>
+    return handler(userCode)
+      .then(({ result }) =>
         writeResponse(res, HttpStatus.OK, {
           body: { data: result },
         })
@@ -196,7 +99,6 @@ export class FunctionPostRoute extends ProxyHttpRoute {
         })
       )
       .finally(async () => {
-        await page.setRequestInterception(false);
         await browserManager.complete(browser);
       });
   };

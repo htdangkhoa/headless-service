@@ -5,6 +5,12 @@ import { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 
 import { Dictionary } from '@/types';
 
+declare global {
+  interface Window {
+    BrowserFunctionRunner: typeof FunctionRunner;
+  }
+}
+
 export interface ICodeRunner {
   (params: { page: Page; context?: Dictionary }): Promise<any>;
 }
@@ -27,7 +33,13 @@ export class FunctionRunner {
     this.browser.once('disconnected', this.stop.bind(this));
     this.page = await this.browser.newPage();
 
-    const result = await codeRunner({ page: this.page });
+    const result = await codeRunner({ page: this.page }).catch((error) => {
+      console.error('Error running code:', error);
+
+      this.browser?.disconnect();
+
+      throw error;
+    });
     await this.page.close();
 
     return result;
