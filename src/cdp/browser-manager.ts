@@ -35,12 +35,12 @@ export class BrowserManager {
         throw new Error(`Could't locate browser "${browserId}" for request "${req.url}"`);
       }
 
-      const { expiresAt } = found;
+      const expiresAt = dayjs(found.expiresAt);
 
-      if (dayjs(expiresAt).isValid()) {
+      if (expiresAt.isValid()) {
         const now = dayjs();
 
-        if (dayjs(expiresAt).isAfter(now)) {
+        if (!expiresAt.isAfter(now)) {
           throw new Error("Browser's session has expired");
         }
       }

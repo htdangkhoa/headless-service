@@ -16,11 +16,21 @@ async function main() {
 
   const connectUrl = await page.evaluate(() => {
     // @ts-ignore
-    return window.keepAlive(60000);
+    return window.keepAlive(90000);
   });
   console.log('🚀 ~ connectUrl ~ connectUrl:', connectUrl);
 
   await browser.disconnect();
+
+  // Reconnect
+  const browser2 = await puppeteer.connect({
+    browserWSEndpoint: connectUrl.replace('localhost', '127.0.0.1'),
+  });
+
+  const [currentPage] = await browser2.pages();
+  console.log(await currentPage.title());
+
+  await browser2.disconnect();
 }
 
 main().catch(console.error);

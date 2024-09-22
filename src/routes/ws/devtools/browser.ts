@@ -68,25 +68,8 @@ export class DevtoolsBrowserWsRoute extends ProxyWebSocketRoute {
 
     const browser = await browserManager.requestBrowser(req, launchBrowserOptions);
 
-    const self = this;
+    const browserWSEndpoint = browser.wsEndpoint();
 
-    socket.once('close', function onSocketClose() {
-      socket.off('close', onSocketClose);
-
-      self.logger.info(`WebSocket Request handler has finished.`);
-
-      browserManager.close(browser);
-    });
-
-    try {
-      const browserWSEndpoint = browser.wsEndpoint();
-
-      return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
-    } catch (error: any) {
-      return writeResponse(socket, HttpStatus.LOGIN_TIMEOUT, {
-        body: error,
-        message: error.message,
-      });
-    }
+    return this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
   };
 }
