@@ -1,11 +1,12 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page } from 'puppeteer';
+import { Frame, Page } from 'puppeteer';
 import {
   FingerprintGenerator,
   BrowserFingerprintWithHeaders,
   FingerprintGeneratorOptions,
 } from 'fingerprint-generator';
 import { FingerprintInjector } from 'fingerprint-injector';
+
 import { patchNamedFunctionESBuildIssue2605 } from '@/utils';
 
 export interface UnblockOptions {
@@ -15,6 +16,9 @@ export interface UnblockOptions {
 
 export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
   private generator = new FingerprintGenerator();
+  private injector = new FingerprintInjector();
+
+  private fingerprintWithHeaders: BrowserFingerprintWithHeaders | null = null;
 
   constructor(protected options?: UnblockOptions) {
     super();
@@ -30,12 +34,33 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
     const fingerprintWithHeaders =
       this.options?.fingerprint ??
       this.generator.getFingerprint(this.options?.fingerprintOptions ?? {});
-
-    const injector = new FingerprintInjector();
+    this.fingerprintWithHeaders = fingerprintWithHeaders;
 
     if (page.isClosed()) return;
 
-    await injector.attachFingerprintToPuppeteer(page, fingerprintWithHeaders);
+    const self = this;
+
+    page.on('framenavigated', self.onFrameNavigated.bind(self));
+
+    page.on('framedetached', (frame: Frame) => {
+      page.off('framenavigated', self.onFrameNavigated);
+    });
+  }
+
+  async onFrameNavigated(frame: Frame): Promise<void> {
+    if (!this.fingerprintWithHeaders) return;
+
+    if (frame.detached) return;
+
+    if (frame.parentFrame()?.detached) return;
+
+    const page = frame.page();
+
+    if (!page) return;
+
+    if (!page.isClosed()) return;
+
+    await this.injector.attachFingerprintToPuppeteer(page, this.fingerprintWithHeaders);
   }
 
   async beforeLaunch(options: any): Promise<void> {

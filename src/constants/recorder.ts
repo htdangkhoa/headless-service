@@ -1,6 +1,6 @@
 import { env } from '@/utils/env';
 
-export const EXTENSION_TITLE = env('SERVICE_NAME', '')?.concat('Cam').trim();
+export const EXTENSION_TITLE = env('SERVICE_NAME', '')!.concat('Cam').trim();
 
 export const ACTIONS = {
   REC_START: 'REC_START',

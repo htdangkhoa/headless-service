@@ -42,7 +42,14 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
   async onPageCreated(page: Page): Promise<void> {
     await patchNamedFunctionESBuildIssue2605(page);
 
-    page.on('framenavigated', this.onFrameNavigated.bind(this));
+    const self = this;
+
+    page.on('framenavigated', self.onFrameNavigated.bind(self));
+
+    page.on('framedetached', (frame: Frame) => {
+      page.off('framenavigated', self.onFrameNavigated);
+    });
+
     await this.injectSessionAPI(page);
   }
 

@@ -69,7 +69,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    page.on('framenavigated', this.onFrameNavigated.bind(this));
+    await patchNamedFunctionESBuildIssue2605(page);
+
+    const self = this;
+
+    page.on('framenavigated', self.onFrameNavigated.bind(self));
+
+    page.on('framedetached', (frame: Frame) => {
+      page.off('framenavigated', self.onFrameNavigated);
+    });
 
     await Promise.allSettled([page.waitForNavigation({ timeout: 0 }), this.injectLiveUrlAPI(page)]);
   }
