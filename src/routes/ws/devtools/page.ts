@@ -93,12 +93,6 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
 
     const { href: pageWSEndpoint } = new URL(`/devtools/page/${pageId}`, origin);
 
-    try {
-      await this.proxyWebSocket(req, socket, head, browser, pageWSEndpoint);
-    } finally {
-      this.logger.info(`WebSocket Request handler has finished.`);
-
-      browserManager.complete(browser);
-    }
+    return this.proxyWebSocket(req, socket, head, browser, pageWSEndpoint);
   };
 }

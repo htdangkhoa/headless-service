@@ -1,9 +1,9 @@
 import type { Handler } from 'express';
-import type { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager } from '@/cdp';
 import { Logger } from '@/logger';
+import { RouteConfig } from './interfaces';
 
 export enum Method {
   GET = 'get',
@@ -22,7 +22,7 @@ export interface HttpRoute {
   path: string;
   handler?: Handler;
   handlers?: Handler[];
-  swagger?: Omit<RouteConfig, 'method' | 'path'>;
+  swagger?: RouteConfig;
 }
 
 export interface HeadlessServerContext {

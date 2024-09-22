@@ -1,11 +1,11 @@
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
-import type { RouteConfig } from '@asteasolutions/zod-to-openapi';
 import type { WebSocketServer } from 'ws';
 import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager, BrowserCDP } from '@/cdp';
 import { Logger } from '@/logger';
+import { RouteConfig } from './interfaces';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -13,7 +13,7 @@ export interface WsRoute {
   path: string;
   handler: WsHandler;
   shouldUpgrade: (req: IncomingMessage) => boolean;
-  swagger?: Omit<RouteConfig, 'method' | 'path'>;
+  swagger?: RouteConfig;
 }
 
 export interface HeadlessServerWebSocketContext {

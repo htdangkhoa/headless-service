@@ -176,7 +176,10 @@ export class HeadlessServer {
   }
 
   private async shutdownServer() {
-    await new Promise((resolve) => this.server!.close(resolve));
+    await new Promise<void>((resolve) => {
+      this.server?.close();
+      resolve();
+    });
     this.server?.removeAllListeners();
     this.server = null;
   }
