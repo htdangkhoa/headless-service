@@ -27,8 +27,8 @@ dependencies:
     specifier: ^1.5.3
     version: 1.5.3
   devtools-protocol:
-    specifier: ^0.0.1358005
-    version: 0.0.1358005
+    specifier: ^0.0.1359167
+    version: 0.0.1359167
   express:
     specifier: ^4.21.0
     version: 4.21.0
@@ -112,8 +112,8 @@ devDependencies:
     specifier: ^4.17.12
     version: 4.17.12
   '@types/node':
-    specifier: ^22.5.5
-    version: 22.5.5
+    specifier: ^22.6.1
+    version: 22.6.1
   '@types/qs':
     specifier: ^6.9.16
     version: 6.9.16
@@ -570,7 +570,7 @@ packages:
     resolution: {integrity: sha512-fB3Zu92ucau0iQ0JMCFQE7b/dv8Ot07NI3KaZIkIUNXq82k4eBAqUaneXfleGY9JWskeS9y+u0nXMyspcuQrCg==}
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/chrome@0.0.271:
@@ -589,20 +589,20 @@ packages:
   /@types/connect@3.4.38:
     resolution: {integrity: sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug==}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/consolidate@0.14.4:
     resolution: {integrity: sha512-rOrLjFOuN+IQHTwwGITW/01Ho1KoaoUBPGRi57NFkwzxFff8S9Mk66TU1au1O9O8N5nJENWx6o0n6W/35Ebfxg==}
     dependencies:
       '@types/bluebird': 3.5.42
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/cors@2.8.17:
     resolution: {integrity: sha512-8CGDvrBj1zgo2qE+oS3pOCyYNqCPryMWY2bGfwA0dcfopWGgxs+78df0Rs3rc9THP4JkOhLsAa+15VdpAqkcUA==}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/debug@4.1.12:
@@ -613,7 +613,7 @@ packages:
   /@types/express-serve-static-core@4.19.0:
     resolution: {integrity: sha512-bGyep3JqPCRry1wq+O5n7oiBgGWmeIJXPjXXCo8EK0u8duZGSYar7cGqd3ML2JUsLGeB7fmc06KYo9fLGWqPvQ==}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
       '@types/qs': 6.9.16
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
@@ -649,7 +649,7 @@ packages:
   /@types/http-proxy@1.17.15:
     resolution: {integrity: sha512-25g5atgiVNTIv0LBDTg1H74Hvayx0ajtJPLLcYE3whFv75J0pWNtOBzaXJQgDTmrX1bx5U9YC2w/n65BN1HwRQ==}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/lodash-es@4.17.12:
@@ -669,8 +669,8 @@ packages:
   /@types/ms@0.7.34:
     resolution: {integrity: sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==}
 
-  /@types/node@22.5.5:
-    resolution: {integrity: sha512-Xjs4y5UPO/CLdzpgR6GirZJx36yScjh73+2NlLlkFRSoQN8B0DpfXPdZGnvVmLRLOsqDpOfTNv7D9trgGhmOIA==}
+  /@types/node@22.6.1:
+    resolution: {integrity: sha512-V48tCfcKb/e6cVUigLAaJDAILdMP0fUW6BidkPK4GpGjXcfbnoHasCZDwz3N3yVt5we2RHm4XTQCpv0KJz9zqw==}
     dependencies:
       undici-types: 6.19.8
 
@@ -686,28 +686,28 @@ packages:
     resolution: {integrity: sha512-x2EM6TJOybec7c52BX0ZspPodMsQUd5L6PRwOunVyVUhXiBSKf3AezDL8Dgvgt5o0UfKNfuA0eMLr2wLT4AiBA==}
     dependencies:
       '@types/mime': 1.3.5
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/serve-static@1.15.7:
     resolution: {integrity: sha512-W8Ym+h8nhuRwaKPaDw34QUkwsGi6Rc4yYqvKFo5rm2FUEhCFbzVWrxXUxuKK8TASjWsysJY0nsmNCGhCOIsrOw==}
     dependencies:
       '@types/http-errors': 2.0.4
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
       '@types/send': 0.17.4
     dev: true
 
   /@types/ws@8.5.12:
     resolution: {integrity: sha512-3tPRkv1EtkDpzlgyKyI8pGsGZAGPEaXeu0DOj5DI25Ja91bdAYddYHbADRYVrZMRbfW+1l5YwXVDKohDJNQxkQ==}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     dev: true
 
   /@types/yauzl@2.10.3:
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
     requiresBuild: true
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
     optional: true
 
   /accepts@1.3.8:
@@ -993,7 +993,7 @@ packages:
     engines: {node: '>=12.13.0'}
     hasBin: true
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 2.0.1
@@ -1394,8 +1394,8 @@ packages:
     resolution: {integrity: sha512-75fMas7PkYNDTmDyb6PRJCH7ILmHLp+BhrZGeMsa4bCh40DTxgCz2NRy5UDzII4C5KuD0oBMZ9vXKhEl6UD/3w==}
     dev: false
 
-  /devtools-protocol@0.0.1358005:
-    resolution: {integrity: sha512-gQ8/zj6d5zKpKkhR8ppQyittBI1GonHiL8FLg0LaSCVtmlur7YC0tg7Aa+iK7XCVtUo5ZO5pSUi9b0BDerYGKg==}
+  /devtools-protocol@0.0.1359167:
+    resolution: {integrity: sha512-f/9PeTaSH3weS/WAwrQb5/s9R3KMOeTGe+Jkhg5952yInub7iDPjdlzRdrDgpLZfxHbTrBuG9aUkAMM+ocVkXQ==}
     dev: false
 
   /dir-glob@3.0.1:
@@ -3071,7 +3071,7 @@ packages:
     resolution: {integrity: sha512-DI7/OuAUD+GMpR6dmu8lliO2Wg5zfeh+/xsdyJZCzd8o5JgFUjCeLsBDuZjIQJdwXS3J0L/uZYrELKYqx+PXog==}
     engines: {node: '>=8.0'}
     dependencies:
-      '@types/node': 22.5.5
+      '@types/node': 22.6.1
       image-ssim: 0.2.0
       jpeg-js: 0.4.4
     dev: false
