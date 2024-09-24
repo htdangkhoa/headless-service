@@ -1,3 +1,5 @@
+/// <reference types="chrome"/>
+
 export {};
 
 declare global {
@@ -6,9 +8,7 @@ declare global {
   }
 }
 
-/// <reference types="chrome"/>
-
-import { ACTIONS as INTERNAL_ACTIONS } from './constants';
+import { ACTIONS as INTERNAL_ACTIONS, DEFAULT_SAMPLE_RATE } from './constants';
 
 chrome.runtime.onMessage.addListener(function (msg, sender, response) {
   console.log('🚀 ~ msg:', msg);
@@ -55,28 +55,22 @@ async function startRecording(streamId: string) {
     throw new Error('Called startRecording while recording is in progress.');
   }
 
-  const media = await navigator.mediaDevices.getUserMedia({
-    preferCurrentTab: true,
+  const media = await navigator.mediaDevices.getDisplayMedia({
     audio: {
-      // @ts-expect-error
-      mandatory: {
-        chromeMediaSource: 'system',
-        chromeMediaSourceId: streamId,
-      },
+      echoCancellation: true,
+      noiseSuppression: true,
+      sampleRate: DEFAULT_SAMPLE_RATE,
     },
-    video: {
-      // @ts-expect-error
-      mandatory: {
-        chromeMediaSource: 'desktop',
-        chromeMediaSourceId: streamId,
-        minFrameRate: 60,
-      },
-    },
+    video: true,
+    // @ts-ignore
+    preferCurrentTab: true,
   });
 
-  const output = new AudioContext();
-  const source = output.createMediaStreamSource(media);
-  source.connect(output.destination);
+  const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  audioStream.getTracks().forEach((track) => {
+    media.addTrack(track);
+  });
 
   // Start recording.
   recorder = new MediaRecorder(media, { mimeType: 'video/webm' });

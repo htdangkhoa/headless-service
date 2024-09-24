@@ -125,9 +125,9 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
                 },
                 '*'
               );
-              setTimeout(() => {
+              requestAnimationFrame(() => {
                 document.title = originalTitle;
-              }, 100);
+              });
             },
             stop() {
               return new Promise((resolve) => {
@@ -169,7 +169,9 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
       '--enable-usermedia-screen-capturing',
       '--allow-http-screen-capture',
       '--auto-accept-this-tab-capture',
-      `--auto-select-desktop-capture-source=${EXTENSION_TITLE}`,
+      `--auto-select-tab-capture-source-by-title=${EXTENSION_TITLE}`,
+      '--auto-accept-camera-and-microphone-capture',
+      '--auto-grant-captured-surface-control-prompt',
     ];
 
     options.args.push(...args);

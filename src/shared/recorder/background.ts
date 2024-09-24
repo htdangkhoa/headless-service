@@ -1,3 +1,5 @@
+/// <reference types="chrome"/>
+
 /* global chrome, MediaRecorder, FileReader */
 
 import { ACTIONS as SHARED_ACTIONS, CUSTOM_EVENT_NAME } from '../../constants/recorder';
@@ -10,8 +12,6 @@ declare global {
     webkitGetUserMedia: any;
   }
 }
-
-/// <reference types="chrome"/>
 
 let desktopMediaRequestId: number | null = null;
 
