@@ -1,5 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import dedent from 'dedent';
+import WebSocket from 'ws';
 
 import { CodeSample, ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
@@ -207,12 +208,96 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
 
     const browserWSEndpoint = browser.wsEndpoint();
 
-    try {
-      await this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
-    } finally {
-      this.logger.info(`WebSocket Request handler has finished.`);
+    // try {
+    //   await this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
+    // } finally {
+    //   this.logger.info(`WebSocket Request handler has finished.`);
+
+    //   browserManager.complete(browser);
+    // }
+
+    const clientWS = new WebSocket(browserWSEndpoint!);
+
+    wsServer.once('connection', (ws) => {
+      this.logger.info(`WebSocket Server opened connection`);
+
+      clientWS.on('message', (data: any) => {
+        const message = Buffer.from(data).toString('utf-8');
+
+        const payload = JSON.parse(message);
+
+        if (payload.error) {
+          if (payload.error.message === `'Foo.bar' wasn't found`) {
+            // {"id":13,"result":{"executionContextId":3},"sessionId":"5F91AFC108FFE095CCDA2E3CFF5A3B06"}
+            const data = {
+              id: payload.id,
+              result: {
+                bar: 'Hello world',
+              },
+              sessionId: payload.sessionId,
+            };
+            const msg = JSON.stringify(data);
+            return ws.send(Buffer.from(msg));
+          }
+
+          ws.send(data);
+          // ws.emit('error', new Error(payload.error.message));
+        }
+
+        ws.send(data);
+      });
+
+      ws.on('message', (data: any) => {
+        this.logger.info(`Received message from browser: ${data}`);
+
+        const message = Buffer.from(data).toString('utf-8');
+
+        this.logger.info(`Received payload from browser: ${message}`);
+
+        const payload = JSON.parse(message);
+
+        if (payload.method === 'Foo.bar') {
+          console.log('Custom method Foo.bar is called');
+        }
+        return clientWS.send(message);
+      });
+    });
+
+    wsServer.once('error', (err) => {
+      this.logger.error(`WebSocket Server error`, err);
+
+      clientWS.close();
+
+      wsServer.close();
+    });
+
+    wsServer.once('close', () => {
+      this.logger.info(`WebSocket Server closed`);
+      clientWS.close();
 
       browserManager.complete(browser);
-    }
+    });
+
+    clientWS.once('open', () => {
+      this.logger.info(`WebSocket connected to ${browserWSEndpoint}`);
+      wsServer.handleUpgrade(req, socket, head, (ws) => {
+        const close = async () => {
+          this.logger.info('socket closed');
+
+          browser.off('close', close);
+          browser.process()?.off('close', close);
+          socket.off('close', close);
+
+          browserManager.complete(browser);
+          // return resolve();
+        };
+
+        browser?.once('close', close);
+        browser?.process()?.once('close', close);
+        socket.once('close', close);
+
+        wsServer.emit('connection', ws, req);
+      });
+    });
   };
 }
