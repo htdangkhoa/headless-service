@@ -1,0 +1,12 @@
+{
+  "domains": [
+    {
+      "domain": "HeadlessService",
+      "commands": [
+        {
+          "name": "foo"
+        }
+      ]
+    }
+  ]
+}

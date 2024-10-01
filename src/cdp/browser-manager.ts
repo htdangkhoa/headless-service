@@ -9,6 +9,7 @@ import { BrowserCDP, BrowserCDPOptions } from './browser';
 import { Dictionary } from '@/types';
 import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
+import customProtocol from './protocol.json';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -212,7 +213,7 @@ export class BrowserManager {
     }
   }
 
-  async getJSONProtocol() {
+  async getJSONProtocol(): Promise<Dictionary> {
     if (this.protocol) {
       return this.protocol;
     }
@@ -227,10 +228,11 @@ export class BrowserManager {
       const { host } = new URL(browserWSEndpoint);
       const response = await fetch(`http://${host}/json/protocol`);
       const protocol = await response.json();
+      protocol.domains = protocol.domains.concat(customProtocol.domains);
 
       this.protocol = protocol;
 
-      return this.protocol;
+      return this.protocol!;
     } catch (error) {
       this.logger.error('Error getting JSON protocol', error);
 

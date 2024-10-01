@@ -9,7 +9,7 @@ async function main() {
 
   const cdp = await page.createCDPSession();
   // @ts-ignore
-  const result = await cdp.send('Foo.barz', { baz: 'qux' });
+  const result = await cdp.send('HeadlessService.foo', { baz: 'qux' });
   console.log('🚀 ~ main ~ result:', result);
 
   await page.setViewport({ width: 1920, height: 1080 });
