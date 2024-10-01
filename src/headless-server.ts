@@ -2,7 +2,6 @@ import path from 'node:path';
 import { createServer, type Server } from 'node:http';
 import express, { ErrorRequestHandler } from 'express';
 import timeout from 'connect-timeout';
-import consolidate from 'consolidate';
 import cors from 'cors';
 import HttpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
@@ -79,8 +78,6 @@ export class HeadlessServer {
 
     // Set up views
     this.app.set('views', publicDir);
-    this.app.engine('html', consolidate.mustache);
-    this.app.set('view engine', 'html');
 
     // Middleware
     this.app.use(express.static(publicDir));
