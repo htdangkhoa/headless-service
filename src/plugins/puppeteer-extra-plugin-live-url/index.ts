@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page, CDPSession, Target, Frame } from 'puppeteer';
+import { Page, CDPSession, Target, Frame, Browser } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
@@ -22,6 +22,8 @@ declare global {
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
 
+  private browser: Browser | null = null;
+
   private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
 
   constructor(
@@ -41,7 +43,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     return 'live-url';
   }
 
-  async onClose(): Promise<void> {
+  async onBrowser(browser: Browser, opts: any): Promise<void> {
+    this.browser = browser;
+
+    browser.on('HeadlessService.liveURL', this.onHeadlessServiceLiveURL.bind(this));
+  }
+
+  async onDisconnected(): Promise<void> {
+    this.browser = null;
     Array.from(this.pageMap.values()).forEach(({ cdp }) => {
       cdp.removeAllListeners();
     });
@@ -246,6 +255,36 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     } catch (error) {
       this.logger.error('Error sending command', error);
       this.logger.debug('Payload params', payload.params);
+    }
+  }
+
+  private async onHeadlessServiceLiveURL(event: any) {
+    const payload: any = {
+      id: event.id,
+      sessionId: event.sessionId,
+    };
+
+    if (!this.browser) return;
+
+    try {
+      const currentPage = await this.browser.currentPage();
+
+      const targetId = currentPage.target()._targetId;
+
+      const liveUrl = new URL(makeExternalUrl('http', `/live`));
+      liveUrl.searchParams.set('t', targetId);
+      if (this.requestId) {
+        liveUrl.searchParams.set('request_id', this.requestId);
+      }
+
+      payload.result = { liveUrl: liveUrl.href };
+    } catch (error: any) {
+      payload.error = {
+        message: error.message,
+        code: -1,
+      };
+    } finally {
+      return this.browser.emit('CDP.result', payload);
     }
   }
 }

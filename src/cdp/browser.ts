@@ -172,4 +172,8 @@ export class BrowserCDP extends EventEmitter {
   pages() {
     return this.browser?.pages() ?? [];
   }
+
+  getPuppeteerBrowser() {
+    return this.browser;
+  }
 }

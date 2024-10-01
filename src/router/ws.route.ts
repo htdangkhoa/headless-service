@@ -84,8 +84,9 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   ) {
     const { wsServer, browserManager } = this.context;
 
+    const puppeteerBrowser = browser.getPuppeteerBrowser()!;
+
     const protocol = await browserManager.getJSONProtocol();
-    console.log(protocol.domains[54]);
 
     return new Promise<void>((resolve, reject) => {
       const cdpWS = new WebSocket(endpoint, {
@@ -111,6 +112,32 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       socket.once('close', close);
 
       wsServer.once('connection', (socket, req) => {
+        let request: any;
+
+        puppeteerBrowser!.on('CDP.result', (payloadWillBeSent) => {
+          const messageWillBeSent = Buffer.from(JSON.stringify(payloadWillBeSent)).toString(
+            'utf-8'
+          );
+
+          socket.send(Buffer.from(messageWillBeSent));
+        });
+
+        // TODO: this is just a sample code to test the custom CDP events
+        setTimeout(async () => {
+          const pl = {
+            sessionId: request.sessionId,
+            method: 'HeadlessService.liveComplete',
+            params: {
+              // test: 'lorem',
+              reason: 'done',
+            },
+          };
+
+          const test = Buffer.from(JSON.stringify(pl)).toString('utf-8');
+
+          socket.send(Buffer.from(test));
+        }, 5000);
+
         cdpWS.on('message', (data: any) => {
           const receivedMessage = Buffer.from(data).toString('utf-8');
 
@@ -134,19 +161,9 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
             if (!matchedCommand) return socket.send(data);
 
             // manipulate the response for the custom CDP method
-            const payloadWillBeSent = {
-              id: receivedPayload.id,
-              result: {
-                bar: 'Hello world',
-              },
-              sessionId: receivedPayload.sessionId,
-            };
-
-            const messageWillBeSent = Buffer.from(JSON.stringify(payloadWillBeSent)).toString(
-              'utf-8'
-            );
-
-            return socket.send(Buffer.from(messageWillBeSent));
+            puppeteerBrowser.emit(method, request);
+            // request = null;
+            return;
           }
 
           return socket.send(data);
@@ -156,6 +173,9 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
           const message = Buffer.from(data).toString('utf-8');
 
           this.logger.info(`Received message:`, message);
+
+          const payload = JSON.parse(message);
+          request = payload;
 
           return cdpWS.send(message);
         });
@@ -172,8 +192,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       });
 
       cdpWS.once('open', () => {
-        this.logger.info(`WebSocket connected to ${endpoint}`);
-
         wsServer.handleUpgrade(req, socket, head, (ws) => {
           wsServer.emit('connection', ws, req);
         });

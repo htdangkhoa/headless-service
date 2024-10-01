@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page } from 'puppeteer';
+import { Browser, Page } from 'puppeteer';
 
 import { DEFAULT_TIMEOUT } from '@/constants';
 import { patchNamedFunctionESBuildIssue2605, sleep } from '@/utils';
@@ -7,6 +7,30 @@ import { patchNamedFunctionESBuildIssue2605, sleep } from '@/utils';
 export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
   get name(): string {
     return 'helper';
+  }
+
+  onBrowser(browser: Browser, opts: any): Promise<void> {
+    browser.currentPage = (timeout = DEFAULT_TIMEOUT) => {
+      const start = Date.now();
+
+      return new Promise<Page>(async (resolve) => {
+        while (Date.now() - start < timeout) {
+          const pages = await browser.pages();
+
+          for (const page of pages) {
+            const isVisible = await page.evaluate(() => document.visibilityState === 'visible');
+
+            if (isVisible) {
+              return resolve(page);
+            }
+          }
+        }
+
+        throw new Error('Unable to get current page');
+      });
+    };
+
+    return Promise.resolve();
   }
 
   async onPageCreated(page: Page): Promise<void> {

@@ -2,9 +2,34 @@
   "domains": [
     {
       "domain": "HeadlessService",
+      "types": [
+        {
+          "id": "LiveURL",
+          "type": "object",
+          "properties": [
+            {
+              "name": "liveURL",
+              "type": "string"
+            }
+          ]
+        }
+      ],
       "commands": [
         {
-          "name": "foo"
+          "name": "liveURL",
+          "description": "Get the live URL.",
+          "returns": [
+            {
+              "name": "result",
+              "$ref": "LiveURL"
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "name": "liveComplete",
+          "description": "Fired when the live URL is complete."
         }
       ]
     }
