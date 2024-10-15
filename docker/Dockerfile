@@ -66,12 +66,6 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/extensions ./extensions
 COPY --from=builder /app/package.json ./package.json
 
-ENV HOST "0.0.0.0"
-ENV PORT "3000"
-ENV EXTERNAL_ADDRESS "http://localhost:3000"
-ENV SERVICE_NAME "headless-service"
-ENV DEBUG "headless-service*,-**:verbose"
-
 CMD ["pnpm", "run", "start"]
 
 EXPOSE 3000
