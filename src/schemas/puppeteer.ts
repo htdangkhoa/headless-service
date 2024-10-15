@@ -1,6 +1,6 @@
 import dedent from 'dedent';
 import { z } from 'zod';
-import _ from 'lodash-es';
+import { capitalize } from 'lodash-es';
 import { NumberOrStringSchema } from './common';
 
 export const PuppeteerUrlSchema = z.string().describe('The URL to take a screenshot of.');
@@ -355,7 +355,7 @@ const pdfFormats = [
   'a5',
   'a6',
 ]
-  .map((s) => [s.toUpperCase(), s.toLowerCase(), _.capitalize(s)])
+  .map((s) => [s.toUpperCase(), s.toLowerCase(), capitalize(s)])
   .flat();
 
 const setPDFFormats = new Set(pdfFormats);

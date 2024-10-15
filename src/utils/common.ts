@@ -1,9 +1,9 @@
-import _ from 'lodash-es';
+import { camelCase } from 'lodash-es';
 import { Dictionary } from '@/types';
 
 export const transformKeysToCamelCase = <T>(obj: any): T => {
   return Object.entries(obj).reduce((acc, [key, value]) => {
-    const camelCaseKey = _.camelCase(key);
+    const camelCaseKey = camelCase(key);
 
     if (Array.isArray(value)) {
       acc[camelCaseKey] = value.map((item) => {
