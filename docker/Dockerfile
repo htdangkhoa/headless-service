@@ -14,7 +14,7 @@ RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
   && apt-get install -y nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g npm@latest
+RUN npm install -g npm@9
 
 ENV PNPM_VERSION 8.15.4
 RUN npm install -g pnpm@"$PNPM_VERSION"
