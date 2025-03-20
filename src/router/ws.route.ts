@@ -3,7 +3,7 @@ import type { Duplex } from 'node:stream';
 import type { WebSocketServer } from 'ws';
 import WebSocket from 'ws';
 
-import type { BrowserManager, BrowserCDP } from '@/cdp';
+import type { BrowserCDP } from '@/cdp';
 import { Logger } from '@/logger';
 import { RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
@@ -82,19 +82,17 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     browser: BrowserCDP,
     endpoint: string
   ) {
-    const { wsServer, browserManager } = this.context;
+    const { wsServer } = this.context;
 
     const puppeteerBrowser = browser.getPuppeteerBrowser()!;
 
-    const protocol = await browserManager.getJSONProtocol();
+    const client = new WebSocket(endpoint, {
+      headers: {
+        Host: '127.0.0.1',
+      },
+    });
 
     return new Promise<void>((resolve, reject) => {
-      const cdpWS = new WebSocket(endpoint, {
-        headers: {
-          Host: '127.0.0.1',
-        },
-      });
-
       const close = async () => {
         this.logger.info('socket closed');
 
@@ -102,7 +100,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
         browser.process()?.off('close', close);
         socket.off('close', close);
 
-        cdpWS.close();
+        client.close();
 
         return resolve();
       };
@@ -110,92 +108,107 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       browser?.once('close', close);
       browser?.process()?.once('close', close);
       socket.once('close', close);
+      wsServer.once('error', close);
 
-      wsServer.once('connection', (socket, req) => {
-        let request: any;
+      wsServer.once('connection', (s, r) => {
+        console.log('socket connected');
 
-        puppeteerBrowser!.on('CDP.result', (payloadWillBeSent) => {
-          const messageWillBeSent = Buffer.from(JSON.stringify(payloadWillBeSent)).toString(
-            'utf-8'
-          );
+        // puppeteerBrowser!.on('CDP.result', (payloadWillBeSent) => {
+        //   const messageWillBeSent = Buffer.from(JSON.stringify(payloadWillBeSent)).toString(
+        //     'utf-8'
+        //   );
 
-          socket.send(Buffer.from(messageWillBeSent));
+        //   s.send(Buffer.from(messageWillBeSent));
+        // });
+
+        client.on('message', (data: any) => {
+          const message = Buffer.from(data).toString('utf-8');
+
+          this.logger.info(`Received message:`, message);
+
+          return s.send(data);
         });
 
-        // TODO: this is just a sample code to test the custom CDP events
-        setTimeout(async () => {
-          const pl = {
-            sessionId: request.sessionId,
-            method: 'HeadlessService.liveComplete',
-            params: {
-              // test: 'lorem',
-              reason: 'done',
-            },
-          };
-
-          const test = Buffer.from(JSON.stringify(pl)).toString('utf-8');
-
-          socket.send(Buffer.from(test));
-        }, 5000);
-
-        cdpWS.on('message', (data: any) => {
-          const receivedMessage = Buffer.from(data).toString('utf-8');
-
-          const receivedPayload = JSON.parse(receivedMessage);
-
-          if (receivedPayload.error) {
-            const [, method] = receivedPayload.error.message.match(/'(.*)' /) ?? [];
-
-            if (!method) return socket.send(data);
-
-            const [domain, command] = method.split('.');
-
-            const matchedProtocol = protocol.domains.find(
-              (d: any) => String(d.domain) === String(domain)
-            );
-
-            if (!matchedProtocol) return socket.send(data);
-
-            const matchedCommand = matchedProtocol.commands.find((c: any) => c.name === command);
-
-            if (!matchedCommand) return socket.send(data);
-
-            // manipulate the response for the custom CDP method
-            puppeteerBrowser.emit(method, request);
-            // request = null;
-            return;
-          }
-
-          return socket.send(data);
-        });
-
-        socket.on('message', (data: any) => {
+        s.on('message', (data: any) => {
           const message = Buffer.from(data).toString('utf-8');
 
           this.logger.info(`Received message:`, message);
 
           const payload = JSON.parse(message);
-          request = payload;
 
-          return cdpWS.send(message);
+          if (payload.method.startsWith('HeadlessService')) {
+            return this.onCustomCDPCommand(s, this.context, payload);
+          }
+
+          return client.send(message);
         });
       });
 
-      wsServer.once('error', (err) => {
-        this.logger.error(`WebSocket Server error`, err);
-
-        cdpWS.close();
-
-        browserManager.close(browser);
-
-        return reject(err);
-      });
-
-      cdpWS.once('open', () => {
+      client.once('open', () => {
         wsServer.handleUpgrade(req, socket, head, (ws) => {
           wsServer.emit('connection', ws, req);
         });
       });
     });
+  }
+
+  private async onCustomCDPCommand(
+    socket: WebSocket,
+    context: HeadlessServerWebSocketContext,
+    payload: any
+  ) {
+    this.logger.info('onCustomCDPCommand', payload);
+
+    const { browserManager } = context;
+
+    const protocol = await browserManager.getJSONProtocol();
+
+    const [domain, command] = payload.method.split('.');
+
+    const matchedProtocol = protocol.domains.find((d: any) => String(d.domain) === String(domain));
+
+    const errorPayload = {
+      id: payload.id,
+      error: { code: -32601, message: `'${payload.method}' wasn't found` },
+      sessionId: payload.sessionId,
+    };
+    const errorBuffer = Buffer.from(JSON.stringify(errorPayload));
+
+    if (!matchedProtocol) return socket.send(errorBuffer);
+
+    const matchedCommand = matchedProtocol.commands.find((c: any) => c.name === command);
+
+    if (!matchedCommand) return socket.send(errorBuffer);
+
+    // // manipulate the response for the custom CDP method
+    // puppeteerBrowser.emit(method, request);
+
+    // TODO: this is just a sample code to test the custom CDP events
+    const resultPayload = {
+      id: payload.id,
+      sessionId: payload.sessionId,
+      method: payload.method,
+      result: {
+        liveUrl: 'https://example.com',
+      },
+    };
+
+    setTimeout(() => {
+      const pl = {
+        // id: payload.id,
+        sessionId: payload.sessionId,
+        method: 'HeadlessService.liveComplete',
+        params: {
+          reason: 'done',
+        },
+      };
+      const plBuffer = Buffer.from(JSON.stringify(pl));
+
+      socket.send(plBuffer);
+    }, 5000);
+
+    const resultBuffer = Buffer.from(JSON.stringify(resultPayload));
+
+    return socket.send(resultBuffer);
   }
 }
