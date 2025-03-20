@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
 import {
+  getBrowserId,
   makeExternalUrl,
   parseUrlFromIncomingMessage,
   patchNamedFunctionESBuildIssue2605,
@@ -46,7 +47,16 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   async onBrowser(browser: Browser, opts: any): Promise<void> {
     this.browser = browser;
 
-    browser.on('HeadlessService.liveURL', this.onHeadlessServiceLiveURL.bind(this));
+    const browserId = getBrowserId(browser);
+
+    /**
+     * Listen for liveURL command
+     */
+    const eventName = `${browserId}.HeadlessService.liveURL`;
+
+    browser.on(eventName, (payload) => {
+      return this.onHeadlessServiceLiveURL(browserId, payload);
+    });
   }
 
   async onDisconnected(): Promise<void> {
@@ -261,10 +271,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private async onHeadlessServiceLiveURL(event: any) {
-    const payload: any = {
-      id: event.id,
-      sessionId: event.sessionId,
+  private async onHeadlessServiceLiveURL(browserId: string, payload: any) {
+    const result: any = {
+      id: payload.id,
+      sessionId: payload.sessionId,
     };
 
     if (!this.browser) return;
@@ -280,14 +290,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
 
-      payload.result = { liveUrl: liveUrl.href };
+      result.result = { liveUrl: liveUrl.href };
     } catch (error: any) {
-      payload.error = {
+      result.error = {
         message: error.message,
         code: -1,
       };
     } finally {
-      return this.browser.emit('CDP.result', payload);
+      const eventNameForResult = `${browserId}.${payload.method}.result`;
+      return this.browser.emit(eventNameForResult, result);
     }
   }
 }

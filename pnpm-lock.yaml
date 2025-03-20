@@ -26,6 +26,9 @@ dependencies:
   devtools-protocol:
     specifier: ^0.0.1359167
     version: 0.0.1359167
+  eventemitter2:
+    specifier: ^6.4.9
+    version: 6.4.9
   express:
     specifier: ^4.21.0
     version: 4.21.0
@@ -99,6 +102,9 @@ devDependencies:
   '@types/debug':
     specifier: ^4.1.12
     version: 4.1.12
+  '@types/eventemitter2':
+    specifier: ^4.1.2
+    version: 4.1.2
   '@types/express':
     specifier: ^4.17.21
     version: 4.17.21
@@ -834,6 +840,13 @@ packages:
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
     dependencies:
       '@types/ms': 0.7.34
+
+  /@types/eventemitter2@4.1.2:
+    resolution: {integrity: sha512-yU7QvSKpbe62hidZQ/424Lnn40dnA5FUJqd6xS+U4BheJUHo/OzNpoixXKDbWKGbnvURqqkWIIIvTZvo8N0gzQ==}
+    deprecated: This is a stub types definition. eventemitter2 provides its own type definitions, so you do not need this installed.
+    dependencies:
+      eventemitter2: 6.4.9
+    dev: true
 
   /@types/express-serve-static-core@4.19.0:
     resolution: {integrity: sha512-bGyep3JqPCRry1wq+O5n7oiBgGWmeIJXPjXXCo8EK0u8duZGSYar7cGqd3ML2JUsLGeB7fmc06KYo9fLGWqPvQ==}
@@ -1687,6 +1700,9 @@ packages:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
     dev: false
+
+  /eventemitter2@6.4.9:
+    resolution: {integrity: sha512-JEPTiaOt9f04oa6NOkc4aH+nVp5I3wEjpHbIPqfgCdD5v5bUzy7xQqwcVO2aDQgOWhI28da57HksMrzK9HlRxg==}
 
   /eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}

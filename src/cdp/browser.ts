@@ -1,4 +1,4 @@
-import { EventEmitter } from 'node:events';
+import EventEmitter from 'eventemitter2';
 import { resolve } from 'node:path';
 import { WebSocketServer } from 'ws';
 import vanillaPuppeteer, { type Browser, type PuppeteerLaunchOptions } from 'puppeteer';

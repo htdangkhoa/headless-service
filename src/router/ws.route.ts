@@ -113,14 +113,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       wsServer.once('connection', (s, r) => {
         console.log('socket connected');
 
-        // puppeteerBrowser!.on('CDP.result', (payloadWillBeSent) => {
-        //   const messageWillBeSent = Buffer.from(JSON.stringify(payloadWillBeSent)).toString(
-        //     'utf-8'
-        //   );
-
-        //   s.send(Buffer.from(messageWillBeSent));
-        // });
-
         client.on('message', (data: any) => {
           const message = Buffer.from(data).toString('utf-8');
 
@@ -137,7 +129,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
           const payload = JSON.parse(message);
 
           if (payload.method.startsWith('HeadlessService')) {
-            return this.onCustomCDPCommand(s, this.context, payload);
+            return this.onCustomCDPCommand(s, payload, browser);
           }
 
           return client.send(message);
@@ -152,14 +144,10 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     });
   }
 
-  private async onCustomCDPCommand(
-    socket: WebSocket,
-    context: HeadlessServerWebSocketContext,
-    payload: any
-  ) {
+  private async onCustomCDPCommand(socket: WebSocket, payload: any, browser: BrowserCDP) {
     this.logger.info('onCustomCDPCommand', payload);
 
-    const { browserManager } = context;
+    const { browserManager } = this.context;
 
     const protocol = await browserManager.getJSONProtocol();
 
@@ -180,35 +168,42 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
     if (!matchedCommand) return socket.send(errorBuffer);
 
-    // // manipulate the response for the custom CDP method
-    // puppeteerBrowser.emit(method, request);
+    const puppeteerBrowser = browser.getPuppeteerBrowser()!;
 
-    // TODO: this is just a sample code to test the custom CDP events
-    const resultPayload = {
-      id: payload.id,
-      sessionId: payload.sessionId,
-      method: payload.method,
-      result: {
-        liveUrl: 'https://example.com',
-      },
-    };
+    const browserId = browser.id();
 
-    setTimeout(() => {
-      const pl = {
-        // id: payload.id,
-        sessionId: payload.sessionId,
-        method: 'HeadlessService.liveComplete',
-        params: {
-          reason: 'done',
-        },
-      };
-      const plBuffer = Buffer.from(JSON.stringify(pl));
+    /**
+     * Listen for the result of the command
+     */
+    const eventNameForResult = `${browserId}.${payload.method}.result`;
 
-      socket.send(plBuffer);
-    }, 5000);
+    puppeteerBrowser.once(eventNameForResult, function onResult(result) {
+      puppeteerBrowser.off(eventNameForResult, onResult);
 
-    const resultBuffer = Buffer.from(JSON.stringify(resultPayload));
+      const resultBuffer = Buffer.from(JSON.stringify(result));
 
-    return socket.send(resultBuffer);
+      return socket.send(resultBuffer);
+    });
+
+    /**
+     * Emit the event to the browser into the plugin to handle the command
+     */
+    const eventName = `${browserId}.${payload.method}`;
+
+    puppeteerBrowser.emit(eventName, payload);
+
+    // setTimeout(() => {
+    //   const pl = {
+    //     // id: payload.id,
+    //     sessionId: payload.sessionId,
+    //     method: 'HeadlessService.liveComplete',
+    //     params: {
+    //       reason: 'done',
+    //     },
+    //   };
+    //   const plBuffer = Buffer.from(JSON.stringify(pl));
+
+    //   socket.send(plBuffer);
+    // }, 5000);
   }
 }
