@@ -78,3 +78,24 @@ main().catch(console.error);
 ```
 
 > you can also run the demo script by executing `pnpm ts-node examples/demo.ts`
+
+## Docker
+
+1. Build the Docker image:
+
+    ```bash
+    docker build -t headless-service . -f ./docker/Dockerfile
+    ```
+
+2. Run the Docker container:
+
+    ```bash
+    docker run \
+      -e HOST='0.0.0.0' \
+      -e PORT='3000' \
+      -e EXTERNAL_ADDRESS='http://localhost:3000' \
+      -e SERVICE_NAME='headless-service' \
+      -e DEBUG='headless-service*,-**:verbose' \
+      -p 3000:3000 \
+      headless-service
+    ```

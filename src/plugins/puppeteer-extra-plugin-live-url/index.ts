@@ -72,6 +72,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const { cdp } = pageMapped;
 
+    const page = await target.page();
+    page?.off('framenavigated', this.onFrameNavigated.bind(this));
+
     cdp.removeAllListeners();
 
     this.pageMap.delete(targetId);
@@ -85,7 +88,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     page.on('framenavigated', self.onFrameNavigated.bind(self));
 
     page.on('framedetached', (frame: Frame) => {
-      page.off('framenavigated', self.onFrameNavigated);
+      page.off('framenavigated', self.onFrameNavigated.bind(self));
     });
 
     await Promise.allSettled([page.waitForNavigation({ timeout: 0 }), this.injectLiveUrlAPI(page)]);

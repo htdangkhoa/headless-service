@@ -172,6 +172,8 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
       `--auto-select-tab-capture-source-by-title=${EXTENSION_TITLE}`,
       '--auto-accept-camera-and-microphone-capture',
       '--auto-grant-captured-surface-control-prompt',
+      '--enable-usermedia-screen-capturing',
+      `--window-name=${EXTENSION_TITLE}`,
     ];
 
     options.args.push(...args);

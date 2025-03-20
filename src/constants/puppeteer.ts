@@ -9,4 +9,5 @@ export const DEFAULT_LAUNCH_ARGS = [
   /* Disable animations to reduce time waiting for animations to complete */
   '--disable-modal-animations',
   '--wm-window-animations-disabled',
+  '--disable-popup-blocking',
 ];
