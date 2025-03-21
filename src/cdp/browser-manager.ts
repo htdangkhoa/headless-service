@@ -10,6 +10,7 @@ import { Dictionary } from '@/types';
 import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
 import customProtocol from './protocol.json';
+import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -24,7 +25,7 @@ export class BrowserManager {
 
   private timers = new Map<string, NodeJS.Timeout>();
 
-  private protocol: Dictionary | null = null;
+  private protocol: Protocol | null = null;
 
   async requestBrowser(req: IncomingMessage, options?: IRequestBrowserOptions) {
     const { browserId, ws, record, ...browserCDPOptions } = options ?? {};
@@ -213,7 +214,7 @@ export class BrowserManager {
     }
   }
 
-  async getJSONProtocol(): Promise<Dictionary> {
+  async getJSONProtocol(): Promise<Protocol> {
     if (this.protocol) {
       return this.protocol;
     }
@@ -227,8 +228,12 @@ export class BrowserManager {
 
       const { host } = new URL(browserWSEndpoint);
       const response = await fetch(`http://${host}/json/protocol`);
-      const protocol = await response.json();
-      protocol.domains = protocol.domains.concat(customProtocol.domains);
+      const protocol = (await response.json()) as Protocol;
+
+      const headlessServiceDomain = new HeadlessServiceDomainRegistry().buildDomain();
+
+      // protocol.domains = protocol.domains.concat(customProtocol.domains);
+      protocol.domains = protocol.domains.concat(headlessServiceDomain);
 
       this.protocol = protocol;
 

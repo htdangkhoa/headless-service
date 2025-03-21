@@ -153,7 +153,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
     const [domain, command] = payload.method.split('.');
 
-    const matchedProtocol = protocol.domains.find((d: any) => String(d.domain) === String(domain));
+    const matchedProtocol = protocol.domains.find((d) => String(d.domain) === String(domain));
 
     const errorPayload = {
       id: payload.id,
@@ -164,7 +164,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
     if (!matchedProtocol) return socket.send(errorBuffer);
 
-    const matchedCommand = matchedProtocol.commands.find((c: any) => c.name === command);
+    const matchedCommand = (matchedProtocol.commands ?? []).find((c) => c.name === command);
 
     if (!matchedCommand) return socket.send(errorBuffer);
 

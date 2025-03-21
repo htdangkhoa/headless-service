@@ -1,12 +1,13 @@
 import { Duplex } from 'node:stream';
 import { STATUS_CODES } from 'node:http';
 import { Request, Response } from 'express';
-import { ZodIssue, ZodError, z } from 'zod';
+import { ZodIssue, ZodError } from 'zod';
 import qs from 'qs';
 
 import { Dictionary } from '@/types';
 import { HttpStatus } from '@/constants';
 import { ResponseBody } from '@/schemas';
+import { Protocol } from '@/cdp/devtools';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 
@@ -25,7 +26,7 @@ export const writeResponse = async (
   options?: {
     contentType?: string;
     message?: string;
-    body?: ResponseBody | Error | Array<Error> | ZodIssue[];
+    body?: ResponseBody | Protocol | Error | Array<Error> | ZodIssue[];
     skipValidateBody?: boolean;
   }
 ) => {
