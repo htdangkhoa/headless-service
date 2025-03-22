@@ -54,9 +54,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
      */
     const eventName = `${browserId}.HeadlessService.liveURL`;
 
-    browser.on(eventName, (payload) => {
-      return this.onHeadlessServiceLiveURL(browserId, payload);
-    });
+    browser.on(eventName, this.onHeadlessServiceLiveURL.bind(this));
   }
 
   async onDisconnected(): Promise<void> {
@@ -271,7 +269,22 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private async onHeadlessServiceLiveURL(browserId: string, payload: any) {
+  private async onHeadlessServiceLiveURL(payload: any) {
+    const timeoutId = setTimeout(() => {
+      this.browser?.emit(`${getBrowserId(this.browser)}.HeadlessService.liveURL.result`, {
+        id: payload.id,
+        sessionId: payload.sessionId,
+        error: {
+          message: 'Timeout',
+          code: -1,
+        },
+      });
+    }, 5000);
+
+    if (this.browser === null) return;
+
+    const browserId = getBrowserId(this.browser);
+
     const result: any = {
       id: payload.id,
       sessionId: payload.sessionId,
@@ -297,6 +310,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         code: -1,
       };
     } finally {
+      clearTimeout(timeoutId);
       const eventNameForResult = `${browserId}.${payload.method}.result`;
       return this.browser.emit(eventNameForResult, result);
     }
