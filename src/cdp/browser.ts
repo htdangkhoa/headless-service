@@ -12,6 +12,8 @@ import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
 import { getBrowserId } from '@/utils/puppeteer';
+import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
+import { Logger } from '@/logger';
 
 export interface BrowserCDPOptions {
   // launch options
@@ -25,11 +27,19 @@ export interface BrowserCDPOptions {
 }
 
 export class BrowserCDP extends EventEmitter {
+  private readonly logger = new Logger(this.constructor.name);
+
   private browser: Browser | null = null;
+
   private browserWSEndpoint: string | null = null;
+
   private wsServer: WebSocketServer | null = null;
+
   expiresAt: Date | null = null;
+
   private record: boolean = false;
+
+  private protocol: Protocol | null = null;
 
   constructor(private options?: BrowserCDPOptions) {
     super();
@@ -171,6 +181,36 @@ export class BrowserCDP extends EventEmitter {
 
   pages() {
     return this.browser?.pages() ?? [];
+  }
+
+  async getJSONProtocol() {
+    if (this.protocol) {
+      return this.protocol;
+    }
+
+    if (!this.browser) {
+      throw new Error(`${this.constructor.name} is not launched yet`);
+    }
+
+    try {
+      const browserWSEndpoint = this.wsEndpoint();
+
+      const { host } = new URL(browserWSEndpoint!);
+      const response = await fetch(`http://${host}/json/protocol`);
+      const protocol = (await response.json()) as Protocol;
+
+      const headlessServiceDomain = new HeadlessServiceDomainRegistry().buildDomain();
+
+      protocol.domains = protocol.domains.concat(headlessServiceDomain);
+
+      this.protocol = protocol;
+
+      return this.protocol!;
+    } catch (error) {
+      this.logger.error('Error getting JSON protocol', error);
+
+      throw new Error('Error getting JSON protocol');
+    }
   }
 
   getPuppeteerBrowser() {

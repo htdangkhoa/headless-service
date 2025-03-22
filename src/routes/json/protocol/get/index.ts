@@ -41,11 +41,21 @@ export class JSONProtocolGetRoute extends ProxyHttpRoute {
   handler: Handler = async (req, res) => {
     const { browserManager } = this.context;
 
-    const meta = await browserManager.getJSONProtocol();
+    const browser = await browserManager.requestBrowser(req);
 
-    return writeResponse(res, HttpStatus.OK, {
-      body: meta!,
-      skipValidateBody: true,
-    });
+    try {
+      const jsonProtocol = await browser.getJSONProtocol();
+
+      return writeResponse(res, HttpStatus.OK, {
+        body: jsonProtocol!,
+        skipValidateBody: true,
+      });
+    } catch (error) {
+      return writeResponse(res, HttpStatus.BAD_REQUEST, {
+        body: error as Error,
+      });
+    } finally {
+      browser.close();
+    }
   };
 }

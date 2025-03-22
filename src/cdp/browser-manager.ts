@@ -214,39 +214,6 @@ export class BrowserManager {
     }
   }
 
-  async getJSONProtocol(): Promise<Protocol> {
-    if (this.protocol) {
-      return this.protocol;
-    }
-
-    const browser = new BrowserCDP();
-
-    try {
-      await browser.launch();
-
-      const browserWSEndpoint = browser.wsEndpoint()!;
-
-      const { host } = new URL(browserWSEndpoint);
-      const response = await fetch(`http://${host}/json/protocol`);
-      const protocol = (await response.json()) as Protocol;
-
-      const headlessServiceDomain = new HeadlessServiceDomainRegistry().buildDomain();
-
-      // protocol.domains = protocol.domains.concat(customProtocol.domains);
-      protocol.domains = protocol.domains.concat(headlessServiceDomain);
-
-      this.protocol = protocol;
-
-      return this.protocol!;
-    } catch (error) {
-      this.logger.error('Error getting JSON protocol', error);
-
-      throw new Error('Error getting JSON protocol');
-    } finally {
-      browser.close();
-    }
-  }
-
   getBrowserById(browserId: string) {
     return this.browsers.get(browserId);
   }

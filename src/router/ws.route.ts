@@ -147,9 +147,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   private async onCustomCDPCommand(socket: WebSocket, payload: any, browser: BrowserCDP) {
     this.logger.info('onCustomCDPCommand', payload);
 
-    const { browserManager } = this.context;
-
-    const protocol = await browserManager.getJSONProtocol();
+    const protocol = await browser.getJSONProtocol();
 
     const [domain, command] = payload.method.split('.');
 
