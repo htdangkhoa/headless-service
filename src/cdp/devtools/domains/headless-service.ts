@@ -1,4 +1,5 @@
-import { Command, Domain, DomainRegistry, DomainType } from '../base';
+import { COMMANDS, DOMAINS, EVENTS } from '@/constants';
+import { Event, Command, Domain, DomainRegistry, DomainType } from '../base';
 
 export class HeadlessServiceDomainRegistry extends DomainRegistry {
   constructor() {
@@ -6,10 +7,14 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
   }
 
   buildDomain(): Domain {
+    /* Register commands */
     this.createLiveUrlCommand();
 
+    /* Register events */
+    this.createLiveCompleteEvent();
+
     return {
-      domain: 'HeadlessService',
+      domain: DOMAINS.HEADLESS_SERVICE,
       types: Array.from(this.types.values()),
       commands: Array.from(this.commands.values()),
       events: Array.from(this.events.values()),
@@ -30,12 +35,21 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     };
 
     const LiveUrlCommand: Command = {
-      name: 'liveURL',
+      name: COMMANDS.LIVE_URL,
       description: 'Get live URL',
       returns: this.buildReturns(LiveUrlPayloadType),
     };
 
     this.addDomainType(LiveUrlPayloadType);
     this.addCommand(LiveUrlCommand);
+  }
+
+  private createLiveCompleteEvent() {
+    const LiveCompleteEvent: Event = {
+      name: EVENTS.LIVE_COMPLETE,
+      description: 'Emit the screencast is stopped',
+    };
+
+    this.addEvent(LiveCompleteEvent);
   }
 }

@@ -154,6 +154,7 @@ export class BrowserCDP extends EventEmitter {
     if (this.browser) {
       this.emit('close');
       this.browser.removeAllListeners();
+      this.wsServer?.removeAllListeners();
       this.removeAllListeners();
       this.browser.close();
       this.browser = null;

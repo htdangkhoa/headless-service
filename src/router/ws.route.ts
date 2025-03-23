@@ -5,6 +5,7 @@ import WebSocket from 'ws';
 
 import type { BrowserCDP } from '@/cdp';
 import { Logger } from '@/logger';
+import { buildProtocolEventNames } from '@/utils';
 import { RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
 
@@ -84,8 +85,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   ) {
     const { wsServer } = this.context;
 
-    const puppeteerBrowser = browser.getPuppeteerBrowser()!;
-
     const client = new WebSocket(endpoint, {
       headers: {
         Host: '127.0.0.1',
@@ -99,6 +98,8 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
         browser.off('close', close);
         browser.process()?.off('close', close);
         socket.off('close', close);
+        wsServer.off('close', close);
+        wsServer.off('error', close);
 
         client.close();
 
@@ -108,10 +109,11 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       browser?.once('close', close);
       browser?.process()?.once('close', close);
       socket.once('close', close);
+      wsServer.once('close', close);
       wsServer.once('error', close);
 
       wsServer.once('connection', (s, r) => {
-        console.log('socket connected');
+        this.logger.info('socket connected');
 
         client.on('message', (data: any) => {
           const message = Buffer.from(data).toString('utf-8');
@@ -123,8 +125,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
         s.on('message', (data: any) => {
           const message = Buffer.from(data).toString('utf-8');
-
-          this.logger.info(`Received message:`, message);
 
           const payload = JSON.parse(message);
 
@@ -145,7 +145,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   }
 
   private async onCustomCDPCommand(socket: WebSocket, payload: any, browser: BrowserCDP) {
-    this.logger.info('onCustomCDPCommand', payload);
+    this.logger.info('Received custom CDP command:', payload);
 
     const protocol = await browser.getJSONProtocol();
 
@@ -173,10 +173,13 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     /**
      * Listen for the result of the command
      */
-    const eventNameForResult = `${browserId}.${payload.method}.result`;
+    const { eventNameForListener, eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      payload.method
+    );
 
-    puppeteerBrowser.once(eventNameForResult, function onResult(result) {
-      puppeteerBrowser.off(eventNameForResult, onResult);
+    puppeteerBrowser.on(eventNameForResult, (result) => {
+      this.logger.debug('Received result for custom CDP command:', result);
 
       const resultBuffer = Buffer.from(JSON.stringify(result));
 
@@ -184,24 +187,8 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     });
 
     /**
-     * Emit the event to the browser into the plugin to handle the command
+     * Emit the command to the browser
      */
-    const eventName = `${browserId}.${payload.method}`;
-
-    puppeteerBrowser.emit(eventName, payload);
-
-    // setTimeout(() => {
-    //   const pl = {
-    //     // id: payload.id,
-    //     sessionId: payload.sessionId,
-    //     method: 'HeadlessService.liveComplete',
-    //     params: {
-    //       reason: 'done',
-    //     },
-    //   };
-    //   const plBuffer = Buffer.from(JSON.stringify(pl));
-
-    //   socket.send(plBuffer);
-    // }, 5000);
+    puppeteerBrowser.emit(eventNameForListener, payload);
   }
 }

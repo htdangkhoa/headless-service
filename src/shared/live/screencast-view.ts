@@ -172,7 +172,7 @@ export class ScreencastView {
     this.sendCommand(SPECIAL_COMMANDS.RELOAD);
   }
 
-  async onOpen(event: Event) {
+  async onOpen(_event: Event) {
     // hide notification
     this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
@@ -297,7 +297,7 @@ export class ScreencastView {
     }
   }
 
-  async onClose(event: CloseEvent) {
+  async onClose(_event: CloseEvent) {
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 
@@ -309,7 +309,7 @@ export class ScreencastView {
     this.$notification.textContent = 'Session closed';
   }
 
-  async onError(event: Event) {
+  async onError(_event: Event) {
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
 
