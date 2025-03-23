@@ -8,6 +8,7 @@ import { Logger } from '@/logger';
 import { buildProtocolEventNames } from '@/utils';
 import { RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
+import { DOMAINS } from '@/constants';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -128,7 +129,9 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
           const payload = JSON.parse(message);
 
-          if (payload.method.startsWith('HeadlessService')) {
+          const customDomains = Object.values(DOMAINS);
+
+          if (customDomains.some((d) => payload.method.startsWith(d))) {
             return this.onCustomCDPCommand(s, payload, browser);
           }
 

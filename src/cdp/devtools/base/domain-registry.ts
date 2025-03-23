@@ -28,12 +28,14 @@ export abstract class DomainRegistry {
     this.types.add(type);
   }
 
-  protected addCommand(command: Command) {
-    if (this.commands.has(command.name)) {
-      throw new Error(`Command ${command.name} already exists`);
-    }
+  protected addCommand(...commands: Command[]) {
+    for (const command of commands) {
+      if (this.commands.has(command.name)) {
+        throw new Error(`Command ${command.name} already exists`);
+      }
 
-    this.commands.set(command.name, command);
+      this.commands.set(command.name, command);
+    }
   }
 
   protected addEvent(event: Event) {

@@ -190,6 +190,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private async onHeadlessServiceLiveURL(payload: any) {
     if (!this.browser) return;
 
+    if (payload.method !== this.PROTOCOL_METHODS.LIVE_URL) return;
+
     const browserId = getBrowserId(this.browser);
 
     const result: any = {
