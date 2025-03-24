@@ -13,17 +13,15 @@ async function main() {
     waitUntil: 'load',
   });
 
-  await page.evaluate(() => {
-    // @ts-ignore
-    window.recorder.start();
-  });
+  const cdp = await page.createCDPSession();
 
-  await sleep(5000);
+  // @ts-expect-error
+  await cdp.send('HeadlessService.startRecording', {});
 
-  await page.evaluate(() => {
-    // @ts-ignore
-    return window.recorder.stop();
-  });
+  await sleep(15000);
+
+  // @ts-expect-error
+  await cdp.send('HeadlessService.stopRecording', {});
 
   await browser.close();
 }

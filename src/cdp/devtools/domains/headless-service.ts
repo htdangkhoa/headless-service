@@ -9,6 +9,7 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
   buildDomain(): Domain {
     /* Register commands */
     this.createLiveUrlCommand();
+    this.createRecordingCommand();
 
     /* Register events */
     this.createLiveCompleteEvent();
@@ -51,5 +52,19 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     };
 
     this.addEvent(LiveCompleteEvent);
+  }
+
+  private createRecordingCommand() {
+    const startRecordingCommand: Command = {
+      name: COMMANDS.START_RECORDING,
+      description: 'Start recording',
+    };
+
+    const stopRecordingCommand: Command = {
+      name: COMMANDS.STOP_RECORDING,
+      description: 'Stop recording',
+    };
+
+    this.addCommand(startRecordingCommand, stopRecordingCommand);
   }
 }

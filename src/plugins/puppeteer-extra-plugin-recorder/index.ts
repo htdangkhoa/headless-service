@@ -1,30 +1,37 @@
-import type { Page, Frame, Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 
-import { env, getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
-import { ACTIONS as SHARED_ACTIONS, CUSTOM_EVENT_NAME, EXTENSION_TITLE } from '@/constants';
+import { buildProtocolEventNames, buildProtocolMethod, env, getBrowserId } from '@/utils';
+import { ACTIONS as SHARED_ACTIONS, EXTENSION_TITLE, DOMAINS, COMMANDS } from '@/constants';
 import { Logger } from '@/logger';
+import { ValueOf } from '@/types';
+import { Request, Response } from '@/cdp/devtools';
 
-export interface IEmbeddedAPIMeta {
-  extensionTitle: string;
-  actions: typeof SHARED_ACTIONS;
-  downloadDir: string;
-  customEventName: typeof CUSTOM_EVENT_NAME;
+interface RecordingParams {
+  action: ValueOf<typeof SHARED_ACTIONS>;
 }
+interface StartRecordingParams extends RecordingParams {
+  originalTitle: string;
+}
+
+interface StopRecordingParams extends RecordingParams {}
 
 export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
   private logger = new Logger(this.constructor.name);
 
   private readonly defaultDownloadDir: string = env('DOWNLOAD_RECORDER_DIR', os.tmpdir())!;
 
-  private downloadDir: string | null = null;
+  private browser: Browser | null = null;
 
-  private pages: Set<Page> = new Set();
+  private readonly downloadDirMap: Map<string, string> = new Map();
 
-  private fsWatcher: fs.FSWatcher | null = null;
+  private readonly PROTOCOL_METHODS = {
+    START_RECORDING: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.START_RECORDING),
+    STOP_RECORDING: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.STOP_RECORDING),
+  };
 
   constructor() {
     super();
@@ -35,133 +42,28 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
   }
 
   async onBrowser(browser: Browser, opts: any): Promise<void> {
+    this.browser = browser;
+
     const browserId = getBrowserId(browser);
-    this.logger.info(`Browser ID: ${browserId}`);
 
-    const downloadDir = path.join(this.defaultDownloadDir, browserId);
+    const { eventNameForListener: eventNameForStartRecordingListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.START_RECORDING
+    );
 
-    this.logger.info(`Download directory: ${downloadDir}`);
+    browser.on(eventNameForStartRecordingListener, this.onStartRecording.bind(this));
 
-    this.downloadDir = downloadDir;
+    const { eventNameForListener: eventNameForStopRecordingListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.STOP_RECORDING
+    );
 
-    if (!fs.existsSync(downloadDir)) {
-      fs.mkdirSync(downloadDir, { recursive: true });
-    }
-
-    this.fsWatcher = fs.watch(downloadDir, (eventType, filename) => {
-      if (eventType === 'rename' && filename?.endsWith('.webm')) {
-        this.logger.info(`Event: ${eventType}, Filename: ${filename}`);
-
-        // TODO: Implement adapters for different storage services
-
-        this.cleanupFsWatcher();
-      }
-    });
-  }
-
-  async onPageCreated(page: Page): Promise<void> {
-    this.pages.add(page);
-
-    const cdp = await page.createCDPSession();
-    await cdp.send('Browser.setDownloadBehavior', {
-      behavior: 'allow',
-      downloadPath: this.downloadDir!,
-    });
-
-    await patchNamedFunctionESBuildIssue2605(page);
-
-    const self = this;
-
-    page.on('framenavigated', self.onFrameNavigated.bind(self));
-
-    page.on('framedetached', (frame: Frame) => {
-      page.off('framenavigated', self.onFrameNavigated);
-    });
+    browser.on(eventNameForStopRecordingListener, this.onStopRecording.bind(this));
   }
 
   async onDisconnected(): Promise<void> {
-    this.pages.forEach((page) => {
-      if (!page.isClosed()) {
-        page.off('framenavigated');
-        page.removeAllListeners();
-      }
-    });
-
-    this.pages.clear();
-
-    this.cleanupFsWatcher();
-
-    this.downloadDir = null;
-  }
-
-  private async onFrameNavigated(frame: Frame): Promise<void> {
-    if (!frame.url().startsWith('http')) return;
-
-    if (frame.page().isClosed()) return;
-
-    if (frame.parentFrame()?.detached) return;
-
-    if (frame.detached) return;
-
-    const setupEmbeddedAPI = (meta: IEmbeddedAPIMeta) => {
-      const { extensionTitle, actions, downloadDir, customEventName } = meta;
-
-      if (!window.recorder) {
-        Object.defineProperty(window, 'recorder', {
-          configurable: false,
-          enumerable: false,
-          writable: false,
-          value: {
-            async start() {
-              const originalTitle = document.title;
-              document.title = extensionTitle;
-              window.postMessage(
-                {
-                  type: actions.REC_START,
-                  data: {
-                    url: window.location.origin,
-                    original_title: originalTitle,
-                  },
-                },
-                '*'
-              );
-              requestAnimationFrame(() => {
-                document.title = originalTitle;
-              });
-            },
-            stop() {
-              return new Promise((resolve) => {
-                window.postMessage({ type: actions.REC_STOP }, '*');
-
-                window.addEventListener(customEventName, function onDownloadComplete(e) {
-                  window.removeEventListener(customEventName, onDownloadComplete);
-
-                  // @ts-ignore
-                  const filename = [downloadDir, e.detail].join('/');
-
-                  return resolve(filename);
-                });
-              });
-            },
-          },
-        });
-      }
-    };
-
-    await Promise.allSettled([
-      frame.waitForNavigation({ timeout: 0 }),
-      frame.evaluate(setupEmbeddedAPI, <IEmbeddedAPIMeta>{
-        extensionTitle: EXTENSION_TITLE,
-        actions: SHARED_ACTIONS,
-        downloadDir: this.defaultDownloadDir,
-        customEventName: CUSTOM_EVENT_NAME,
-      }),
-    ]);
-  }
-
-  private cleanupFsWatcher() {
-    this.fsWatcher?.close();
-    this.fsWatcher = null;
+    this.browser = null;
+    this.downloadDirMap.clear();
   }
 
   async beforeLaunch(options: any): Promise<void> {
@@ -177,6 +79,129 @@ export class PuppeteerExtraPluginRecorder extends PuppeteerExtraPlugin {
     ];
 
     options.args.push(...args);
+  }
+
+  private async onStartRecording(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    const currentPage = await this.browser.currentPage();
+
+    if (!currentPage) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    const cdp = await currentPage.createCDPSession();
+
+    const {
+      targetInfo: { targetId },
+    } = await cdp.send('Target.getTargetInfo');
+
+    const downloadDir = path.join(this.defaultDownloadDir, browserId, targetId);
+
+    if (!fs.existsSync(downloadDir)) {
+      fs.mkdirSync(downloadDir, { recursive: true });
+    }
+
+    await cdp.send('Browser.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath: downloadDir,
+    });
+
+    this.downloadDirMap.set(targetId, downloadDir);
+
+    this.logger.info(`Download directory: ${downloadDir}`);
+
+    const originalTitle = await currentPage.title();
+
+    await currentPage.evaluate((extensionTitle: string) => {
+      document.title = extensionTitle;
+    }, EXTENSION_TITLE);
+
+    await currentPage.evaluate(
+      ({ action, originalTitle }: StartRecordingParams) => {
+        window.postMessage(
+          {
+            type: action,
+            data: {
+              url: window.location.origin,
+              original_title: originalTitle,
+            },
+          },
+          '*'
+        );
+
+        requestAnimationFrame(() => {
+          document.title = originalTitle;
+        });
+      },
+      <StartRecordingParams>{
+        action: SHARED_ACTIONS.REC_START,
+        originalTitle,
+      }
+    );
+
+    const response = Response.success(request.id!, {}, request.sessionId);
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.START_RECORDING
+    );
+
+    return this.browser.emit(eventNameForResult, response);
+  }
+
+  private async onStopRecording(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    const currentPage = await this.browser.currentPage();
+
+    if (!currentPage) return;
+
+    const cdp = await currentPage.createCDPSession();
+
+    const {
+      targetInfo: { targetId },
+    } = await cdp.send('Target.getTargetInfo');
+
+    const downloadDir = this.downloadDirMap.get(targetId);
+
+    if (!downloadDir) return;
+
+    const fsWatcher = fs.watch(downloadDir, (eventType, filename) => {
+      if (eventType === 'rename' && filename?.endsWith('.webm')) {
+        this.logger.info(`Event: ${eventType}, Filename: ${filename}`);
+
+        // TODO: Implement adapters for different storage services
+
+        fsWatcher.close();
+
+        this.downloadDirMap.delete(targetId);
+
+        const browserId = getBrowserId(this.browser!);
+
+        const response = Response.success(request.id!, {}, request.sessionId);
+
+        const { eventNameForResult } = buildProtocolEventNames(
+          browserId,
+          this.PROTOCOL_METHODS.STOP_RECORDING
+        );
+
+        return this.browser!.emit(eventNameForResult, response);
+      }
+    });
+
+    await currentPage.evaluate(
+      ({ action }: StopRecordingParams) => {
+        window.postMessage({ type: action }, '*');
+      },
+      <StopRecordingParams>{
+        action: SHARED_ACTIONS.REC_STOP,
+      }
+    );
   }
 }
 
