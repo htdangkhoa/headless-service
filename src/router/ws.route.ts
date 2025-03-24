@@ -9,6 +9,7 @@ import { buildProtocolEventNames } from '@/utils';
 import { RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
 import { DOMAINS } from '@/constants';
+import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -148,20 +149,19 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   }
 
   private async onCustomCDPCommand(socket: WebSocket, payload: any, browser: BrowserCDP) {
-    this.logger.info('Received custom CDP command:', payload);
+    const request = Request.parse(payload);
+
+    this.logger.info('Received custom CDP command:', request);
 
     const protocol = await browser.getJSONProtocol();
 
-    const [domain, command] = payload.method.split('.');
+    const [domain, command] = request.method.split('.');
 
     const matchedProtocol = protocol.domains.find((d) => String(d.domain) === String(domain));
 
-    const errorPayload = {
-      id: payload.id,
-      error: { code: -32601, message: `'${payload.method}' wasn't found` },
-      sessionId: payload.sessionId,
-    };
-    const errorBuffer = Buffer.from(JSON.stringify(errorPayload));
+    const dispatchResponse = DispatchResponse.MethodNotFound(`'${request.method}' wasn't found`);
+    const errorResponse = Response.error(request.id!, dispatchResponse, request.sessionId);
+    const errorBuffer = Buffer.from(JSON.stringify(errorResponse));
 
     if (!matchedProtocol) return socket.send(errorBuffer);
 
@@ -178,13 +178,13 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
      */
     const { eventNameForListener, eventNameForResult } = buildProtocolEventNames(
       browserId,
-      payload.method
+      request.method
     );
 
-    puppeteerBrowser.on(eventNameForResult, (result) => {
-      this.logger.debug('Received result for custom CDP command:', result);
+    puppeteerBrowser.on(eventNameForResult, (resultResponse) => {
+      this.logger.debug('Received result for custom CDP command:', resultResponse);
 
-      const resultBuffer = Buffer.from(JSON.stringify(result));
+      const resultBuffer = Buffer.from(JSON.stringify(resultResponse));
 
       return socket.send(resultBuffer);
     });
@@ -192,6 +192,6 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     /**
      * Emit the command to the browser
      */
-    puppeteerBrowser.emit(eventNameForListener, payload);
+    puppeteerBrowser.emit(eventNameForListener, request);
   }
 }

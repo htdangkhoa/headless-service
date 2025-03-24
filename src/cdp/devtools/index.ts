@@ -1,2 +1,2 @@
-export * from './base/protocol';
+export * from './base';
 export * from './domains';

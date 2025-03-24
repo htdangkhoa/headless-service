@@ -1,4 +1,4 @@
-import EventEmitter from 'eventemitter2';
+import EventEmitter from 'events';
 import { resolve } from 'node:path';
 import { WebSocketServer } from 'ws';
 import vanillaPuppeteer, { type Browser, type PuppeteerLaunchOptions } from 'puppeteer';
@@ -43,6 +43,8 @@ export class BrowserCDP extends EventEmitter {
 
   constructor(private options?: BrowserCDPOptions) {
     super();
+
+    this.setMaxListeners(Infinity);
   }
 
   setWsServer(wsServer: WebSocketServer) {

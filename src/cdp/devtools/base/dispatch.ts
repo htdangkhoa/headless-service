@@ -56,8 +56,8 @@ export class DispatchResponse {
     return new DispatchResponse(DispatchCode.INVALID_PARAMS, message);
   }
 
-  public static InternalError() {
-    return new DispatchResponse(DispatchCode.INTERNAL_ERROR);
+  public static InternalError(message?: string) {
+    return new DispatchResponse(DispatchCode.INTERNAL_ERROR, message);
   }
 
   public static ServerError(message: string) {

@@ -12,6 +12,7 @@ import {
   parseUrlFromIncomingMessage,
 } from '@/utils';
 import { Logger } from '@/logger';
+import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
@@ -188,16 +189,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   private async onHeadlessServiceLiveURL(payload: any) {
+    const request = Request.parse(payload);
+
     if (!this.browser) return;
 
-    if (payload.method !== this.PROTOCOL_METHODS.LIVE_URL) return;
+    if (request.method !== this.PROTOCOL_METHODS.LIVE_URL) return;
 
     const browserId = getBrowserId(this.browser);
 
-    const result: any = {
-      id: payload.id,
-      sessionId: payload.sessionId,
-    };
+    let response: any = null;
 
     const { eventNameForResult } = buildProtocolEventNames(
       browserId,
@@ -228,14 +228,19 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
 
-      result.result = { liveUrl: liveUrl.href };
+      response = Response.success(
+        request.id!,
+        {
+          liveUrl: liveUrl.href,
+        },
+        payload.sessionId
+      );
     } catch (error: any) {
-      result.error = {
-        message: error.message,
-        code: -1,
-      };
+      const dispatchResponse = DispatchResponse.InternalError(error.message);
+
+      response = Response.error(request.id!, dispatchResponse, payload.sessionId);
     } finally {
-      return this.browser.emit(eventNameForResult, result);
+      return this.browser.emit(eventNameForResult, response);
     }
   }
 
