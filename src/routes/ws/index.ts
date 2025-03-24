@@ -208,7 +208,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     const browserWSEndpoint = browser.wsEndpoint();
 
     try {
-      await this.proxyWebSocketV2(req, socket, head, browser, browserWSEndpoint!);
+      await this.proxyWebSocket(req, socket, head, browser, browserWSEndpoint!);
     } finally {
       this.logger.info(`WebSocket Request handler has finished.`);
 

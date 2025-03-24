@@ -6,11 +6,9 @@ import type { Page } from 'puppeteer';
 import { WebSocketServer } from 'ws';
 
 import { BrowserCDP, BrowserCDPOptions } from './browser';
-import { Dictionary } from '@/types';
 import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
-import customProtocol from './protocol.json';
-import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
+import { Protocol } from './devtools';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -24,8 +22,6 @@ export class BrowserManager {
   private browsers = new Map<string, BrowserCDP>();
 
   private timers = new Map<string, NodeJS.Timeout>();
-
-  private protocol: Protocol | null = null;
 
   async requestBrowser(req: IncomingMessage, options?: IRequestBrowserOptions) {
     const { browserId, ws, record, ...browserCDPOptions } = options ?? {};
@@ -135,8 +131,6 @@ export class BrowserManager {
 
     this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
-
-    this.protocol = null;
   }
 
   async getJSONList() {

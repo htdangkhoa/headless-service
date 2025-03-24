@@ -34,51 +34,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   abstract shouldUpgrade: (req: IncomingMessage) => boolean;
   swagger?: Omit<RouteConfig, 'method' | 'path'>;
 
-  protected proxyWebSocket(
-    req: IncomingMessage,
-    socket: Duplex,
-    head: Buffer,
-    browser: BrowserCDP,
-    endpoint: string
-  ) {
-    const { browserManager, proxy } = this.context;
-
-    return new Promise<void>((resolve, reject) => {
-      const close = async () => {
-        this.logger.info('socket closed');
-
-        browser.off('close', close);
-        browser.process()?.off('close', close);
-        socket.off('close', close);
-        return resolve();
-      };
-
-      browser?.once('close', close);
-      browser?.process()?.once('close', close);
-      socket.once('close', close);
-
-      req.url = '';
-
-      // Delete headers known to cause issues
-      delete req.headers.origin;
-
-      proxy.ws(
-        req,
-        socket,
-        head,
-        {
-          target: endpoint,
-          changeOrigin: true,
-        },
-        (error) => {
-          browserManager.close(browser);
-          return reject(error);
-        }
-      );
-    });
-  }
-
-  protected async proxyWebSocketV2(
+  protected async proxyWebSocket(
     req: IncomingMessage,
     socket: Duplex,
     head: Buffer,
