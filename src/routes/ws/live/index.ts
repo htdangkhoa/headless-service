@@ -9,6 +9,7 @@ import {
   removeTrailingSlash,
   writeResponse,
 } from '@/utils';
+import { PuppeteerExtraPluginLiveUrl } from '@/plugins/puppeteer-extra-plugin-live-url';
 
 export class LiveIndexWsRoute extends ProxyWebSocketRoute {
   path = '/live';
@@ -58,7 +59,7 @@ export class LiveIndexWsRoute extends ProxyWebSocketRoute {
     }
 
     return wsServer.handleUpgrade(req, socket, head, (ws) => {
-      wsServer.emit('connection', ws, req);
+      wsServer.emit(PuppeteerExtraPluginLiveUrl.prototype.constructor.name, ws, req);
     });
   };
 }

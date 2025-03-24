@@ -1,36 +1,48 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page, CDPSession, Target, Frame } from 'puppeteer';
+import { Page, CDPSession, Target, Browser } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 
+import { COMMANDS, DOMAINS, EVENTS, LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 import {
+  buildProtocolEventNames,
+  buildProtocolMethod,
+  getBrowserId,
   makeExternalUrl,
   parseUrlFromIncomingMessage,
-  patchNamedFunctionESBuildIssue2605,
 } from '@/utils';
-import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 import { Logger } from '@/logger';
-
-declare global {
-  interface Window {
-    liveURL: () => string;
-
-    liveComplete: () => void;
-  }
-}
+import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
 
-  private pageMap: Map<string, { page: Page; cdp: CDPSession }> = new Map();
+  private browser: Browser | null = null;
+
+  private pageMap: Map<
+    string,
+    {
+      page: Page;
+      cdp: CDPSession;
+      protocolInfo: {
+        id: number;
+        sessionId?: string;
+      };
+    }
+  > = new Map();
+
+  private readonly PROTOCOL_METHODS = {
+    LIVE_URL: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.LIVE_URL),
+    LIVE_COMPLETE: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, EVENTS.LIVE_COMPLETE),
+  };
 
   constructor(
     private ws: WebSocketServer,
-    private requestId?: string
+    private readonly requestId?: string
   ) {
     super();
 
-    this.ws.once('connection', async (socket, req) => {
+    this.ws.on(this.constructor.name, async (socket: WebSocket, req) => {
       this.logger.info('connected from plugins', this.requestId);
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
@@ -41,7 +53,21 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     return 'live-url';
   }
 
-  async onClose(): Promise<void> {
+  async onBrowser(browser: Browser, opts: any): Promise<void> {
+    this.browser = browser;
+
+    const browserId = getBrowserId(browser);
+
+    const { eventNameForListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.LIVE_URL
+    );
+
+    browser.on(eventNameForListener, this.onHeadlessServiceLiveURL.bind(this));
+  }
+
+  async onDisconnected(): Promise<void> {
+    this.browser = null;
     Array.from(this.pageMap.values()).forEach(({ cdp }) => {
       cdp.removeAllListeners();
     });
@@ -49,99 +75,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     this.pageMap.clear();
   }
 
-  async onTargetDestroyed(target: Target): Promise<void> {
-    const targetType = target.type();
-
-    if (targetType !== 'page') return;
-
+  onTargetDestroyed(target: Target): Promise<void> {
     // @ts-ignore
     const targetId = target._targetId;
 
-    const pageMapped = this.pageMap.get(targetId);
-
-    if (!pageMapped) return;
-
-    const { cdp } = pageMapped;
-
-    const page = await target.page();
-    page?.off('framenavigated', this.onFrameNavigated.bind(this));
-
-    cdp.removeAllListeners();
-
-    this.pageMap.delete(targetId);
-  }
-
-  async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
-
-    const self = this;
-
-    page.on('framenavigated', self.onFrameNavigated.bind(self));
-
-    page.on('framedetached', (frame: Frame) => {
-      page.off('framenavigated', self.onFrameNavigated.bind(self));
-    });
-
-    await Promise.allSettled([page.waitForNavigation({ timeout: 0 }), this.injectLiveUrlAPI(page)]);
-  }
-
-  private async onFrameNavigated(frame: Frame) {
-    if (frame.detached) return;
-
-    if (frame.parentFrame()?.detached) return;
-
-    const page = frame.page();
-
-    if (page.isClosed()) return;
-
-    await this.injectLiveUrlAPI(frame);
-  }
-
-  private async injectLiveUrlAPI(target: Page | Frame) {
-    if (!(target instanceof Page) && !(target instanceof Frame))
-      throw new Error('Target must be either a Page or a Frame');
-
-    let page: Page;
-
-    if (target instanceof Page) {
-      page = target;
-    } else {
-      page = (<Frame>target).page();
-    }
-
-    const client = await page.createCDPSession();
-
-    const {
-      targetInfo: { targetId },
-    } = await client.send('Target.getTargetInfo');
-
-    this.pageMap.set(targetId, { page, cdp: client });
-
-    const setupEmbeddedAPI = (_liveUrl: string) => {
-      Object.defineProperty(window, 'liveURL', {
-        configurable: false,
-        enumerable: false,
-        value: () => _liveUrl,
-        writable: false,
-      });
-    };
-
-    const liveUrl = new URL(makeExternalUrl('http', `/live`));
-    liveUrl.searchParams.set('t', targetId);
-    if (this.requestId) {
-      liveUrl.searchParams.set('request_id', this.requestId);
-    }
-
-    const promises: any[] = [
-      target.waitForNavigation({ timeout: 0 }),
-      target.evaluate(setupEmbeddedAPI, liveUrl.href),
-    ];
-
-    if (target instanceof Page) {
-      promises.push(page.evaluateOnNewDocument(setupEmbeddedAPI, liveUrl.href));
-    }
-
-    await Promise.allSettled(promises);
+    return Promise.resolve(this.handleTargetDestroyed.call(this, targetId));
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
@@ -220,9 +158,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           await client.send(payload.command);
 
-          await page.evaluate(() => {
-            window && typeof window.liveComplete === 'function' && window.liveComplete();
-          });
+          this.handleTargetDestroyed(targetId, 'Screencast stopped');
 
           break;
         }
@@ -250,6 +186,90 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.logger.error('Error sending command', error);
       this.logger.debug('Payload params', payload.params);
     }
+  }
+
+  private async onHeadlessServiceLiveURL(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    if (request.method !== this.PROTOCOL_METHODS.LIVE_URL) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    let response: any = null;
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.LIVE_URL
+    );
+
+    try {
+      const currentPage = await this.browser.currentPage();
+
+      const client = await currentPage.createCDPSession();
+
+      const {
+        targetInfo: { targetId },
+      } = await client.send('Target.getTargetInfo');
+
+      this.pageMap.set(targetId, {
+        page: currentPage,
+        cdp: client,
+        protocolInfo: {
+          id: payload.id,
+          sessionId: payload.sessionId,
+        },
+      });
+
+      const liveUrl = new URL(makeExternalUrl('http', `/live`));
+      liveUrl.searchParams.set('t', targetId);
+      if (this.requestId) {
+        liveUrl.searchParams.set('request_id', this.requestId);
+      }
+
+      response = Response.success(
+        request.id!,
+        {
+          liveUrl: liveUrl.href,
+        },
+        payload.sessionId
+      );
+    } catch (error: any) {
+      const dispatchResponse = DispatchResponse.InternalError(error.message);
+
+      response = Response.error(request.id!, dispatchResponse, payload.sessionId);
+    } finally {
+      return this.browser.emit(eventNameForResult, response);
+    }
+  }
+
+  private handleTargetDestroyed(targetId: string, reason?: string) {
+    if (!this.browser) return;
+
+    const pageMapped = this.pageMap.get(targetId);
+
+    if (!pageMapped) return;
+
+    const { protocolInfo } = pageMapped;
+
+    const browserId = getBrowserId(this.browser);
+
+    const payload = {
+      // id: protocolInfo.id,
+      sessionId: protocolInfo.sessionId,
+      method: this.PROTOCOL_METHODS.LIVE_COMPLETE,
+      params: {
+        reason: reason ?? `Target ${targetId} destroyed`,
+      },
+    };
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.LIVE_URL
+    );
+
+    this.browser.emit(eventNameForResult, payload);
   }
 }
 

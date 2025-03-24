@@ -11,10 +11,12 @@ async function main() {
   });
 
   const page = await browser.newPage();
-  const liveURL = await page.evaluate(() => {
-    return (window as any).liveURL();
-  });
-  console.log('🚀 ~ liveURL ~ liveURL:', liveURL);
+
+  const cdp = await page.createCDPSession();
+
+  // @ts-ignore
+  const { liveUrl } = await cdp.send('HeadlessService.liveURL');
+  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl);
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
@@ -29,7 +31,11 @@ async function main() {
   const title = await page.title();
   console.log(title);
 
-  await new Promise((resolve) => page.exposeFunction('liveComplete', resolve));
+  await new Promise<void>((resolve) =>
+    cdp.on('HeadlessService.liveComplete', () => {
+      return resolve();
+    })
+  );
 
   const page2 = await browser.newPage();
   await page2.goto('https://example.com', {

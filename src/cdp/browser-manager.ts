@@ -6,9 +6,9 @@ import type { Page } from 'puppeteer';
 import { WebSocketServer } from 'ws';
 
 import { BrowserCDP, BrowserCDPOptions } from './browser';
-import { Dictionary } from '@/types';
 import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
+import { Protocol } from './devtools';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -22,8 +22,6 @@ export class BrowserManager {
   private browsers = new Map<string, BrowserCDP>();
 
   private timers = new Map<string, NodeJS.Timeout>();
-
-  private protocol: Dictionary | null = null;
 
   async requestBrowser(req: IncomingMessage, options?: IRequestBrowserOptions) {
     const { browserId, ws, record, ...browserCDPOptions } = options ?? {};
@@ -133,8 +131,6 @@ export class BrowserManager {
 
     this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
-
-    this.protocol = null;
   }
 
   async getJSONList() {
@@ -207,34 +203,6 @@ export class BrowserManager {
       this.logger.error('Error getting JSON version', error);
 
       throw new Error('Error getting JSON version');
-    } finally {
-      browser.close();
-    }
-  }
-
-  async getJSONProtocol() {
-    if (this.protocol) {
-      return this.protocol;
-    }
-
-    const browser = new BrowserCDP();
-
-    try {
-      await browser.launch();
-
-      const browserWSEndpoint = browser.wsEndpoint()!;
-
-      const { host } = new URL(browserWSEndpoint);
-      const response = await fetch(`http://${host}/json/protocol`);
-      const protocol = await response.json();
-
-      this.protocol = protocol;
-
-      return this.protocol;
-    } catch (error) {
-      this.logger.error('Error getting JSON protocol', error);
-
-      throw new Error('Error getting JSON protocol');
     } finally {
       browser.close();
     }
