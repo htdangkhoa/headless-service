@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.1.2",
+    "@ghostery/adblocker-puppeteer": "^2.5.0",
     "connect-timeout": "^1.9.0",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",

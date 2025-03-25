@@ -8,6 +8,9 @@ dependencies:
   '@asteasolutions/zod-to-openapi':
     specifier: ^7.1.2
     version: 7.1.2(zod@3.23.8)
+  '@ghostery/adblocker-puppeteer':
+    specifier: ^2.5.0
+    version: 2.5.0(puppeteer@23.11.1)
   connect-timeout:
     specifier: ^1.9.0
     version: 1.9.0
@@ -34,7 +37,7 @@ dependencies:
     version: 2.1.56
   fingerprint-injector:
     specifier: ^2.1.56
-    version: 2.1.56(puppeteer@23.4.1)
+    version: 2.1.56(puppeteer@23.11.1)
   http-proxy:
     specifier: ^1.18.1
     version: 1.18.1(debug@4.3.7)
@@ -49,13 +52,13 @@ dependencies:
     version: 4.2.0
   puppeteer:
     specifier: ^23.4.1
-    version: 23.4.1(bufferutil@4.0.8)(typescript@5.6.2)
+    version: 23.11.1(bufferutil@4.0.8)(typescript@5.6.2)
   puppeteer-core:
     specifier: ^23.4.1
-    version: 23.4.1(bufferutil@4.0.8)
+    version: 23.11.1(bufferutil@4.0.8)
   puppeteer-extra:
     specifier: ^3.3.6
-    version: 3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1)
+    version: 3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1)
   puppeteer-extra-plugin:
     specifier: ^3.2.3
     version: 3.2.3(puppeteer-extra@3.3.6)
@@ -654,6 +657,38 @@ packages:
       tslib: 2.7.0
     dev: false
 
+  /@ghostery/adblocker-content@2.5.0:
+    resolution: {integrity: sha512-Gn9fslZdacx1m1e3/2LSUPWagLObYmIDbkgvZTtgqT/OHc17VbM71AxWEjtC/xzo5K4PI25958PjvidoEH7ufw==}
+    dependencies:
+      '@ghostery/adblocker-extended-selectors': 2.5.0
+    dev: false
+
+  /@ghostery/adblocker-extended-selectors@2.5.0:
+    resolution: {integrity: sha512-/GBAwErjktcBKLjCMl/n+jz2MxXFfTmEGw+hcPtAhEin49eSC09PK1TAdzDPDXkCTF4Jmb/zC+MYtbX1eZ1WsQ==}
+    dev: false
+
+  /@ghostery/adblocker-puppeteer@2.5.0(puppeteer@23.11.1):
+    resolution: {integrity: sha512-5SFmit+tMMsZDmjWwstFd6G+GV3HB7+ypZ9/vSKT0vo8FI9/hHm6pLMiif+iMI626+8dHjfjA/cItL9ttAwu3w==}
+    peerDependencies:
+      puppeteer: '>5'
+    dependencies:
+      '@ghostery/adblocker': 2.5.0
+      '@ghostery/adblocker-content': 2.5.0
+      puppeteer: 23.11.1(bufferutil@4.0.8)(typescript@5.6.2)
+      tldts-experimental: 6.1.85
+    dev: false
+
+  /@ghostery/adblocker@2.5.0:
+    resolution: {integrity: sha512-CcmWiTLKxDqYiTlPyOAWr3xeZYXjWlpu6UOCDkk33k0w7jTgVrdvwbXf8Tv4XE0m3uNX6Idfj4H+Umv8L3AiUw==}
+    dependencies:
+      '@ghostery/adblocker-content': 2.5.0
+      '@ghostery/adblocker-extended-selectors': 2.5.0
+      '@remusao/guess-url-type': 1.3.0
+      '@remusao/small': 1.3.0
+      '@remusao/smaz': 1.10.0
+      tldts-experimental: 6.1.85
+    dev: false
+
   /@isaacs/cliui@8.0.2:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
@@ -703,21 +738,50 @@ packages:
     dev: true
     optional: true
 
-  /@puppeteer/browsers@2.4.0:
-    resolution: {integrity: sha512-x8J1csfIygOwf6D6qUAZ0ASk3z63zPb7wkNeHRerCMh82qWKUrOgkuP005AJC8lDL6/evtXETGEJVcwykKT4/g==}
+  /@puppeteer/browsers@2.6.1:
+    resolution: {integrity: sha512-aBSREisdsGH890S2rQqK82qmQYU3uFpSH8wcZWHgHzl3LfzsxAKbLNiAG9mO8v1Y0UICBeClICxPJvyr0rcuxg==}
     engines: {node: '>=18'}
     hasBin: true
     dependencies:
-      debug: 4.3.7(supports-color@5.5.0)
+      debug: 4.4.0
       extract-zip: 2.0.1
       progress: 2.0.3
-      proxy-agent: 6.4.0
+      proxy-agent: 6.5.0
       semver: 7.6.3
       tar-fs: 3.0.6
       unbzip2-stream: 1.4.3
       yargs: 17.7.2
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /@remusao/guess-url-type@1.3.0:
+    resolution: {integrity: sha512-SNSJGxH5ckvxb3EUHj4DqlAm/bxNxNv2kx/AESZva/9VfcBokwKNS+C4D1lQdWIDM1R3d3UG+xmVzlkNG8CPTQ==}
+    dev: false
+
+  /@remusao/small@1.3.0:
+    resolution: {integrity: sha512-bydAhJI+ywmg5xMUcbqoR8KahetcfkFywEZpsyFZ8EBofilvWxbXnMSe4vnjDI1Y+SWxnNhR4AL/2BAXkf4b8A==}
+    dev: false
+
+  /@remusao/smaz-compress@1.10.0:
+    resolution: {integrity: sha512-E/lC8OSU+3bQrUl64vlLyPzIxo7dxF2RvNBe9KzcM4ax43J/d+YMinmMztHyCIHqRbz7rBCtkp3c0KfeIbHmEg==}
+    dependencies:
+      '@remusao/trie': 1.5.0
+    dev: false
+
+  /@remusao/smaz-decompress@1.10.0:
+    resolution: {integrity: sha512-aA5ImUH480Pcs5/cOgToKmFnzi7osSNG6ft+7DdmQTaQEEst3nLq3JLlBEk+gwidURymjbx6DYs60LHaZ415VQ==}
+    dev: false
+
+  /@remusao/smaz@1.10.0:
+    resolution: {integrity: sha512-GQzCxmmMpLkyZwcwNgz8TpuBEWl0RUQa8IcvKiYlPxuyYKqyqPkCr0hlHI15ckn3kDUPS68VmTVgyPnLNrdVmg==}
+    dependencies:
+      '@remusao/smaz-compress': 1.10.0
+      '@remusao/smaz-decompress': 1.10.0
+    dev: false
+
+  /@remusao/trie@1.5.0:
+    resolution: {integrity: sha512-UX+3utJKgwCsg6sUozjxd38gNMVRXrY4TNX9VvCdSrlZBS1nZjRPi98ON3QjRAdf6KCguJFyQARRsulTeqQiPg==}
     dev: false
 
   /@sentry/core@6.19.7:
@@ -952,18 +1016,14 @@ packages:
     resolution: {integrity: sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==}
     engines: {node: '>= 6.0.0'}
     dependencies:
-      debug: 4.3.7(supports-color@5.5.0)
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /agent-base@7.1.1:
-    resolution: {integrity: sha512-H0TSyFNDMomMNJQBn8wFV5YC/2eJ+VXECwOadZJT554xP6cODZHPX3H9QMQECxvrgiSOP1pHjy1sMWQVYJOUOA==}
+  /agent-base@7.1.3:
+    resolution: {integrity: sha512-jRR5wdylq8CkOe6hei19GGZnxM6rBGwFl3Bg0YItGDimvjGtAvdZk4Pu6Cl4u4Igsws4a1fd1Vq3ezrhn4KmFw==}
     engines: {node: '>= 14'}
-    dependencies:
-      debug: 4.3.7(supports-color@5.5.0)
-    transitivePeerDependencies:
-      - supports-color
     dev: false
 
   /ansi-colors@4.1.3:
@@ -1226,14 +1286,13 @@ packages:
       - supports-color
     dev: false
 
-  /chromium-bidi@0.6.5(devtools-protocol@0.0.1342118):
-    resolution: {integrity: sha512-RuLrmzYrxSb0s9SgpB+QN5jJucPduZQ/9SIe76MDxYJuecPW5mxMdacJ1f4EtgiV+R0p3sCkznTMvH0MPGFqjA==}
+  /chromium-bidi@0.11.0(devtools-protocol@0.0.1367902):
+    resolution: {integrity: sha512-6CJWHkNRoyZyjV9Rwv2lYONZf1Xm0IuDyNq97nwSsxxP3wf5Bwy15K5rOvVKMtJ127jJBmxFUanSAOjgFRxgrA==}
     peerDependencies:
       devtools-protocol: '*'
     dependencies:
-      devtools-protocol: 0.0.1342118
+      devtools-protocol: 0.0.1367902
       mitt: 3.0.1
-      urlpattern-polyfill: 10.0.0
       zod: 3.23.8
     dev: false
 
@@ -1406,6 +1465,18 @@ packages:
       ms: 2.1.3
       supports-color: 5.5.0
 
+  /debug@4.4.0:
+    resolution: {integrity: sha512-6WTZ/IxCY/T6BALoZHaE4ctp9xm+Z5kY/pzYaCHRFeyVhojxlrm+46y68HA6hr0TcwEssoxNiDEUJQjfPZ/RYA==}
+    engines: {node: '>=6.0'}
+    peerDependencies:
+      supports-color: '*'
+    peerDependenciesMeta:
+      supports-color:
+        optional: true
+    dependencies:
+      ms: 2.1.3
+    dev: false
+
   /dedent@1.5.3:
     resolution: {integrity: sha512-NHQtfOOW68WD8lgypbLA5oT+Bt0xXJhiYvoR6SmmNXZfpzOGXwdKWmcwG8N7PwVVWV3eF/68nmD9BaJSsTBhyQ==}
     peerDependencies:
@@ -1462,12 +1533,12 @@ packages:
     resolution: {integrity: sha512-DPnhUXvmvKT2dFA/j7B+riVLUt9Q6RKJlcppojL5CoRywJJKLDYnRlw0gTFKfgDPHP5E04UoB71SxoJlVZy8FA==}
     dev: false
 
-  /devtools-protocol@0.0.1342118:
-    resolution: {integrity: sha512-75fMas7PkYNDTmDyb6PRJCH7ILmHLp+BhrZGeMsa4bCh40DTxgCz2NRy5UDzII4C5KuD0oBMZ9vXKhEl6UD/3w==}
-    dev: false
-
   /devtools-protocol@0.0.1359167:
     resolution: {integrity: sha512-f/9PeTaSH3weS/WAwrQb5/s9R3KMOeTGe+Jkhg5952yInub7iDPjdlzRdrDgpLZfxHbTrBuG9aUkAMM+ocVkXQ==}
+    dev: false
+
+  /devtools-protocol@0.0.1367902:
+    resolution: {integrity: sha512-XxtPuC3PGakY6PD7dG66/o8KwJ/LkH2/EKe19Dcw58w53dv4/vSQEkn/SzuyhHE2q4zPgCkxQBxus3VV4ql+Pg==}
     dev: false
 
   /dir-glob@3.0.1:
@@ -1801,7 +1872,7 @@ packages:
       tslib: 2.7.0
     dev: false
 
-  /fingerprint-injector@2.1.56(puppeteer@23.4.1):
+  /fingerprint-injector@2.1.56(puppeteer@23.11.1):
     resolution: {integrity: sha512-kwvjbA2FUlTPg+r/0xcvhngIxw1fFDXJLSwLYlai4YqdEsCqMpJ8lHd+EYYBbFusT9VIWwhPEAuGzPjK3Wz1Yw==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
@@ -1814,7 +1885,7 @@ packages:
         optional: true
     dependencies:
       fingerprint-generator: 2.1.56
-      puppeteer: 23.4.1(bufferutil@4.0.8)(typescript@5.6.2)
+      puppeteer: 23.11.1(bufferutil@4.0.8)(typescript@5.6.2)
       tslib: 2.7.0
     dev: false
 
@@ -1940,7 +2011,7 @@ packages:
     dependencies:
       basic-ftp: 5.0.5
       data-uri-to-buffer: 6.0.2
-      debug: 4.3.7(supports-color@5.5.0)
+      debug: 4.4.0
       fs-extra: 11.2.0
     transitivePeerDependencies:
       - supports-color
@@ -2066,8 +2137,8 @@ packages:
     resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.1
-      debug: 4.3.7(supports-color@5.5.0)
+      agent-base: 7.1.3
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2088,17 +2159,17 @@ packages:
     engines: {node: '>= 6'}
     dependencies:
       agent-base: 6.0.2
-      debug: 4.3.7(supports-color@5.5.0)
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /https-proxy-agent@7.0.5:
-    resolution: {integrity: sha512-1e4Wqeblerz+tMKPIq2EMGiiWW1dIjZOksyHWSUm1rmuvw/how9hBHZ38lAGj5ID4Ik6EdkOw7NmWPy6LAwalw==}
+  /https-proxy-agent@7.0.6:
+    resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.1
-      debug: 4.3.7(supports-color@5.5.0)
+      agent-base: 7.1.3
+      debug: 4.4.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2367,7 +2438,7 @@ packages:
       metaviewport-parser: 0.3.0
       open: 8.4.2
       parse-cache-control: 1.0.1
-      puppeteer-core: 23.4.1(bufferutil@4.0.8)
+      puppeteer-core: 23.11.1(bufferutil@4.0.8)
       robots-parser: 3.0.1
       semver: 5.7.2
       speedline-core: 1.4.3
@@ -2632,18 +2703,18 @@ packages:
       vali-date: 1.0.0
     dev: false
 
-  /pac-proxy-agent@7.0.2:
-    resolution: {integrity: sha512-BFi3vZnO9X5Qt6NRz7ZOaPja3ic0PhlsmCRYLOpN11+mWBCR6XJDqW5RF3j8jm4WGGQZtBA+bTfxYzeKW73eHg==}
+  /pac-proxy-agent@7.2.0:
+    resolution: {integrity: sha512-TEB8ESquiLMc0lV8vcd5Ql/JAKAoyzHFXaStwjkzpOpC5Yv+pIzLfHvjTSdf3vpa2bMiUQrg9i6276yn8666aA==}
     engines: {node: '>= 14'}
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
-      agent-base: 7.1.1
-      debug: 4.3.7(supports-color@5.5.0)
+      agent-base: 7.1.3
+      debug: 4.4.0
       get-uri: 6.0.3
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.5
+      https-proxy-agent: 7.0.6
       pac-resolver: 7.0.1
-      socks-proxy-agent: 8.0.4
+      socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2751,18 +2822,18 @@ packages:
       ipaddr.js: 1.9.1
     dev: false
 
-  /proxy-agent@6.4.0:
-    resolution: {integrity: sha512-u0piLU+nCOHMgGjRbimiXmA9kM/L9EHh3zL81xCdp7m+Y2pHIsnmbdDoEDoAz5geaonNR6q6+yOPQs6n4T6sBQ==}
+  /proxy-agent@6.5.0:
+    resolution: {integrity: sha512-TmatMXdr2KlRiA2CyDu8GqR8EjahTG3aY3nXjdzFyoZbmB8hrBsTyMezhULIXKnC0jpfjlmiZ3+EaCzoInSu/A==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.1
-      debug: 4.3.7(supports-color@5.5.0)
+      agent-base: 7.1.3
+      debug: 4.4.0
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.5
+      https-proxy-agent: 7.0.6
       lru-cache: 7.18.3
-      pac-proxy-agent: 7.0.2
+      pac-proxy-agent: 7.2.0
       proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.4
+      socks-proxy-agent: 8.0.5
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2788,14 +2859,14 @@ packages:
       once: 1.4.0
     dev: false
 
-  /puppeteer-core@23.4.1(bufferutil@4.0.8):
-    resolution: {integrity: sha512-uCxGtn8VE9PlKhdFJX/zZySi9K3Ufr3qUZe28jxJoZUqiMJOi+SFh2zhiFDSjWqZIDkc0FtnaCC+rewW3MYXmg==}
+  /puppeteer-core@23.11.1(bufferutil@4.0.8):
+    resolution: {integrity: sha512-3HZ2/7hdDKZvZQ7dhhITOUg4/wOrDRjyK2ZBllRB0ZCOi9u0cwq1ACHDjBB+nX+7+kltHjQvBRdeY7+W0T+7Gg==}
     engines: {node: '>=18'}
     dependencies:
-      '@puppeteer/browsers': 2.4.0
-      chromium-bidi: 0.6.5(devtools-protocol@0.0.1342118)
-      debug: 4.3.7(supports-color@5.5.0)
-      devtools-protocol: 0.0.1342118
+      '@puppeteer/browsers': 2.6.1
+      chromium-bidi: 0.11.0(devtools-protocol@0.0.1367902)
+      debug: 4.4.0
+      devtools-protocol: 0.0.1367902
       typed-query-selector: 2.12.0
       ws: 8.18.0(bufferutil@4.0.8)
     transitivePeerDependencies:
@@ -2817,7 +2888,7 @@ packages:
         optional: true
     dependencies:
       debug: 4.3.7(supports-color@5.5.0)
-      puppeteer-extra: 3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1)
+      puppeteer-extra: 3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1)
       puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6)
       puppeteer-extra-plugin-user-preferences: 2.4.1(puppeteer-extra@3.3.6)
     transitivePeerDependencies:
@@ -2838,7 +2909,7 @@ packages:
     dependencies:
       debug: 4.3.7(supports-color@5.5.0)
       fs-extra: 10.1.0
-      puppeteer-extra: 3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1)
+      puppeteer-extra: 3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1)
       puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6)
       rimraf: 3.0.2
     transitivePeerDependencies:
@@ -2859,7 +2930,7 @@ packages:
     dependencies:
       debug: 4.3.7(supports-color@5.5.0)
       deepmerge: 4.3.1
-      puppeteer-extra: 3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1)
+      puppeteer-extra: 3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1)
       puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6)
       puppeteer-extra-plugin-user-data-dir: 2.4.1(puppeteer-extra@3.3.6)
     transitivePeerDependencies:
@@ -2881,12 +2952,12 @@ packages:
       '@types/debug': 4.1.12
       debug: 4.3.7(supports-color@5.5.0)
       merge-deep: 3.0.3
-      puppeteer-extra: 3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1)
+      puppeteer-extra: 3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1)
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /puppeteer-extra@3.3.6(puppeteer-core@23.4.1)(puppeteer@23.4.1):
+  /puppeteer-extra@3.3.6(puppeteer-core@23.11.1)(puppeteer@23.11.1):
     resolution: {integrity: sha512-rsLBE/6mMxAjlLd06LuGacrukP2bqbzKCLzV1vrhHFavqQE/taQ2UXv3H5P0Ls7nsrASa+6x3bDbXHpqMwq+7A==}
     engines: {node: '>=8'}
     peerDependencies:
@@ -2904,23 +2975,23 @@ packages:
       '@types/debug': 4.1.12
       debug: 4.3.7(supports-color@5.5.0)
       deepmerge: 4.3.1
-      puppeteer: 23.4.1(bufferutil@4.0.8)(typescript@5.6.2)
-      puppeteer-core: 23.4.1(bufferutil@4.0.8)
+      puppeteer: 23.11.1(bufferutil@4.0.8)(typescript@5.6.2)
+      puppeteer-core: 23.11.1(bufferutil@4.0.8)
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /puppeteer@23.4.1(bufferutil@4.0.8)(typescript@5.6.2):
-    resolution: {integrity: sha512-+wWfWTkQ8L9IB/3OVGSUp37c0eQ5za/85KdX+LAq2wTZkMdocgYGMCs+/91e2f/RXIYzve4x/uGxN8zG2sj8+w==}
+  /puppeteer@23.11.1(bufferutil@4.0.8)(typescript@5.6.2):
+    resolution: {integrity: sha512-53uIX3KR5en8l7Vd8n5DUv90Ae9QDQsyIthaUFVzwV6yU750RjqRznEtNMBT20VthqAdemnJN+hxVdmMHKt7Zw==}
     engines: {node: '>=18'}
     hasBin: true
     requiresBuild: true
     dependencies:
-      '@puppeteer/browsers': 2.4.0
-      chromium-bidi: 0.6.5(devtools-protocol@0.0.1342118)
+      '@puppeteer/browsers': 2.6.1
+      chromium-bidi: 0.11.0(devtools-protocol@0.0.1367902)
       cosmiconfig: 9.0.0(typescript@5.6.2)
-      devtools-protocol: 0.0.1342118
-      puppeteer-core: 23.4.1(bufferutil@4.0.8)
+      devtools-protocol: 0.0.1367902
+      puppeteer-core: 23.11.1(bufferutil@4.0.8)
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bufferutil
@@ -3156,12 +3227,12 @@ packages:
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
     dev: false
 
-  /socks-proxy-agent@8.0.4:
-    resolution: {integrity: sha512-GNAq/eg8Udq2x0eNiFkr9gRg5bA7PXEWagQdeRX4cPSG+X/8V38v637gim9bjFptMk1QWsCTr0ttrJEiXbNnRw==}
+  /socks-proxy-agent@8.0.5:
+    resolution: {integrity: sha512-HehCEsotFqbPW9sJ8WVYB6UbmIMv7kUUORIF2Nncq4VQvBfNBLibW9YZR5dlYCSUhwcD628pRllm7n+E+YTzJw==}
     engines: {node: '>= 14'}
     dependencies:
-      agent-base: 7.1.1
-      debug: 4.3.7(supports-color@5.5.0)
+      agent-base: 7.1.3
+      debug: 4.4.0
       socks: 2.8.3
     transitivePeerDependencies:
       - supports-color
@@ -3287,6 +3358,16 @@ packages:
     resolution: {integrity: sha512-6SWyFMnlst1fEt7GQVAAu16EGgFK0cLouH/2Mk6Ftlwhv3Ol40L0dlpGMcnnNiiOMyD2EV/aF3S+U2nKvvLvrA==}
     dev: false
 
+  /tldts-core@6.1.85:
+    resolution: {integrity: sha512-DTjUVvxckL1fIoPSb3KE7ISNtkWSawZdpfxGxwiIrZoO6EbHVDXXUIlIuWympPaeS+BLGyggozX/HTMsRAdsoA==}
+    dev: false
+
+  /tldts-experimental@6.1.85:
+    resolution: {integrity: sha512-oM+m5GnOdxgbnfSfix98YvzAIgkKZbdqMD/BTLbnbL349MyaEeNo6z8jVX9/lrL6DvnjgW7RV+sIVojrFvB+hw==}
+    dependencies:
+      tldts-core: 6.1.85
+    dev: false
+
   /tldts-icann@6.1.47:
     resolution: {integrity: sha512-KKZwmwhjQWIa+GFDZJCgUtHSx4QntYIecd2+O7wwdOhQaHc3omlfQ/iTADx84fyBuokmRKi7pvsBO3UvukXZsQ==}
     dependencies:
@@ -3410,10 +3491,6 @@ packages:
       browserslist: 4.24.0
       escalade: 3.2.0
       picocolors: 1.1.0
-    dev: false
-
-  /urlpattern-polyfill@10.0.0:
-    resolution: {integrity: sha512-H/A06tKD7sS1O1X2SshBVeA5FLycRpjqiBeqGKmBwBDBy28EnRjORxTNe269KSSr5un5qyWi1iL61wLxpd+ZOg==}
     dev: false
 
   /utils-merge@1.0.1:

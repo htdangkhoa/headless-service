@@ -11,6 +11,7 @@ import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
+import GhosteryPlugin from '@/plugins/puppeteer-extra-plugin-ghostery';
 import { getBrowserId } from '@/utils/puppeteer';
 import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
 import { Logger } from '@/logger';
@@ -103,6 +104,7 @@ export class BrowserCDP extends EventEmitter {
     if (blockAds) {
       const uBlock0Path = resolve(process.cwd(), 'extensions', 'uBlock0.chromium');
       extensionPaths.push(uBlock0Path);
+      puppeteer.use(GhosteryPlugin());
     }
 
     if (this.record) {
