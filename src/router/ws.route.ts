@@ -9,7 +9,7 @@ import { buildProtocolEventNames } from '@/utils';
 import { RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
 import { DOMAINS } from '@/constants';
-import { DispatchResponse, Request, Response } from '@/cdp/devtools';
+import { DispatchResponse, ProtocolRequest, Request, Response } from '@/cdp/devtools';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
@@ -86,10 +86,12 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
           const payload = JSON.parse(message);
 
+          const request = Request.parse(payload);
+
           const customDomains = Object.values(DOMAINS);
 
-          if (customDomains.some((d) => payload.method.startsWith(d))) {
-            return this.onCustomCDPCommand(s, payload, browser);
+          if (customDomains.some((d) => request.method.startsWith(d))) {
+            return this.onCustomCDPCommand(s, request, browser);
           }
 
           return client.send(message);
@@ -104,9 +106,11 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     });
   }
 
-  private async onCustomCDPCommand(socket: WebSocket, payload: any, browser: BrowserCDP) {
-    const request = Request.parse(payload);
-
+  private async onCustomCDPCommand(
+    socket: WebSocket,
+    request: ProtocolRequest,
+    browser: BrowserCDP
+  ) {
     this.logger.info('Received custom CDP command:', request);
 
     const protocol = await browser.getJSONProtocol();
