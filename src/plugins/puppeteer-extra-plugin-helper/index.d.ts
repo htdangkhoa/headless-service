@@ -1,4 +1,4 @@
-import {} from 'puppeteer';
+import type { Page } from 'puppeteer';
 
 export interface IBrowserHelper {
   currentPage(timeout?: number): Promise<Page>;

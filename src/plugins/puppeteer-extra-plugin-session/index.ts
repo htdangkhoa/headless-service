@@ -1,4 +1,4 @@
-import { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { get, isNil } from 'lodash-es';
 

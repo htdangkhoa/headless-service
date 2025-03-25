@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Frame, Page } from 'puppeteer';
+import type { Frame, Page } from 'puppeteer';
 import {
   FingerprintGenerator,
   BrowserFingerprintWithHeaders,

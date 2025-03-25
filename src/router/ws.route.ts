@@ -78,7 +78,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
 
           this.logger.info(`Received message:`, message);
 
-          return s.send(data);
+          return s.send(message);
         });
 
         s.on('message', (data: any) => {

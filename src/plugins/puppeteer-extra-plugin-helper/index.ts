@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Browser, Page } from 'puppeteer';
+import type { Browser, Page } from 'puppeteer';
 
 import { DEFAULT_TIMEOUT } from '@/constants';
 import { patchNamedFunctionESBuildIssue2605, sleep } from '@/utils';
