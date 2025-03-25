@@ -10,6 +10,7 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     /* Register commands */
     this.createLiveUrlCommand();
     this.createRecordingCommand();
+    this.createKeepAliveCommand();
 
     /* Register events */
     this.createLiveCompleteEvent();
@@ -66,5 +67,27 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     };
 
     this.addCommand(startRecordingCommand, stopRecordingCommand);
+  }
+
+  private createKeepAliveCommand() {
+    const keepAliveCommand: Command = {
+      name: COMMANDS.KEEP_ALIVE,
+      description: 'Keep alive',
+      parameters: [
+        {
+          name: 'ms',
+          type: 'number',
+          description: 'Milliseconds to keep alive',
+        },
+      ],
+      returns: [
+        {
+          name: 'reconnectUrl',
+          type: 'string',
+        },
+      ],
+    };
+
+    this.addCommand(keepAliveCommand);
   }
 }

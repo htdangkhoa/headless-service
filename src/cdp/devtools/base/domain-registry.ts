@@ -9,15 +9,6 @@ export abstract class DomainRegistry {
 
   constructor(private readonly domain: string) {}
 
-  // abstract build() {
-  //   return {
-  //     domain: this.domain,
-  //     types: Array.from(this.types.values()),
-  //     commands: Array.from(this.commands.values()),
-  //     events: Array.from(this.events.values()),
-  //   };
-  // }
-
   abstract buildDomain(): Domain;
 
   protected addDomainType(type: DomainType) {

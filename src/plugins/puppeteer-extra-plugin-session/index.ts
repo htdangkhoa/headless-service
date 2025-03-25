@@ -1,20 +1,18 @@
-import { Browser, Frame, Page } from 'puppeteer';
+import { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
+import { get, isNil } from 'lodash-es';
 
-import { getBrowserId, patchNamedFunctionESBuildIssue2605 } from '@/utils';
+import { buildProtocolEventNames, buildProtocolMethod, getBrowserId } from '@/utils';
 import { makeExternalUrl } from '@/utils';
-
-export interface IEmbeddedAPIMeta {
-  reconnectUrl: string;
-  api: {
-    endpoint: string;
-    method: string;
-  };
-}
+import { COMMANDS, DOMAINS } from '@/constants';
+import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
 export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
-  private reconnectUrl: string | null = null;
-  private apiEndpoint: string | null = null;
+  private browser: Browser | null = null;
+
+  private readonly PROTOCOL_METHODS = {
+    KEEP_ALIVE: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.KEEP_ALIVE),
+  };
 
   constructor() {
     super();
@@ -25,93 +23,69 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
   }
 
   async onBrowser(browser: Browser, opts: any): Promise<void> {
-    const sessionId = getBrowserId(browser);
+    this.browser = browser;
 
-    const reconnectUrl = makeExternalUrl('ws', 'devtools', 'browser', sessionId);
-    this.reconnectUrl = reconnectUrl;
+    const browserId = getBrowserId(browser);
 
-    const apiEndpoint = makeExternalUrl('http', 'internal', 'browser', sessionId, 'session');
-    this.apiEndpoint = apiEndpoint;
+    const { eventNameForListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.KEEP_ALIVE
+    );
+
+    browser.on(eventNameForListener, this.onKeepAlive.bind(this));
   }
 
   async onDisconnected(): Promise<void> {
-    this.reconnectUrl = null;
-    this.apiEndpoint = null;
+    this.browser = null;
   }
 
-  async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
+  private async onKeepAlive(payload: any) {
+    const request = Request.parse(payload);
 
-    const self = this;
+    if (!this.browser) return;
 
-    page.on('framenavigated', self.onFrameNavigated.bind(self));
+    const currentPage = await this.browser.currentPage();
 
-    page.on('framedetached', (frame: Frame) => {
-      page.off('framenavigated', self.onFrameNavigated);
-    });
+    if (!currentPage) return;
 
-    await this.injectSessionAPI(page);
-  }
+    const ms = get(request, 'params.ms');
 
-  private async onFrameNavigated(frame: Frame) {
-    if (frame.detached) return;
+    const browserId = getBrowserId(this.browser);
 
-    if (frame.parentFrame()?.detached) return;
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.KEEP_ALIVE
+    );
 
-    const page = frame.page();
-
-    if (page.isClosed()) return;
-
-    await this.injectSessionAPI(frame);
-  }
-
-  private async injectSessionAPI(target: Page | Frame) {
-    if (!(target instanceof Page) && !(target instanceof Frame))
-      throw new Error('Target must be either a Page or a Frame');
-
-    const setupEmbeddedAPI = (meta: IEmbeddedAPIMeta) => {
-      const { reconnectUrl, api } = meta;
-
-      Object.defineProperty(window, 'keepAlive', {
-        configurable: false,
-        enumerable: false,
-        value: async (ms: number) => {
-          const response = await fetch(api.endpoint, {
-            method: api.method,
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ keep_alive: ms }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to keep alive');
-          }
-
-          return reconnectUrl;
-        },
-        writable: false,
-      });
-    };
-
-    const meta: IEmbeddedAPIMeta = {
-      reconnectUrl: this.reconnectUrl!,
-      api: {
-        endpoint: this.apiEndpoint!,
-        method: 'PUT',
-      },
-    };
-
-    const promises: any[] = [
-      target.waitForNavigation({ timeout: 0 }),
-      target.evaluate(setupEmbeddedAPI, meta),
-    ];
-
-    if (target instanceof Page) {
-      promises.push(target.evaluateOnNewDocument(setupEmbeddedAPI, meta));
+    if (isNil(ms)) {
+      const dispatchResponse = DispatchResponse.InvalidParams(
+        `Invalid parameters Failed to deserialize params.ms`
+      );
+      const response = Response.error(request.id!, dispatchResponse, request.sessionId);
+      return this.browser.emit(eventNameForResult, response);
     }
 
-    await Promise.allSettled(promises);
+    const apiEndpoint = makeExternalUrl('http', 'internal', 'browser', browserId, 'session');
+
+    const fetchResponse = await fetch(apiEndpoint, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ keep_alive: ms }),
+    });
+
+    if (!fetchResponse.ok) {
+      // throw new Error('Failed to keep alive');
+      const dispatchResponse = DispatchResponse.InternalError('Failed to keep alive');
+      const response = Response.error(request.id!, dispatchResponse, request.sessionId);
+      return this.browser.emit(eventNameForResult, response);
+    }
+
+    const reconnectUrl = makeExternalUrl('ws', 'devtools', 'browser', browserId);
+
+    const response = Response.success(request.id!, { reconnectUrl }, request.sessionId);
+    return this.browser.emit(eventNameForResult, response);
   }
 }
 
