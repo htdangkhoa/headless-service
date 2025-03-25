@@ -75,10 +75,5 @@
   },
   "optionalDependencies": {
     "bufferutil": "4.0.8"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "puppeteer-core@24.4.0": "patches/puppeteer-core@24.4.0.patch"
-    }
   }
 }

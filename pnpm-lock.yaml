@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  puppeteer-core@24.4.0:
-    hash: yltwz6jzxr5hlxc67to2zrw63m
-    path: patches/puppeteer-core@24.4.0.patch
-
 dependencies:
   '@asteasolutions/zod-to-openapi':
     specifier: 7.1.2
@@ -57,7 +52,7 @@ dependencies:
     version: 24.4.0(bufferutil@4.0.8)(typescript@5.6.2)
   puppeteer-core:
     specifier: 24.4.0
-    version: 24.4.0(patch_hash=yltwz6jzxr5hlxc67to2zrw63m)(bufferutil@4.0.8)
+    version: 24.4.0(bufferutil@4.0.8)
   puppeteer-extra:
     specifier: 3.3.6
     version: 3.3.6(puppeteer-core@24.4.0)(puppeteer@24.4.0)
@@ -2811,7 +2806,7 @@ packages:
       - utf-8-validate
     dev: false
 
-  /puppeteer-core@24.4.0(patch_hash=yltwz6jzxr5hlxc67to2zrw63m)(bufferutil@4.0.8):
+  /puppeteer-core@24.4.0(bufferutil@4.0.8):
     resolution: {integrity: sha512-eFw66gCnWo0X8Hyf9KxxJtms7a61NJVMiSaWfItsFPzFBsjsWdmcNlBdsA1WVwln6neoHhsG+uTVesKmTREn/g==}
     engines: {node: '>=18'}
     dependencies:
@@ -2827,7 +2822,6 @@ packages:
       - supports-color
       - utf-8-validate
     dev: false
-    patched: true
 
   /puppeteer-extra-plugin-stealth@2.11.2(puppeteer-extra@3.3.6):
     resolution: {integrity: sha512-bUemM5XmTj9i2ZerBzsk2AN5is0wHMNE6K0hXBzBXOzP5m5G3Wl0RHhiqKeHToe/uIH8AoZiGhc1tCkLZQPKTQ==}
@@ -2930,7 +2924,7 @@ packages:
       debug: 4.3.7(supports-color@5.5.0)
       deepmerge: 4.3.1
       puppeteer: 24.4.0(bufferutil@4.0.8)(typescript@5.6.2)
-      puppeteer-core: 24.4.0(patch_hash=yltwz6jzxr5hlxc67to2zrw63m)(bufferutil@4.0.8)
+      puppeteer-core: 24.4.0(bufferutil@4.0.8)
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -2945,7 +2939,7 @@ packages:
       chromium-bidi: 2.1.2(devtools-protocol@0.0.1413902)
       cosmiconfig: 9.0.0(typescript@5.6.2)
       devtools-protocol: 0.0.1413902
-      puppeteer-core: 24.4.0(patch_hash=yltwz6jzxr5hlxc67to2zrw63m)(bufferutil@4.0.8)
+      puppeteer-core: 24.4.0(bufferutil@4.0.8)
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bare-buffer
