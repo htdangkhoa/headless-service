@@ -1,5 +1,5 @@
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { Page, CDPSession, Target, Browser } from 'puppeteer';
+import type { Page, CDPSession, Target, Browser } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
 

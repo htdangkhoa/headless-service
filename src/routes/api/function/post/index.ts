@@ -1,7 +1,7 @@
 import { Handler } from 'express';
 import tsc from 'typescript';
 import { randomUUID } from 'node:crypto';
-import { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
+import type { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
 import { z } from 'zod';
 import dedent from 'dedent';
