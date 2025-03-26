@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import { resolve } from 'node:path';
 import { WebSocketServer } from 'ws';
-import vanillaPuppeteer, { type Browser, type PuppeteerLaunchOptions } from 'puppeteer';
+import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
@@ -17,7 +17,7 @@ import { Logger } from '@/logger';
 
 export interface BrowserCDPOptions {
   // launch options
-  launch?: PuppeteerLaunchOptions;
+  launch?: LaunchOptions;
   // feature options
   stealth?: boolean;
   proxy?: string;
@@ -126,7 +126,7 @@ export class BrowserCDP extends EventEmitter {
 
     const launchArgs = Array.from(setOfArgs);
 
-    const opts: PuppeteerLaunchOptions = {
+    const opts: LaunchOptions = {
       ..._launchOptions,
       executablePath: puppeteer.executablePath(),
       args: launchArgs,
