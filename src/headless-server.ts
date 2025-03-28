@@ -16,6 +16,7 @@ import {
   JSONGetRoute,
   JSONListGetRoute,
   JSONNewPutRoute,
+  JSONActivateGetRoute,
   JSONProtocolGetRoute,
   JSONVersionGetRoute,
   DevtoolsBrowserWsRoute,
@@ -103,7 +104,14 @@ export class HeadlessServer {
     );
 
     this.jsonGroup = new Group(
-      [JSONGetRoute, JSONListGetRoute, JSONNewPutRoute, JSONVersionGetRoute, JSONProtocolGetRoute],
+      [
+        JSONGetRoute,
+        JSONListGetRoute,
+        JSONNewPutRoute,
+        JSONActivateGetRoute,
+        JSONVersionGetRoute,
+        JSONProtocolGetRoute,
+      ],
       this.app,
       this.headlessServerContext,
       '/json'

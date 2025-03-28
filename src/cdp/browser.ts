@@ -219,4 +219,17 @@ export class BrowserCDP extends EventEmitter {
   getPuppeteerBrowser() {
     return this.browser;
   }
+
+  async getPageById(pageId: string) {
+    if (!this.browser) {
+      throw new Error(`${this.constructor.name} is not launched yet`);
+    }
+
+    const pages = await this.browser.pages();
+
+    // @ts-expect-error
+    const page = pages.find((p) => p.target()._targetId === pageId);
+
+    return page;
+  }
 }
