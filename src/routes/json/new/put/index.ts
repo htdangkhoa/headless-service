@@ -1,6 +1,7 @@
 import type { Handler } from 'express';
 import dedent from 'dedent';
 import z from 'zod';
+import { head } from 'lodash-es';
 
 import { Method, ProxyHttpRoute } from '@/router';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
@@ -17,40 +18,17 @@ const DevToolsJSONSchema = z.object({
   webSocketDebuggerUrl: z.string().describe('The WebSocket debugger URL for the target.'),
 });
 
-const RequestJsonNewParamsSchema = z.object({
-  url: z
-    .string()
-    .refine(
-      (val) => {
-        try {
-          new URL(val);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      {
-        message: 'Invalid URL',
-      }
-    )
-    .optional()
-    .describe('The URL to open.'),
-});
-
 export class JSONNewPutRoute extends ProxyHttpRoute {
   method = Method.PUT;
-  path = '/new/:url?';
+  path = '/new';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
-    summary: this.path,
+    summary: `${this.path}?{url}`,
     description: dedent`
       Returns a JSON payload that acts as a pass-through to the DevTools /json/new HTTP API in Browser.
       
       Headless Service mocks this payload so that remote clients can connect to the underlying \`webSocketDebuggerUrl\` which will cause Headless Service to start the browser and proxy that request into a blank page.
     `,
-    request: {
-      params: RequestJsonNewParamsSchema,
-    },
     responses: {
       200: {
         description: 'The performance data',
@@ -71,25 +49,17 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
     },
   };
   handler: Handler = async (req, res) => {
-    const paramsValidation = useTypedParsers(RequestJsonNewParamsSchema).safeParse(req.params);
-
-    if (!paramsValidation.success) {
-      return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: paramsValidation.error.errors,
-      });
-    }
-
-    const { url } = paramsValidation.data;
+    const openUrl = head(Object.keys(req.query));
 
     const externalWSAddress = makeExternalUrl('ws');
 
     const pageId = generatePageId();
 
-    const devtoolsUrl = new URL(`/devtools/page/${pageId}`, externalWSAddress);
-
-    if (url) {
-      devtoolsUrl.searchParams.set('open_url', url);
+    let devtoolsPath = `/devtools/page/${pageId}`;
+    if (openUrl) {
+      devtoolsPath += `?${openUrl}`;
     }
+    const devtoolsUrl = new URL(devtoolsPath, externalWSAddress);
 
     const { href } = devtoolsUrl;
 
@@ -104,7 +74,7 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
       id: pageId,
       title: 'New Tab',
       type: 'page',
-      url: 'about:blank',
+      url: openUrl ?? 'about:blank',
       webSocketDebuggerUrl: href,
     };
 

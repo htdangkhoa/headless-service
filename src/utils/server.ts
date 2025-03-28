@@ -26,7 +26,7 @@ export const writeResponse = async (
   options?: {
     contentType?: string;
     message?: string;
-    body?: ResponseBody | Protocol | Error | Array<Error> | ZodIssue[];
+    body?: ResponseBody | Protocol | Error | Array<Error> | ZodIssue[] | string;
     skipValidateBody?: boolean;
   }
 ) => {
@@ -36,6 +36,10 @@ export const writeResponse = async (
     const response = writable as Response;
 
     const { body, skipValidateBody } = options;
+
+    if (typeof body === 'string') {
+      return response.status(status).send(body);
+    }
 
     if (body instanceof ZodError) {
       return response.status(status).send({
