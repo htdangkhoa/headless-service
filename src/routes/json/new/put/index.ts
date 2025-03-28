@@ -1,13 +1,11 @@
 import type { Handler } from 'express';
-import * as path from 'node:path';
 import dedent from 'dedent';
 import z from 'zod';
 
 import { Method, ProxyHttpRoute } from '@/router';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ResponseBodySchema as ResponseDefaultBodySchema } from '@/schemas';
-import { makeExternalUrl, writeResponse } from '@/utils';
-import { generatePageId } from '@/utils/puppeteer';
+import { generatePageId, makeExternalUrl, useTypedParsers, writeResponse } from '@/utils';
 
 const DevToolsJSONSchema = z.object({
   description: z.string().describe("The description of the target. Generally the page's title."),
@@ -19,9 +17,29 @@ const DevToolsJSONSchema = z.object({
   webSocketDebuggerUrl: z.string().describe('The WebSocket debugger URL for the target.'),
 });
 
+const RequestJsonNewParamsSchema = z.object({
+  url: z
+    .string()
+    .refine(
+      (val) => {
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      {
+        message: 'Invalid URL',
+      }
+    )
+    .optional()
+    .describe('The URL to open.'),
+});
+
 export class JSONNewPutRoute extends ProxyHttpRoute {
   method = Method.PUT;
-  path = '/new';
+  path = '/new/:url?';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,
@@ -30,6 +48,9 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
       
       Headless Service mocks this payload so that remote clients can connect to the underlying \`webSocketDebuggerUrl\` which will cause Headless Service to start the browser and proxy that request into a blank page.
     `,
+    request: {
+      params: RequestJsonNewParamsSchema,
+    },
     responses: {
       200: {
         description: 'The performance data',
@@ -50,21 +71,36 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
     },
   };
   handler: Handler = async (req, res) => {
+    const paramsValidation = useTypedParsers(RequestJsonNewParamsSchema).safeParse(req.params);
+
+    if (!paramsValidation.success) {
+      return writeResponse(res, HttpStatus.BAD_REQUEST, {
+        body: paramsValidation.error.errors,
+      });
+    }
+
+    const { url } = paramsValidation.data;
+
     const externalWSAddress = makeExternalUrl('ws');
 
     const pageId = generatePageId();
 
-    const { protocol, host, pathname, href } = new URL(
-      `/devtools/page/${pageId}`,
-      externalWSAddress
-    );
+    const devtoolsUrl = new URL(`/devtools/page/${pageId}`, externalWSAddress);
 
-    const param = protocol.replace(':', '');
-    const value = path.join(host, pathname);
+    if (url) {
+      devtoolsUrl.searchParams.set('open_url', url);
+    }
+
+    const { href } = devtoolsUrl;
+
+    const devtoolsUrlSearchParams = href.replace(/\:\/\//, '=');
 
     const body: any = {
       description: '',
-      devtoolsFrontendUrl: makeExternalUrl('http', `/devtools/inspector.html?${param}=${value}`),
+      devtoolsFrontendUrl: makeExternalUrl(
+        'http',
+        `/devtools/inspector.html?${devtoolsUrlSearchParams}`
+      ),
       id: pageId,
       title: 'New Tab',
       type: 'page',

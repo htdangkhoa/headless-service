@@ -50,11 +50,7 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
 
     const url = parseUrlFromIncomingMessage(req);
 
-    const [, requestPageId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
-
-    let pageId = requestPageId;
-
-    const query = parseSearchParams(url.search);
+    const { open_url: openUrl, ...query } = parseSearchParams(url.search);
 
     const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
 
@@ -67,6 +63,10 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
     }
 
     const options = queryValidation.data;
+
+    const [, requestPageId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
+
+    let pageId = requestPageId;
 
     let browser: BrowserCDP | null = null;
 
@@ -84,6 +84,16 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
       return writeResponse(socket, HttpStatus.LOGIN_TIMEOUT, {
         body: error,
         message: error.message,
+      });
+    }
+
+    const pages = await browser.pages();
+    const page = pages.find((p) => browserManager.getPageId(p) === pageId);
+    await page?.bringToFront();
+
+    if (openUrl) {
+      await page?.goto(openUrl, {
+        waitUntil: 'domcontentloaded',
       });
     }
 
