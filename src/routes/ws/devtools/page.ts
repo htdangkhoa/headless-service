@@ -122,8 +122,7 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
       });
     }
 
-    const pages = await browser.pages();
-    const page = pages.find((p) => browserManager.getPageId(p) === pageId);
+    const page = await browser.getPageById(pageId);
     await page?.bringToFront();
 
     if (openUrl) {

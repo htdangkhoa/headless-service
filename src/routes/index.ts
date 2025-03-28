@@ -8,6 +8,7 @@ export * from './json/get';
 export * from './json/list/get';
 export * from './json/new/put';
 export * from './json/activate/get';
+export * from './json/close/get';
 export * from './json/protocol/get';
 export * from './json/version/get';
 export * from './ws/devtools/browser';
