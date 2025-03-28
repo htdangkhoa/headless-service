@@ -24,6 +24,7 @@ import {
   LiveIndexWsRoute,
   IndexWsRoute,
   InternalBrowserSessionPutRoute,
+  JSONCloseGetRoute,
 } from '@/routes';
 import { makeExternalUrl, writeResponse } from '@/utils';
 import { Group } from '@/router';
@@ -109,6 +110,7 @@ export class HeadlessServer {
         JSONListGetRoute,
         JSONNewPutRoute,
         JSONActivateGetRoute,
+        JSONCloseGetRoute,
         JSONVersionGetRoute,
         JSONProtocolGetRoute,
       ],
