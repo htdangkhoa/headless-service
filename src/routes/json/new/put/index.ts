@@ -1,13 +1,12 @@
 import type { Handler } from 'express';
-import * as path from 'node:path';
 import dedent from 'dedent';
 import z from 'zod';
+import { head } from 'lodash-es';
 
 import { Method, ProxyHttpRoute } from '@/router';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ResponseBodySchema as ResponseDefaultBodySchema } from '@/schemas';
-import { makeExternalUrl, writeResponse } from '@/utils';
-import { generatePageId } from '@/utils/puppeteer';
+import { generatePageId, makeExternalUrl, useTypedParsers, writeResponse } from '@/utils';
 
 const DevToolsJSONSchema = z.object({
   description: z.string().describe("The description of the target. Generally the page's title."),
@@ -24,7 +23,7 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
   path = '/new';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
-    summary: this.path,
+    summary: `${this.path}?{url}`,
     description: dedent`
       Returns a JSON payload that acts as a pass-through to the DevTools /json/new HTTP API in Browser.
       
@@ -50,25 +49,32 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
     },
   };
   handler: Handler = async (req, res) => {
+    const openUrl = head(Object.keys(req.query));
+
     const externalWSAddress = makeExternalUrl('ws');
 
     const pageId = generatePageId();
 
-    const { protocol, host, pathname, href } = new URL(
-      `/devtools/page/${pageId}`,
-      externalWSAddress
-    );
+    let devtoolsPath = `/devtools/page/${pageId}`;
+    if (openUrl) {
+      devtoolsPath += `?${openUrl}`;
+    }
+    const devtoolsUrl = new URL(devtoolsPath, externalWSAddress);
 
-    const param = protocol.replace(':', '');
-    const value = path.join(host, pathname);
+    const { href } = devtoolsUrl;
+
+    const devtoolsUrlSearchParams = href.replace(/\:\/\//, '=');
 
     const body: any = {
       description: '',
-      devtoolsFrontendUrl: makeExternalUrl('http', `/devtools/inspector.html?${param}=${value}`),
+      devtoolsFrontendUrl: makeExternalUrl(
+        'http',
+        `/devtools/inspector.html?${devtoolsUrlSearchParams}`
+      ),
       id: pageId,
       title: 'New Tab',
       type: 'page',
-      url: 'about:blank',
+      url: openUrl ?? 'about:blank',
       webSocketDebuggerUrl: href,
     };
 

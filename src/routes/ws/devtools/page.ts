@@ -1,4 +1,6 @@
 import { IncomingMessage } from 'node:http';
+import dedent from 'dedent';
+import { head as _head } from 'lodash-es';
 
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
@@ -11,7 +13,7 @@ import {
 import { HEADLESS_PAGE_IDENTIFIER, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { BrowserCDP } from '@/cdp';
 import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
-import dedent from 'dedent';
+import { Dictionary } from '@/types';
 
 // /devtools/page/9D8F0DE47A20F0181D65B251A6F59ACC
 const DEVTOOLS_PATH_REGEX = /\/devtools\/page\/([A-Z0-9]{32})/;
@@ -50,13 +52,42 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
 
     const url = parseUrlFromIncomingMessage(req);
 
-    const [, requestPageId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
-
-    let pageId = requestPageId;
-
     const query = parseSearchParams(url.search);
 
-    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
+    const transformQuery = Object.entries(query).reduce(
+      (acc, [key, value]) => {
+        if (!value) {
+          acc.invalid.push([key, value]);
+        } else {
+          acc.valid.push([key, value]);
+        }
+        return acc;
+      },
+      {
+        valid: [],
+        invalid: [],
+      } as Dictionary
+    );
+
+    const validQuery = transformQuery.valid.reduce(
+      (acc: Dictionary, [key, value]: [string, any]) => {
+        acc[key] = value;
+        return acc;
+      },
+      {} as Dictionary
+    );
+
+    const invalidQuery = transformQuery.invalid.reduce(
+      (acc: Dictionary, [key, value]: [string, any]) => {
+        acc[key] = value;
+        return acc;
+      },
+      {} as Dictionary
+    );
+
+    const openUrl = _head(Object.keys(invalidQuery));
+
+    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(validQuery);
 
     if (queryValidation.error) {
       const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
@@ -67,6 +98,10 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
     }
 
     const options = queryValidation.data;
+
+    const [, requestPageId] = DEVTOOLS_PATH_REGEX.exec(url.pathname) || [];
+
+    let pageId = requestPageId;
 
     let browser: BrowserCDP | null = null;
 
@@ -85,6 +120,16 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
         body: error,
         message: error.message,
       });
+    }
+
+    const page = await browser.getPageById(pageId);
+    await page?.bringToFront();
+
+    if (openUrl) {
+      try {
+        const url = new URL(openUrl);
+        await page?.goto(url.href);
+      } catch {}
     }
 
     const browserWSEndpoint = browser.wsEndpoint();

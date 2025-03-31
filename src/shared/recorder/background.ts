@@ -82,7 +82,7 @@ chrome.runtime.onConnect.addListener((port) => {
         },
       });
       port.postMessage({ downloadComplete: true });
-    } catch (e) {}
+    } catch {}
   }
 
   if (!chrome.downloads.onChanged.hasListener(onDownloadChanged)) {
