@@ -26,7 +26,7 @@ import {
   InternalBrowserSessionPutRoute,
   JSONCloseGetRoute,
 } from '@/routes';
-import { makeExternalUrl, writeResponse } from '@/utils';
+import { env, Ghostery, makeExternalUrl, writeResponse } from '@/utils';
 import { Group } from '@/router';
 import { OpenAPI } from '@/openapi';
 import { HttpStatus } from '@/constants';
@@ -161,6 +161,18 @@ export class HeadlessServer {
       version: '1.0.0',
       servers: [{ url: makeExternalUrl('http') }],
     });
+
+    const INITIALIZE_GHOSTERY = env<boolean>('INITIALIZE_GHOSTERY', true);
+
+    if (INITIALIZE_GHOSTERY) {
+      try {
+        this.logger.info('Initializing Ghostery...');
+        await Ghostery.initialize();
+        this.logger.info('Ghostery initialized');
+      } catch (error) {
+        this.logger.error('Error initializing Ghostery:', error);
+      }
+    }
 
     this.server!.timeout = 0;
     this.server!.keepAliveTimeout = 0;
