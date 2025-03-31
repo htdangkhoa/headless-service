@@ -102,8 +102,6 @@ export class BrowserCDP extends EventEmitter {
     const extensionPaths: string[] = [];
 
     if (blockAds) {
-      const uBlock0Path = resolve(process.cwd(), 'extensions', 'uBlock0.chromium');
-      extensionPaths.push(uBlock0Path);
       puppeteer.use(GhosteryPlugin());
     }
 

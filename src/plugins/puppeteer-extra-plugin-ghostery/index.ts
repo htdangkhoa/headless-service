@@ -1,31 +1,23 @@
 import { Browser, Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { PuppeteerBlocker, fullLists } from '@ghostery/adblocker-puppeteer';
+import { Ghostery } from '@/utils';
 
 export class PuppeteerExtraPluginGhostery extends PuppeteerExtraPlugin {
-  private blocker: PuppeteerBlocker | null = null;
+  private blocker: PuppeteerBlocker | undefined;
 
   get name(): string {
     return 'ghostery';
   }
 
   async onBrowser(browser: Browser, opts: any): Promise<void> {
-    await this.provideBlocker();
+    this.blocker = await Ghostery.getBlocker();
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    const blocker = await this.provideBlocker();
-    await blocker.enableBlockingInPage(page);
-  }
-
-  private async provideBlocker() {
-    if (!this.blocker) {
-      this.blocker = await PuppeteerBlocker.fromLists(fetch, fullLists, {
-        enableCompression: true,
-      });
+    if (this.blocker) {
+      await this.blocker.enableBlockingInPage(page);
     }
-
-    return this.blocker;
   }
 }
 

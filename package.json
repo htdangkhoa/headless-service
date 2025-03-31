@@ -10,7 +10,6 @@
     "build:live": "node scripts/build/live.js",
     "build:recorder": "node scripts/build/recorder.js",
     "install:devtools": "node scripts/install/devtools.js",
-    "install:ublock": "node scripts/install/ublock.js",
     "prebuild": "rimraf dist",
     "build": "tsc -p tsconfig.build.json",
     "postbuild": "tsc-alias -p tsconfig.build.json -f true -fe .js",
