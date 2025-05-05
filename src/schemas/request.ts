@@ -12,6 +12,7 @@ export const RequestLaunchQuerySchema = z.object({
 
 export const RequestDefaultQuerySchema = z
   .object({
+    token: z.string().describe('The token to authenticate the request').optional(),
     launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
     stealth: BooleanOrStringSchema.describe(
       'Whether to run the browser in stealth mode'

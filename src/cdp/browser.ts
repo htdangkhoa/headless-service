@@ -24,6 +24,7 @@ export interface BrowserCDPOptions {
   proxy?: string;
   block_ads?: boolean;
   unblock?: boolean;
+  token?: string;
   request_id?: string;
 }
 
@@ -41,6 +42,8 @@ export class BrowserCDP extends EventEmitter {
   private record: boolean = false;
 
   private protocol: Protocol | null = null;
+
+  private token: string | null | undefined = null;
 
   constructor(private options?: BrowserCDPOptions) {
     super();
@@ -74,8 +77,11 @@ export class BrowserCDP extends EventEmitter {
       block_ads: blockAds,
       proxy,
       launch: launchOptions,
+      token,
       request_id: requestId,
     } = this.options ?? {};
+
+    this.token = token;
 
     if (this.wsServer instanceof WebSocketServer) {
       puppeteer.use(LiveUrlPlugin(this.wsServer, requestId));
@@ -143,7 +149,11 @@ export class BrowserCDP extends EventEmitter {
     this.browser = vanillaBrowser;
 
     const browserWSEndpoint = vanillaBrowser.wsEndpoint();
-    this.browserWSEndpoint = browserWSEndpoint;
+    const browserWebSocketURL = new URL(browserWSEndpoint!);
+    if (this.token) {
+      browserWebSocketURL.searchParams.set('token', this.token);
+    }
+    this.browserWSEndpoint = browserWebSocketURL.href;
   }
 
   id() {

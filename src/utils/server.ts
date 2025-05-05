@@ -12,10 +12,13 @@ import { Protocol } from '@/cdp/devtools';
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 
 export const parseSearchParams = (searchParams: string | Request['query']) => {
-  let query: Dictionary = searchParams as Dictionary;
-  if (typeof searchParams === 'string') {
-    query = qs.parse(searchParams, { ignoreQueryPrefix: true }) as object;
+  let strQuery: string = searchParams as any;
+
+  if (typeof strQuery !== 'string') {
+    strQuery = qs.stringify(strQuery);
   }
+
+  const query = qs.parse(strQuery, { ignoreQueryPrefix: true }) as object;
 
   return query;
 };

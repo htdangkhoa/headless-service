@@ -104,8 +104,12 @@ export class FunctionPostRoute extends ProxyHttpRoute {
 
     const browserWSEndpoint = browser.wsEndpoint();
     const browserWebSocketURL = new URL(browserWSEndpoint!);
+    const browserWebSocketFullPath = browserWebSocketURL.href.replace(
+      browserWebSocketURL.origin,
+      ''
+    );
 
-    const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketURL.pathname);
+    const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketFullPath);
 
     const functionIndexHTML = makeExternalUrl('http', 'function', 'index.html');
 

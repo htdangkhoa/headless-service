@@ -3,7 +3,7 @@ import type { Server, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 
 import { Maybe, Optional } from '@/types';
-import { getFullPath, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
+import { env, getFullPath, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
 import { HttpStatus } from '@/constants';
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
@@ -52,9 +52,24 @@ export class Group {
     routes.forEach((route) => {
       const fullPath = getFullPath(route.path, this.prefix);
 
-      const handlers = Array<Optional<Handler>>()
-        .concat(route.handler, route.handlers)
-        .filter(Boolean);
+      let handlers = Array<Optional<Handler>>();
+
+      if (route.auth) {
+        handlers.push((req, res, next) => {
+          const isPermitted = this.isAuthorized(route, req);
+
+          if (!isPermitted) {
+            const error = new Error('Unauthorized');
+            return writeResponse(res, HttpStatus.UNAUTHORIZED, {
+              body: error,
+            });
+          }
+
+          return next();
+        });
+      }
+
+      handlers = handlers.concat(route.handler, route.handlers).filter(Boolean);
 
       (this.app as Express)[route.method](fullPath, handlers as Array<Handler>);
     });
@@ -73,6 +88,15 @@ export class Group {
         const route = routes.find((r) => r.shouldUpgrade(req));
 
         if (route) {
+          const isPermitted = this.isAuthorized(route, req);
+
+          if (!isPermitted) {
+            const error = new Error('Unauthorized');
+            return writeResponse(socket, HttpStatus.UNAUTHORIZED, {
+              message: error.message,
+            });
+          }
+
           return route.handler(req, socket, head);
         }
 
@@ -81,6 +105,22 @@ export class Group {
         });
       });
     });
+  }
+
+  isAuthorized(route: Route, req: IncomingMessage): boolean {
+    const token = env('HEADLESS_SERVICE_TOKEN');
+
+    if (!token) return true;
+
+    if (route.auth !== true) return true;
+
+    const url = parseUrlFromIncomingMessage(req);
+
+    const requestToken = url.searchParams.get('token');
+
+    if (!requestToken) return false;
+
+    return (Array.isArray(token) ? token : [token]).includes(requestToken);
   }
 
   getRoutes() {
