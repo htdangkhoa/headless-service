@@ -12,7 +12,7 @@ const RequestJsonCloseParamsSchema = z.object({
 
 export class JSONCloseGetRoute extends ProxyHttpRoute {
   method = Method.GET;
-  path = '/close/{:targetId}';
+  path = '/close/{targetId}';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,

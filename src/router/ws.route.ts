@@ -6,18 +6,15 @@ import WebSocket from 'ws';
 import type { BrowserCDP } from '@/cdp';
 import { Logger } from '@/logger';
 import { buildProtocolEventNames } from '@/utils';
-import { RouteConfig } from './interfaces';
+import { OpenApiRoute, RouteConfig } from './interfaces';
 import { HeadlessServerContext } from './http.route';
 import { DOMAINS } from '@/constants';
 import { DispatchResponse, ProtocolRequest, Request, Response } from '@/cdp/devtools';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 
-export interface WsRoute {
-  path: string;
-  handler: WsHandler;
+export interface WsRoute extends OpenApiRoute<WsHandler> {
   shouldUpgrade: (req: IncomingMessage) => boolean;
-  swagger?: RouteConfig;
 }
 
 export interface HeadlessServerWebSocketContext extends HeadlessServerContext {
@@ -30,6 +27,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   constructor(protected context: HeadlessServerWebSocketContext) {}
 
   abstract path: string;
+  auth: boolean = true;
   abstract handler: WsHandler;
   abstract shouldUpgrade: (req: IncomingMessage) => boolean;
   swagger?: Omit<RouteConfig, 'method' | 'path'>;

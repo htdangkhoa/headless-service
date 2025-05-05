@@ -3,7 +3,8 @@ import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager } from '@/cdp';
 import { Logger } from '@/logger';
-import { RouteConfig } from './interfaces';
+import { OpenApiRoute, RouteConfig } from './interfaces';
+import { IncomingMessage } from 'http';
 
 export enum Method {
   GET = 'get',
@@ -17,12 +18,9 @@ export enum Method {
   ALL = 'all',
 }
 
-export interface HttpRoute {
+export interface HttpRoute extends OpenApiRoute<Handler> {
   method: Method;
-  path: string;
-  handler?: Handler;
   handlers?: Handler[];
-  swagger?: RouteConfig;
 }
 
 export interface HeadlessServerContext {
@@ -37,6 +35,7 @@ export abstract class ProxyHttpRoute implements HttpRoute {
 
   abstract method: Method;
   abstract path: string;
+  auth: boolean = true;
   handler?: Handler;
   handlers?: Handler[];
   swagger?: Omit<RouteConfig, 'method' | 'path'>;
