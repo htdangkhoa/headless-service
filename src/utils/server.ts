@@ -29,7 +29,7 @@ export const writeResponse = async (
     body?: ResponseBody | Protocol | Error | Array<Error> | ZodIssue[] | string;
     skipValidateBody?: boolean;
   }
-) => {
+): Promise<void> => {
   const httpMessage = STATUS_CODES[status];
 
   if (isHTTP(writable) && options?.body) {
@@ -38,20 +38,26 @@ export const writeResponse = async (
     const { body, skipValidateBody } = options;
 
     if (typeof body === 'string') {
-      return response.status(status).send(body);
+      response.status(status).send(body);
+
+      return;
     }
 
     if (body instanceof ZodError) {
-      return response.status(status).send({
+      response.status(status).send({
         errors: body.errors.map((error) => ({
           path: error.path.join('.'),
           message: error.message,
         })),
       });
+
+      return;
     }
 
     if (['data', 'errors'].some((key) => key in body) || skipValidateBody) {
-      return response.status(status).send(body);
+      response.status(status).send(body);
+
+      return;
     }
 
     const errors = new Array<Error>().concat(body as any).map((error) => {
@@ -65,7 +71,9 @@ export const writeResponse = async (
       return error;
     });
 
-    return response.status(status).send({ errors });
+    response.status(status).send({ errors });
+
+    return;
   }
 
   const socket = writable as Duplex;
@@ -83,5 +91,8 @@ export const writeResponse = async (
     .join('\r\n');
 
   socket.write(httpResponse);
-  return socket.end();
+
+  socket.end();
+
+  return;
 };

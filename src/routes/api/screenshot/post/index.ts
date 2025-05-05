@@ -279,7 +279,9 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
       const mimeType = ['image', parsedScreenshotOptions.type ?? 'png'].join('/');
 
-      return res.setHeader('Content-Type', mimeType).status(HttpStatus.OK).send(buffer);
+      res.setHeader('Content-Type', mimeType).status(HttpStatus.OK).send(buffer);
+
+      return;
     }
 
     return writeResponse(res, HttpStatus.BAD_REQUEST, {

@@ -252,6 +252,8 @@ export class PdfPostRoute extends ProxyHttpRoute {
 
     await browserManager.complete(browser);
 
-    return res.setHeader('Content-Type', 'application/pdf').status(HttpStatus.OK).send(pdf);
+    res.setHeader('Content-Type', 'application/pdf').status(HttpStatus.OK).send(pdf);
+
+    return;
   };
 }
