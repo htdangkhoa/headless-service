@@ -12,7 +12,7 @@ const RequestJsonActivateParamsSchema = z.object({
 
 export class JSONActivateGetRoute extends ProxyHttpRoute {
   method = Method.GET;
-  path = '/activate/:targetId?';
+  path = '/activate/{:targetId}';
   swagger = {
     tags: [OPENAPI_TAGS.REST_APIS],
     summary: this.path,
