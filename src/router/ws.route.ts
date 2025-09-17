@@ -142,7 +142,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     puppeteerBrowser.on(eventNameForResult, (resultResponse) => {
       this.logger.debug('Received result for custom CDP command:', resultResponse);
 
-      const resultBuffer = Buffer.from(JSON.stringify(resultResponse));
+      const resultBuffer = Buffer.from(JSON.stringify(resultResponse)).toString('utf-8');
 
       return socket.send(resultBuffer);
     });
