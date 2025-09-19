@@ -6,6 +6,14 @@ import cors from 'cors';
 import HttpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
+import { ApolloServer } from '@apollo/server';
+import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import {
+  ApolloServerPluginLandingPageLocalDefault,
+  ApolloServerPluginLandingPageProductionDefault,
+} from '@apollo/server/plugin/landingPage/default';
+import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
+import { expressMiddleware } from '@as-integrations/express5';
 
 import {
   FunctionPostRoute,
@@ -75,8 +83,38 @@ export class HeadlessServer {
 
   private openApi: OpenAPI;
 
+  private apolloServer: ApolloServer;
+
   constructor(options: HeadlessServerOptions) {
     this.options = options;
+
+    // test apollo server
+    const typeDefs = `
+      type Query {
+        hello: String
+      }
+    `;
+
+    this.apolloServer = new ApolloServer({
+      typeDefs,
+      resolvers: {
+        Query: {
+          hello: () => 'Hello World',
+        },
+      },
+      plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer: this.server! }),
+        // ApolloServerPluginLandingPageLocalDefault({
+        //   // graphRef: 'my-graph-id@my-graph-variant',
+        //   footer: true,
+        // }),
+        ApolloServerPluginLandingPageDisabled(),
+      ],
+    });
+
+    this.app.get('/graphql', (req, res) => {
+      res.send('Hello World');
+    });
 
     // Set up views
     this.app.set('views', publicDir);
@@ -154,6 +192,9 @@ export class HeadlessServer {
   }
 
   async start() {
+    await this.apolloServer.start();
+    this.app.use('/graphql', expressMiddleware(this.apolloServer));
+
     // Generate OpenAPI documentation
     this.openApi.generateDocument({
       jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'swagger.json'),
@@ -183,12 +224,14 @@ export class HeadlessServer {
       const baseUrl = makeExternalUrl('http');
       const wsUrl = makeExternalUrl('ws');
       const docsLink = makeExternalUrl('http', 'docs');
+      const graphqlLink = makeExternalUrl('http', 'graphql');
       const info = dedent`
-      --------------------------------------------
-      | Host:           ${baseUrl}
-      | WS Proxy:       ${wsUrl}
-      | Documentation:  ${docsLink}
-      --------------------------------------------
+        ------------------------------------------------------
+        | Host:           ${baseUrl}
+        | WS Proxy:       ${wsUrl}
+        | Documentation:  ${docsLink}
+        | GraphQL:        ${graphqlLink}
+        ------------------------------------------------------
       `;
       console.log(info);
     });
