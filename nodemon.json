@@ -2,7 +2,7 @@
   "watch": ["src"],
   "ext": "ts,json",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "tsx -r dotenv/config src/index.ts",
+  "exec": "tsx --env-file=.env src/index.ts",
   "events": {
     "start": "clear"
   }
