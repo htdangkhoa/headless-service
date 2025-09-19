@@ -32,14 +32,14 @@
     "@types/node": "24.5.2",
     "@types/qs": "6.14.0",
     "@types/ws": "8.18.1",
-    "esbuild": "0.25.3",
+    "esbuild": "0.25.10",
     "esbuild-plugin-polyfill-node": "0.3.0",
     "extract-zip": "2.0.1",
     "nodemon": "3.1.10",
     "prettier": "3.5.3",
     "rimraf": "6.0.1",
-    "tsc-alias": "1.8.15",
-    "tsx": "4.19.4"
+    "tsc-alias": "1.8.16",
+    "tsx": "4.20.5"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "8.1.0",

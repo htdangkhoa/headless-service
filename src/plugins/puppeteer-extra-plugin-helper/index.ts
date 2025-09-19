@@ -2,7 +2,7 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import type { Browser, Page } from 'puppeteer';
 
 import { DEFAULT_TIMEOUT } from '@/constants';
-import { patchNamedFunctionESBuildIssue2605, sleep } from '@/utils';
+import { sleep } from '@/utils';
 
 export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
   get name(): string {
@@ -34,7 +34,7 @@ export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
+    // await patchNamedFunctionESBuildIssue2605(page);
 
     page.scrollThroughPage = this.scrollThroughPage.bind(this, page);
     page.waitForEvent = this.waitForEvent.bind(this, page);
