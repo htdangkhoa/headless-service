@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 import { Logger } from './logger';
 

@@ -26,6 +26,7 @@ declare global {
  * Issue: https://github.com/evanw/esbuild/issues/2605
  * Solution: https://github.com/evanw/esbuild/issues/2605#issuecomment-2050808084 (comment)
  */
+// @deprecated
 export const patchNamedFunctionESBuildIssue2605 = (page: Page) => {
   return Promise.race([
     page.evaluateOnNewDocument(() => (window.__name = (func: Function) => func)),

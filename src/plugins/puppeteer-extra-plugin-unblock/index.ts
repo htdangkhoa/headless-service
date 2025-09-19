@@ -7,8 +7,6 @@ import {
 } from 'fingerprint-generator';
 import { FingerprintInjector } from 'fingerprint-injector';
 
-import { patchNamedFunctionESBuildIssue2605 } from '@/utils';
-
 export interface UnblockOptions {
   fingerprint?: BrowserFingerprintWithHeaders;
   fingerprintOptions?: Partial<FingerprintGeneratorOptions>;
@@ -29,7 +27,7 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
   }
 
   async onPageCreated(page: Page): Promise<void> {
-    await patchNamedFunctionESBuildIssue2605(page);
+    // await patchNamedFunctionESBuildIssue2605(page);
 
     const fingerprintWithHeaders =
       this.options?.fingerprint ??

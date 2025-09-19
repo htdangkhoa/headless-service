@@ -38,7 +38,7 @@ import {
   PuppeteerWaitForFunctionSchema,
 } from '@/schemas';
 
-const RequestScreenshotBodySchema = z.object({
+const RequestPdfBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),
   html: PuppeteerHtmlSchema.optional(),
   options: PuppeteerPDFOptionsSchema.optional(),
@@ -49,7 +49,7 @@ const RequestScreenshotBodySchema = z.object({
   viewport: PuppeteerViewportSchema.optional(),
   block_urls: z.array(z.string()).optional(),
   request_interception: PuppeteerRequestInterceptionSchema.optional(),
-  set_extra_http_headers: z.record(z.string()).optional(),
+  set_extra_http_headers: z.record(z.string(), z.string()).optional(),
   set_javascript_enabled: z.boolean().optional(),
   go_to_options: PuppeteerGoToOptionsSchema.optional(),
   add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
@@ -77,10 +77,11 @@ export class PdfPostRoute extends ProxyHttpRoute {
         description: 'The performance data',
         content: {
           'application/json': {
-            schema: RequestScreenshotBodySchema,
-            example: {
-              url: 'https://example.com',
-            },
+            schema: RequestPdfBodySchema.meta({
+              example: {
+                url: 'https://example.com',
+              },
+            }),
           },
         },
       },
@@ -96,15 +97,15 @@ export class PdfPostRoute extends ProxyHttpRoute {
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: queryValidation.error.errors,
+        body: queryValidation.error.issues,
       });
     }
 
-    const bodyValidation = useTypedParsers(RequestScreenshotBodySchema).safeParse(req.body);
+    const bodyValidation = useTypedParsers(RequestPdfBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: bodyValidation.error.errors,
+        body: bodyValidation.error.issues,
       });
     }
 

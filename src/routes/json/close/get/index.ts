@@ -22,8 +22,9 @@ export class JSONCloseGetRoute extends ProxyHttpRoute {
         description: 'Valid target and browser can close it',
         content: {
           'text/html': {
-            schema: z.string().describe('Target is closing'),
-            example: 'Target is closing',
+            schema: z.string().describe('Target is closing').meta({
+              example: 'Target is closing',
+            }),
           },
         },
       },
@@ -31,8 +32,9 @@ export class JSONCloseGetRoute extends ProxyHttpRoute {
         description: 'No such target id',
         content: {
           'text/html': {
-            schema: z.string().describe('No such target id'),
-            example: 'No such target id: 1234567890',
+            schema: z.string().describe('No such target id').meta({
+              example: 'No such target id: 1234567890',
+            }),
           },
         },
       },

@@ -3,6 +3,7 @@ import dedent from 'dedent';
 
 import { CodeSample, ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
+  getZodErrorMessages,
   makeExternalUrl,
   parseSearchParams,
   parseUrlFromIncomingMessage,
@@ -191,7 +192,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
     const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
 
     if (queryValidation.error) {
-      const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
+      const errorDetails = getZodErrorMessages(queryValidation.error);
 
       return writeResponse(socket, HttpStatus.BAD_REQUEST, {
         message: `Bad Request: ${errorDetails}`,

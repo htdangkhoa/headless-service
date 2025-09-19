@@ -6,7 +6,7 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 
 ## Prerequisites
 
-- Node.js: 18 or higher
+- Node.js: 22 or higher
 - pnpm: 8 or higher
 
 ## Environment Variables
