@@ -48,7 +48,7 @@ export const writeResponse = async (
 
     if (body instanceof ZodError) {
       response.status(status).send({
-        errors: body.errors.map((error) => ({
+        errors: body.issues.map((error) => ({
           path: error.path.join('.'),
           message: error.message,
         })),

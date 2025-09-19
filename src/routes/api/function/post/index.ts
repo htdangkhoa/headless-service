@@ -43,16 +43,17 @@ export class FunctionPostRoute extends ProxyHttpRoute {
       body: {
         content: {
           'application/javascript': {
-            schema: RequestFunctionBodySchema,
-            example: dedent`
-              export default async function ({ page }: { page: Page }) {
-                await page.goto('https://example.com', {
-                  waitUntil: 'domcontentloaded',
-                });
-                const title = await page.title();
-                return { title };
-              };
-            `,
+            schema: RequestFunctionBodySchema.meta({
+              example: dedent`
+                export default async function ({ page }: { page: Page }) {
+                  await page.goto("https://example.com", {
+                    waitUntil: "domcontentloaded",
+                  });
+                  const title = await page.title();
+                  return { title };
+                };
+              `,
+            }),
           },
         },
         required: true,
@@ -94,7 +95,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
 
     if (queryValidation.error) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: queryValidation.error.errors,
+        body: queryValidation.error.issues,
       });
     }
 

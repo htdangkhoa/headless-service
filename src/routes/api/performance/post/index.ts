@@ -12,7 +12,7 @@ import { Events, IChildProcessInput, IChildProcessOutput } from './child';
 const RequestPerformanceBodySchema = z
   .object({
     url: z.string(),
-    config: z.record(z.unknown()).optional(),
+    config: z.record(z.string(), z.unknown()).optional(),
     timeout: NumberOrStringSchema.optional(),
   })
   .strict();
@@ -30,14 +30,15 @@ export class PerformancePostRoute extends ProxyHttpRoute {
         description: 'The performance data',
         content: {
           'application/json': {
-            schema: RequestPerformanceBodySchema,
-            example: {
-              url: 'https://example.com',
-              config: {
-                extends: 'lighthouse:default',
+            schema: RequestPerformanceBodySchema.meta({
+              example: {
+                url: 'https://example.com',
+                config: {
+                  extends: 'lighthouse:default',
+                },
+                timeout: 10000,
               },
-              timeout: 10000,
-            },
+            }),
           },
         },
       },
@@ -78,7 +79,7 @@ export class PerformancePostRoute extends ProxyHttpRoute {
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: queryValidation.error.errors,
+        body: queryValidation.error.issues,
       });
     }
 
@@ -86,7 +87,7 @@ export class PerformancePostRoute extends ProxyHttpRoute {
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: bodyValidation.error.errors,
+        body: bodyValidation.error.issues,
       });
     }
 

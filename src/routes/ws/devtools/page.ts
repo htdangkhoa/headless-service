@@ -4,6 +4,7 @@ import { head as _head } from 'lodash-es';
 
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
+  getZodErrorMessages,
   makeExternalUrl,
   parseSearchParams,
   parseUrlFromIncomingMessage,
@@ -90,7 +91,7 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
     const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(validQuery);
 
     if (queryValidation.error) {
-      const errorDetails = queryValidation.error.errors.map((error) => error.message).join('\n');
+      const errorDetails = getZodErrorMessages(queryValidation.error);
 
       return writeResponse(socket, HttpStatus.BAD_REQUEST, {
         message: `Bad Request: ${errorDetails}`,

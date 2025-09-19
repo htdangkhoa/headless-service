@@ -65,7 +65,7 @@ const RequestScreenshotBodySchema = z.object({
   viewport: PuppeteerViewportSchema.optional(),
   block_urls: z.array(z.string()).optional(),
   request_interception: PuppeteerRequestInterceptionSchema.optional(),
-  set_extra_http_headers: z.record(z.string()).optional(),
+  set_extra_http_headers: z.record(z.string(), z.string()).optional(),
   set_javascript_enabled: z.boolean().optional(),
   go_to_options: PuppeteerGoToOptionsSchema.optional(),
   add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
@@ -148,19 +148,20 @@ export class ScrapePostRoute extends ProxyHttpRoute {
         description: 'The performance data',
         content: {
           'application/json': {
-            schema: RequestScreenshotBodySchema,
-            example: {
-              url: 'https://example.com',
-              elements: [
-                {
-                  selector: 'h1',
-                },
-                {
-                  selector: 'h2',
-                  timeout: 5000,
-                },
-              ],
-            },
+            schema: RequestScreenshotBodySchema.meta({
+              example: {
+                url: 'https://example.com',
+                elements: [
+                  {
+                    selector: 'h1',
+                  },
+                  {
+                    selector: 'h2',
+                    timeout: 5000,
+                  },
+                ],
+              },
+            }),
           },
         },
       },
@@ -176,7 +177,7 @@ export class ScrapePostRoute extends ProxyHttpRoute {
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: queryValidation.error.errors,
+        body: queryValidation.error.issues,
       });
     }
 
@@ -184,7 +185,7 @@ export class ScrapePostRoute extends ProxyHttpRoute {
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: bodyValidation.error.errors,
+        body: bodyValidation.error.issues,
       });
     }
 

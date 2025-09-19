@@ -15,3 +15,7 @@ type Params<Schema extends z.ZodType, Method extends ParseMethods> = [
 type TypedParsersSchema<Schema extends z.ZodType> = Omit<Schema, ParseMethods> & {
   [Method in ParseMethods]: (...args: Params<Schema, Method>) => ReturnType<Schema[Method]>;
 };
+
+export const getZodErrorMessages = (error: z.ZodError) => {
+  return z.treeifyError(error).errors;
+};

@@ -43,7 +43,7 @@
     "tsx": "4.19.4"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "7.3.0",
+    "@asteasolutions/zod-to-openapi": "8.1.0",
     "@ghostery/adblocker-puppeteer": "2.5.2",
     "connect-timeout": "1.9.0",
     "cors": "2.8.5",
@@ -66,7 +66,7 @@
     "tree-kill": "1.2.2",
     "typescript": "5.8.3",
     "ws": "8.18.2",
-    "zod": "3.24.4"
+    "zod": "4.1.9"
   },
   "engines": {
     "node": ">=18.0.0",

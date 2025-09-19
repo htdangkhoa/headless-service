@@ -51,7 +51,7 @@ const RequestScreenshotBodySchema = z.object({
   viewport: PuppeteerViewportSchema.optional(),
   block_urls: z.array(z.string()).optional(),
   request_interception: PuppeteerRequestInterceptionSchema.optional(),
-  set_extra_http_headers: z.record(z.string()).optional(),
+  set_extra_http_headers: z.record(z.string(), z.string()).optional(),
   set_javascript_enabled: z.boolean().optional(),
   go_to_options: PuppeteerGoToOptionsSchema.optional(),
   add_script_tags: PuppeteerAddScriptTagsSchema.optional(),
@@ -81,10 +81,11 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
         description: 'The performance data',
         content: {
           'application/json': {
-            schema: RequestScreenshotBodySchema,
-            example: {
-              url: 'https://example.com',
-            },
+            schema: RequestScreenshotBodySchema.meta({
+              example: {
+                url: 'https://example.com',
+              },
+            }),
           },
         },
       },
@@ -100,7 +101,7 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: queryValidation.error.errors,
+        body: queryValidation.error.issues,
       });
     }
 
@@ -108,7 +109,7 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: bodyValidation.error.errors,
+        body: bodyValidation.error.issues,
       });
     }
 
