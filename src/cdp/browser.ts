@@ -4,6 +4,8 @@ import { WebSocketServer } from 'ws';
 import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import os from 'node:os';
+import { randomUUID } from 'node:crypto';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
 import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
@@ -132,6 +134,8 @@ export class BrowserCDP extends EventEmitter {
 
     const launchArgs = Array.from(setOfArgs);
 
+    const virtualProfileDir = resolve(os.tmpdir(), 'headless-service', randomUUID());
+
     const opts: LaunchOptions = {
       ..._launchOptions,
       executablePath: puppeteer.executablePath(),
@@ -142,6 +146,7 @@ export class BrowserCDP extends EventEmitter {
       handleSIGHUP: false,
       waitForInitialPage: false,
       acceptInsecureCerts: true,
+      userDataDir: virtualProfileDir,
     };
 
     const vanillaBrowser = await puppeteer.launch(opts);
