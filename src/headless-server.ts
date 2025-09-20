@@ -25,6 +25,7 @@ import {
   IndexWsRoute,
   InternalBrowserSessionPutRoute,
   JSONCloseGetRoute,
+  ActiveGetRoute,
 } from '@/routes';
 import { env, Ghostery, makeExternalUrl, writeResponse } from '@/utils';
 import { Group } from '@/router';
@@ -98,7 +99,14 @@ export class HeadlessServer {
     );
 
     this.apiGroup = new Group(
-      [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
+      [
+        ActiveGetRoute,
+        FunctionPostRoute,
+        PerformancePostRoute,
+        ScreenshotPostRoute,
+        PdfPostRoute,
+        ScrapePostRoute,
+      ],
       this.app,
       this.headlessServerContext,
       '/api'

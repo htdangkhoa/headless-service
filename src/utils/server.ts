@@ -1,13 +1,14 @@
 import { Duplex } from 'node:stream';
 import { STATUS_CODES } from 'node:http';
 import { Request, Response } from 'express';
-import { ZodIssue, ZodError } from 'zod';
+import { ZodError, z } from 'zod';
 import qs from 'qs';
 
 import { Dictionary } from '@/types';
 import { HttpStatus } from '@/constants';
 import { ResponseBody } from '@/schemas';
 import { Protocol } from '@/cdp/devtools';
+import { isNil } from 'lodash-es';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 
@@ -29,16 +30,22 @@ export const writeResponse = async (
   options?: {
     contentType?: string;
     message?: string;
-    body?: ResponseBody | Protocol | Error | Array<Error> | ZodIssue[] | string;
+    body?: ResponseBody | Protocol | Error | Array<Error> | z.core.$ZodIssue[] | string;
     skipValidateBody?: boolean;
   }
 ): Promise<void> => {
   const httpMessage = STATUS_CODES[status];
 
-  if (isHTTP(writable) && options?.body) {
+  if (isHTTP(writable)) {
     const response = writable as Response;
 
-    const { body, skipValidateBody } = options;
+    const { body, skipValidateBody } = options ?? {};
+
+    if (isNil(body)) {
+      response.status(HttpStatus.NO_CONTENT).send('');
+
+      return;
+    }
 
     if (typeof body === 'string') {
       response.status(status).send(body);

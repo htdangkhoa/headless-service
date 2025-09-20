@@ -1,4 +1,5 @@
 export * from './internal/browser/session/put';
+export * from './api/active/get';
 export * from './api/function/post';
 export * from './api/pdf/post';
 export * from './api/performance/post';
