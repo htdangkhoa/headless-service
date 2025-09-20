@@ -10,4 +10,5 @@ export const DEFAULT_LAUNCH_ARGS = [
   '--disable-modal-animations',
   '--wm-window-animations-disabled',
   '--disable-popup-blocking',
+  '--disable-software-rasterizer',
 ];
