@@ -1,8 +1,12 @@
 import puppeteer from 'puppeteer-core';
 
+const browserWSURL = new URL('ws://127.0.0.1:3000');
+browserWSURL.searchParams.set('token', '<token>');
+const browserWSEndpoint = browserWSURL.href;
+
 async function main() {
   const browser = await puppeteer.connect({
-    browserWSEndpoint: 'ws://127.0.0.1:3000',
+    browserWSEndpoint,
   });
 
   const page = await browser.newPage();
