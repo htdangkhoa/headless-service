@@ -83,10 +83,19 @@ main().catch(console.error);
 
 ## Docker
 
+### Supported Browsers
+
+| Browser | Dockerfile                                    |
+|---------|-----------------------------------------------|
+| Chrome  | [Dockerfile.chrome](./docker/Dockerfile.chrome)      |
+| Brave   | [Dockerfile.brave](./docker/Dockerfile.brave) |
+
+### Usage
+
 1. Build the Docker image:
 
     ```bash
-    docker build -t headless-service . -f ./docker/Dockerfile
+    docker build -t headless-service/<browser> . -f ./docker/Dockerfile.<browser>
     ```
 
 2. Run the Docker container:
@@ -99,5 +108,5 @@ main().catch(console.error);
       -e SERVICE_NAME='headless-service' \
       -e DEBUG='headless-service*,-**:verbose' \
       -p 3000:3000 \
-      headless-service
+      headless-service/<browser>
     ```

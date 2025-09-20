@@ -1,8 +1,7 @@
 #!/bin/bash
 
-Xvfb -ac :99 -screen 0 1280x1024x16 &
-
-export DISPLAY=:99
+# Start Xvfb in the background
+Xvfb $DISPLAY -screen 0 1280x1024x24 -ac +extension GLX +render -noreset &
 
 echo -e "\n\n------------------ EXECUTE COMMAND ------------------"
 echo "Executing command: '$@'"

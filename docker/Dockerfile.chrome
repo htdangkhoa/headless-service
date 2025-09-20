@@ -1,0 +1,95 @@
+FROM --platform=linux/amd64 ubuntu:24.04 AS node
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+RUN apt-get update && apt-get install -y \
+  curl \
+  git \
+  unzip \
+  wget \
+  xorg \
+  xvfb \
+  x11-utils \
+  xauth \
+  xkb-data \
+  gtk2-engines-pixbuf \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sL https://deb.nodesource.com/setup_22.x | bash - \
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g npm@10
+
+ENV PNPM_VERSION 8.15.4
+RUN npm install -g pnpm@"$PNPM_VERSION"
+
+FROM node as builder
+
+WORKDIR /app
+
+ENV PUPPETEER_SKIP_DOWNLOAD true
+
+COPY ./.npmrc ./package.json ./pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prefer-offline
+
+COPY ./tsconfig.json ./
+COPY ./tsconfig.build.json ./
+
+COPY ./extensions ./extensions
+COPY ./public ./public
+COPY ./scripts ./scripts
+COPY ./src ./src
+
+RUN pnpm run /^build:.*/ && \
+  pnpm run build
+
+RUN pnpm install --prod --frozen-lockfile --prefer-offline
+
+FROM node AS chrome
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+  apt-transport-https \
+  ca-certificates \
+  gnupg \
+  fonts-liberation \
+  libatk-bridge2.0-0 \
+  libatk1.0-0 \
+  libatspi2.0-0 \
+  libcups2 \
+  libdrm2 \
+  libgbm1 \
+  libnspr4 \
+  libnss3 \
+  libxcomposite1 \
+  libxdamage1 \
+  libxfixes3 \
+  libxrandr2 \
+  libxkbcommon0 \
+  libx11-xcb1 \
+  xdg-utils \
+  --no-install-recommends && \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN npx --yes playwright install --with-deps chrome
+
+WORKDIR /app
+
+ENV PUPPETEER_EXECUTABLE_PATH='/usr/bin/google-chrome-stable'
+ENV DISPLAY=:99
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/extensions ./extensions
+COPY --from=builder /app/package.json ./package.json
+
+COPY docker/startup.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/startup.sh
+
+ENTRYPOINT ["/usr/local/bin/startup.sh"]
+CMD ["pnpm", "run", "start"]
+
+EXPOSE 3000
