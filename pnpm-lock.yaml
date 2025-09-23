@@ -38,9 +38,6 @@ dependencies:
   fingerprint-injector:
     specifier: 2.1.72
     version: 2.1.72(puppeteer@24.22.0)
-  http-proxy:
-    specifier: 1.18.1
-    version: 1.18.1(debug@4.4.3)
   lighthouse:
     specifier: 12.8.2
     version: 12.8.2(bufferutil@4.0.9)
@@ -102,9 +99,6 @@ devDependencies:
   '@types/express':
     specifier: 5.0.3
     version: 5.0.3
-  '@types/http-proxy':
-    specifier: 1.17.16
-    version: 1.17.16
   '@types/lodash-es':
     specifier: 4.17.12
     version: 4.17.12
@@ -1164,12 +1158,6 @@ packages:
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
     dev: true
 
-  /@types/http-proxy@1.17.16:
-    resolution: {integrity: sha512-sdWoUajOB1cd0A8cRRQ1cfyWNbmFKLAqBB89Y8x5iYyG/mkJHc0YUH8pdWBy2omi9qtCpiIgGjuwO0dQST2l5w==}
-    dependencies:
-      '@types/node': 24.5.2
-    dev: true
-
   /@types/lodash-es@4.17.12:
     resolution: {integrity: sha512-0NgftHUcV4v34VhXm8QBSftKVXtbkBG3ViCjs6+eJ5a6y6Mi/jiFGPc1sC7QK+9BFhWrURE3EOggmWaSxL9OzQ==}
     dependencies:
@@ -1971,10 +1959,6 @@ packages:
     engines: {node: '>= 0.6'}
     dev: false
 
-  /eventemitter3@4.0.7:
-    resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
-    dev: false
-
   /express@5.1.0:
     resolution: {integrity: sha512-DT9ck5YIRU+8GYzzU5kT3eHGA5iL+1Zd0EutOmTE9Dtk+Tvuzd23VBU+ec7HPNSTxXYO55gPV/hq4pSBJDjFpA==}
     engines: {node: '>= 18'}
@@ -2094,18 +2078,6 @@ packages:
       fingerprint-generator: 2.1.72
       puppeteer: 24.22.0(bufferutil@4.0.9)(typescript@5.9.2)
       tslib: 2.8.1
-    dev: false
-
-  /follow-redirects@1.15.6(debug@4.4.3):
-    resolution: {integrity: sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==}
-    engines: {node: '>=4.0'}
-    peerDependencies:
-      debug: '*'
-    peerDependenciesMeta:
-      debug:
-        optional: true
-    dependencies:
-      debug: 4.4.3(supports-color@5.5.0)
     dev: false
 
   /for-in@0.1.8:
@@ -2344,17 +2316,6 @@ packages:
       debug: 4.4.3(supports-color@5.5.0)
     transitivePeerDependencies:
       - supports-color
-    dev: false
-
-  /http-proxy@1.18.1(debug@4.4.3):
-    resolution: {integrity: sha512-7mz/721AbnJwIVbnaSv1Cz3Am0ZLT/UBwkC92VlxhXv/k/BBQfM2fXElQNC27BVGr0uwUpplYPQM9LnaBMR5NQ==}
-    engines: {node: '>=8.0.0'}
-    dependencies:
-      eventemitter3: 4.0.7
-      follow-redirects: 1.15.6(debug@4.4.3)
-      requires-port: 1.0.0
-    transitivePeerDependencies:
-      - debug
     dev: false
 
   /https-proxy-agent@7.0.6:
@@ -3291,10 +3252,6 @@ packages:
       resolve: 1.22.10
     transitivePeerDependencies:
       - supports-color
-    dev: false
-
-  /requires-port@1.0.0:
-    resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
     dev: false
 
   /resolve-from@4.0.0:

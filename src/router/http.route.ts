@@ -1,5 +1,4 @@
 import type { Handler } from 'express';
-import type ProxyServer from 'http-proxy';
 
 import type { BrowserManager } from '@/cdp';
 import { Logger } from '@/logger';
@@ -25,7 +24,6 @@ export interface HttpRoute extends OpenApiRoute<Handler> {
 
 export interface HeadlessServerContext {
   browserManager: BrowserManager;
-  proxy: ProxyServer;
 }
 
 export abstract class ProxyHttpRoute implements HttpRoute {

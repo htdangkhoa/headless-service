@@ -3,7 +3,6 @@ import { createServer, type Server } from 'node:http';
 import express, { ErrorRequestHandler } from 'express';
 import timeout from 'connect-timeout';
 import cors from 'cors';
-import HttpProxy from 'http-proxy';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
 
@@ -50,15 +49,12 @@ export class HeadlessServer {
 
   private server: Server | null = createServer(this.app);
 
-  private proxy: HttpProxy | null = HttpProxy.createProxyServer({});
-
   private wsServer = new WebSocketServer({ noServer: true });
 
   private browserManager = new BrowserManager();
 
   private headlessServerContext = {
     browserManager: this.browserManager,
-    proxy: this.proxy!,
   };
 
   private headlessServerWebSocketContext = {
@@ -221,12 +217,6 @@ export class HeadlessServer {
     this.wsServer.removeAllListeners();
   }
 
-  private async shutdownProxy() {
-    await new Promise<void>((resolve) => this.proxy!.close(resolve));
-    this.proxy?.removeAllListeners();
-    this.proxy = null;
-  }
-
   async shutdownRouteGroups() {
     await Promise.all([
       [this.apiInternalGroup, this.apiGroup, this.jsonGroup, this.wsGroup].map((group) =>
@@ -243,7 +233,6 @@ export class HeadlessServer {
     await Promise.all([
       this.shutdownWsServer(),
       this.shutdownServer(),
-      this.shutdownProxy(),
       this.shutdownBrowserManager(),
       this.shutdownRouteGroups(),
     ]);
