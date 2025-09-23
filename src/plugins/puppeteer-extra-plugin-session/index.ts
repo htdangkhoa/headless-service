@@ -2,7 +2,7 @@ import type { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { get, isNil } from 'lodash-es';
 
-import { buildProtocolEventNames, buildProtocolMethod, getBrowserId } from '@/utils';
+import { buildProtocolEventNames, buildProtocolMethod, env, getBrowserId } from '@/utils';
 import { makeExternalUrl } from '@/utils';
 import { COMMANDS, DOMAINS } from '@/constants';
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
@@ -65,9 +65,14 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       return this.browser.emit(eventNameForResult, response);
     }
 
+    const token = env('HEADLESS_SERVICE_TOKEN');
     const apiEndpoint = makeExternalUrl('http', 'internal', 'browser', browserId, 'session');
+    const apiUrl = new URL(apiEndpoint);
+    if (token) {
+      apiUrl.searchParams.append('token', token);
+    }
 
-    const fetchResponse = await fetch(apiEndpoint, {
+    const fetchResponse = await fetch(apiUrl.href, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
