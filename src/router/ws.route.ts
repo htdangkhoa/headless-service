@@ -27,6 +27,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
   constructor(protected context: HeadlessServerWebSocketContext) {}
 
   abstract path: string;
+  internal?: boolean | undefined;
   auth: boolean = true;
   abstract handler: WsHandler;
   abstract shouldUpgrade: (req: IncomingMessage) => boolean;

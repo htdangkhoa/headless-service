@@ -33,6 +33,7 @@ export abstract class ProxyHttpRoute implements HttpRoute {
 
   abstract method: Method;
   abstract path: string;
+  internal?: boolean | undefined;
   auth: boolean = true;
   handler?: Handler;
   handlers?: Handler[];

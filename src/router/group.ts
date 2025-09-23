@@ -108,13 +108,23 @@ export class Group {
   }
 
   isAuthorized(route: Route, req: IncomingMessage): boolean {
+    const url = parseUrlFromIncomingMessage(req);
+
+    const SECRET = env('SECRET');
+
+    if (route.internal) {
+      const requestSecret = url.searchParams.get('secret');
+
+      if (!requestSecret) return false;
+
+      return requestSecret === SECRET;
+    }
+
     const token = env('HEADLESS_SERVICE_TOKEN');
 
     if (!token) return true;
 
-    if (route.auth !== true) return true;
-
-    const url = parseUrlFromIncomingMessage(req);
+    if (!route.auth) return true;
 
     const requestToken = url.searchParams.get('token');
 

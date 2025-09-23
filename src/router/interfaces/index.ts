@@ -13,6 +13,7 @@ export interface RouteConfig extends Omit<ZodToOpenapi.RouteConfig, 'method' | '
 
 export interface OpenApiRoute<H> {
   path: string;
+  internal?: boolean;
   auth: boolean;
   handler?: H;
   swagger?: RouteConfig;

@@ -18,6 +18,7 @@ const RequestSessionBodySchema = z.object({
 export class InternalBrowserSessionPutRoute extends ProxyHttpRoute {
   path = '/browser/:browser_id/session';
   method = Method.PUT;
+  internal = true;
   handler = (req: Request, res: Response) => {
     this.logger.info('InternalBrowserSessionPutRoute');
     const paramsValidation = useTypedParsers(RequestSessionParamsSchema).safeParse(

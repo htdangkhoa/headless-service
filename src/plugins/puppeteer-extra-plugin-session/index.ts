@@ -65,12 +65,10 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       return this.browser.emit(eventNameForResult, response);
     }
 
-    const token = env('HEADLESS_SERVICE_TOKEN');
+    const secret = env('SECRET')!;
     const apiEndpoint = makeExternalUrl('http', 'internal', 'browser', browserId, 'session');
     const apiUrl = new URL(apiEndpoint);
-    if (token) {
-      apiUrl.searchParams.append('token', token);
-    }
+    apiUrl.searchParams.append('secret', secret);
 
     const fetchResponse = await fetch(apiUrl.href, {
       method: 'PUT',
