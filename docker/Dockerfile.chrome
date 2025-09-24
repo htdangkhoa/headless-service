@@ -1,7 +1,7 @@
 FROM --platform=linux/amd64 ubuntu:24.04 AS node
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Etc/UTC
+ENV DEBIAN_FRONTEND noninteractive
+ENV TZ Etc/UTC
 
 RUN apt-get update && apt-get install -y \
   curl \
@@ -25,7 +25,7 @@ RUN npm install -g npm@10
 ENV PNPM_VERSION 8.15.4
 RUN npm install -g pnpm@"$PNPM_VERSION"
 
-FROM node as builder
+FROM node AS builder
 
 WORKDIR /app
 
@@ -77,8 +77,8 @@ RUN npx --yes playwright install --with-deps chrome
 
 WORKDIR /app
 
-ENV PUPPETEER_EXECUTABLE_PATH='/usr/bin/google-chrome-stable'
-ENV DISPLAY=:99
+ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/google-chrome-stable
+ENV DISPLAY :99
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
