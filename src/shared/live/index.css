@@ -133,3 +133,38 @@ main {
 .hidden {
   display: none;
 }
+
+.screencast-navigation {
+  border-bottom: 1px solid rgb(92 92 92);
+}
+
+.screencast-navigation button {
+  display: flex;
+  flex: 24px 0 0;
+  width: 23px;
+  height: 23px;
+  padding: 2px;
+  background-color: transparent;
+  background-image: image-set(url(./assets/images/navigation-controls.png) 1x, url(./assets/images/navigation-controls@2x.png) 2x);
+  background-clip: content-box;
+  background-origin: content-box;
+  background-repeat: no-repeat;
+  border: 1px solid transparent;
+}
+
+.screencast-navigation button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.screencast-navigation button:hover,
+.screencast-navigation button:focus {
+  border-color: rgb(17 119 187);
+}
+
+.screencast-navigation input {
+  background: transparent;
+  border: 1px solid rgb(92 92 92);
+  max-height: 19px;
+  color: white;
+}

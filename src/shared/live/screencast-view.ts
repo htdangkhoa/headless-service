@@ -30,18 +30,18 @@ export class ScreencastView {
 
     /* ===== Navigation ===== */
     this.$navigation = document.createElement('div');
-    this.$navigation.classList.add('flex', 'flex-1');
+    this.$navigation.classList.add('flex', 'screencast-navigation');
 
     const backButton = document.createElement('button');
-    backButton.textContent = 'Back';
+    backButton.style.backgroundPositionX = '-1px';
     backButton.addEventListener('click', this.handleBack.bind(this));
 
     const forwardButton = document.createElement('button');
-    forwardButton.textContent = 'Forward';
+    forwardButton.style.backgroundPositionX = '-18px';
     forwardButton.addEventListener('click', this.handleForward.bind(this));
 
     const reloadButton = document.createElement('button');
-    reloadButton.textContent = 'Reload';
+    reloadButton.style.backgroundPositionX = '-37px';
     reloadButton.addEventListener('click', this.handleReload.bind(this));
 
     const input = document.createElement('input');

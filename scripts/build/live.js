@@ -3,12 +3,11 @@ import { join } from 'path';
 import { build } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
 import dedent from 'dedent';
+import * as glob from 'glob';
 
 const cwd = process.cwd();
 
-const entryPoints = fs
-  .readdirSync(join(cwd, 'src', 'shared', 'live'))
-  .map((file) => join(cwd, 'src', 'shared', 'live', file));
+const entryPoints = glob.sync(join(cwd, 'src', 'shared', 'live', '**', '*.*'));
 
 const outdir = join(cwd, 'public', 'live');
 
@@ -40,6 +39,16 @@ async function main() {
     entryPoints,
     metafile: true,
     outdir,
+    loader: {
+      // convert all image files
+      '.png': 'copy',
+      '.jpg': 'copy',
+      '.jpeg': 'copy',
+      '.gif': 'copy',
+      '.svg': 'copy',
+      '.webp': 'copy',
+      '.ico': 'copy',
+    },
     plugins: [
       polyfillNode({
         globals: {
