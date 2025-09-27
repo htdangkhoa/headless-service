@@ -138,6 +138,7 @@ public/*
 !public/docs
 public/docs/*
 !public/docs/index.html
+!public/docs/images
 
 !public/.gitkeep
 
