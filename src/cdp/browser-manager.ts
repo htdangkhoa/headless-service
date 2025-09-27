@@ -155,7 +155,10 @@ export class BrowserManager {
           ''
         );
         const devtoolsFrontendURL = new URL('/devtools/inspector.html', externalAddress);
-        devtoolsFrontendURL.searchParams.set('ws', wsProxyUrl);
+        devtoolsFrontendURL.searchParams.set(
+          webSocketDebuggerURL.protocol.replace(':', ''),
+          wsProxyUrl
+        );
 
         return {
           ...c,

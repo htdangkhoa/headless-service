@@ -132,7 +132,10 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       );
       const inspectUrl = makeExternalUrl('http', 'devtools', 'inspector.html');
       const devtoolsFrontendURL = new URL(inspectUrl);
-      devtoolsFrontendURL.searchParams.set('ws', wsProxyUrl);
+      devtoolsFrontendURL.searchParams.set(
+        webSocketDebuggerURL.protocol.replace(':', ''),
+        wsProxyUrl
+      );
 
       response = Response.success(
         request.id!,
