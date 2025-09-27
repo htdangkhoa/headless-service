@@ -1,10 +1,12 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import express, { ErrorRequestHandler } from 'express';
 import timeout from 'connect-timeout';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
+import pkg from '../package.json';
 
 import {
   FunctionPostRoute,
@@ -158,11 +160,14 @@ export class HeadlessServer {
   }
 
   async start() {
+    const extraDocs = this.combineAllDocs();
+
     // Generate OpenAPI documentation
     this.openApi.generateDocument({
       jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'swagger.json'),
-      title: 'Headless Server',
-      version: '1.0.0',
+      title: 'Headless Service',
+      description: extraDocs,
+      version: pkg.version || '0.0.0',
       servers: [{ url: makeExternalUrl('http') }],
     });
 
@@ -236,5 +241,25 @@ export class HeadlessServer {
       this.shutdownBrowserManager(),
       this.shutdownRouteGroups(),
     ]);
+  }
+
+  private combineAllDocs() {
+    const baseUrl = makeExternalUrl('http');
+    const wsUrl = makeExternalUrl('ws');
+
+    const docsDir = path.resolve(process.cwd(), 'docs');
+
+    const docs = fs.readdirSync(docsDir).sort((a, b) => {
+      if (a.startsWith('_')) return -1;
+      if (b.startsWith('_')) return 1;
+      return a.localeCompare(b);
+    });
+
+    const contents = docs.map((doc) => {
+      const content = fs.readFileSync(path.resolve(docsDir, doc), 'utf8');
+      return content.replaceAll('{{baseUrl}}', baseUrl).replaceAll('{{wsUrl}}', wsUrl);
+    });
+
+    return contents.join('\n\n');
   }
 }
