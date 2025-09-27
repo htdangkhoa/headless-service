@@ -1,5 +1,4 @@
 import { IncomingMessage } from 'node:http';
-import * as path from 'node:path';
 import treeKill from 'tree-kill';
 import dayjs from 'dayjs';
 import type { Page } from 'puppeteer';
@@ -8,7 +7,6 @@ import { WebSocketServer } from 'ws';
 import { BrowserCDP, BrowserCDPOptions } from './browser';
 import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
-import { Protocol } from './devtools';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;
@@ -152,17 +150,12 @@ export class BrowserManager {
         webSocketDebuggerURL.port = externalURL.port;
         webSocketDebuggerURL.protocol = externalURL.protocol;
 
-        const devtoolsFrontendURL = new URL(c.devtoolsFrontendUrl, externalAddress);
-
-        const hasWsQuery = devtoolsFrontendURL.searchParams.has('ws');
-
-        if (hasWsQuery) {
-          const paramName = externalURL.protocol.replace(':', '');
-          devtoolsFrontendURL.searchParams.set(
-            paramName,
-            path.join(webSocketDebuggerURL.host, webSocketDebuggerURL.pathname)
-          );
-        }
+        const wsProxyUrl = webSocketDebuggerURL.href.replace(
+          `${webSocketDebuggerURL.protocol}//`,
+          ''
+        );
+        const devtoolsFrontendURL = new URL('/devtools/inspector.html', externalAddress);
+        devtoolsFrontendURL.searchParams.set('ws', wsProxyUrl);
 
         return {
           ...c,
