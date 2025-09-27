@@ -69,6 +69,17 @@ RUN apt-get update && apt-get install -y \
   libxrandr2 \
   libxkbcommon0 \
   libx11-xcb1 \
+  libxcursor1 \
+  libxi6 \
+  libxtst6 \
+  libasound2t64 \
+  libpangocairo-1.0-0 \
+  libpango-1.0-0 \
+  libxss1 \
+  libgdk-pixbuf2.0-0 \
+  libgtk-3-0 \
+  libxshmfence1 \
+  ffmpeg \
   xdg-utils \
   --no-install-recommends && \
   && rm -rf /var/lib/apt/lists/*
