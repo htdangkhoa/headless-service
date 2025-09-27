@@ -6,7 +6,6 @@ import timeout from 'connect-timeout';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
-import pkg from '../package.json';
 
 import {
   FunctionPostRoute,
@@ -162,12 +161,15 @@ export class HeadlessServer {
   async start() {
     const extraDocs = this.combineAllDocs();
 
+    const pkg = fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8');
+    const pkgJson = JSON.parse(pkg);
+
     // Generate OpenAPI documentation
     this.openApi.generateDocument({
       jsonFileName: path.resolve(process.cwd(), 'public', 'docs', 'swagger.json'),
       title: 'Headless Service',
       description: extraDocs,
-      version: pkg.version || '0.0.0',
+      version: pkgJson.version || '0.0.0',
       servers: [{ url: makeExternalUrl('http') }],
     });
 
