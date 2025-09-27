@@ -1,9 +1,10 @@
 import puppeteer from 'puppeteer-core';
 
+const TOKEN = '<token>';
+
 const browserWSURL = new URL('ws://127.0.0.1:3000');
-browserWSURL.searchParams.set('token', '<token>');
+browserWSURL.searchParams.set('token', TOKEN);
 browserWSURL.searchParams.set('unblock', 'true');
-browserWSURL.searchParams.set('live', 'true');
 const browserWSEndpoint = browserWSURL.href;
 
 async function main() {
@@ -17,7 +18,7 @@ async function main() {
 
   // @ts-ignore
   const { liveUrl } = await cdp.send('HeadlessService.liveURL');
-  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl);
+  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl + `&token=${TOKEN}`);
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 

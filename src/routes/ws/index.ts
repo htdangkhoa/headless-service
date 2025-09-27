@@ -199,10 +199,10 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
       });
     }
 
-    const { live: isLiveMode, ...queryOptions } = queryValidation.data;
+    const queryOptions = queryValidation.data;
 
     const launchBrowserOptions = Object.assign({}, queryOptions, {
-      ws: isLiveMode && wsServer,
+      ws: wsServer,
     });
     const browser = await browserManager.requestBrowser(req, launchBrowserOptions);
 
