@@ -1,9 +1,9 @@
 import puppeteer from 'puppeteer-core';
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const TOKEN = '<token>';
 
 const browserWSURL = new URL('ws://127.0.0.1:3000');
-browserWSURL.searchParams.set('token', '<token>');
+browserWSURL.searchParams.set('token', TOKEN);
 browserWSURL.searchParams.set('record', 'true');
 const browserWSEndpoint = browserWSURL.href;
 
@@ -32,3 +32,5 @@ async function main() {
 }
 
 main().catch(console.error);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
