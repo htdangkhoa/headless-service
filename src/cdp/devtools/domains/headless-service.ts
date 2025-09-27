@@ -11,6 +11,7 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     this.createLiveUrlCommand();
     this.createRecordingCommand();
     this.createKeepAliveCommand();
+    this.createDebuggerUrlCommand();
 
     /* Register events */
     this.createLiveCompleteEvent();
@@ -89,5 +90,32 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     };
 
     this.addCommand(keepAliveCommand);
+  }
+
+  private createDebuggerUrlCommand() {
+    const DebuggerUrlPayloadType: DomainType = {
+      id: 'DebuggerUrlPayload',
+      description: 'Payload for debuggerUrl command',
+      type: 'object',
+      properties: [
+        {
+          name: 'webSocketDebuggerUrl',
+          type: 'string',
+        },
+        {
+          name: 'devtoolsFrontendUrl',
+          type: 'string',
+        },
+      ],
+    };
+
+    const debuggerUrlCommand: Command = {
+      name: COMMANDS.DEBUGGER_URL,
+      description: 'Get debugger URL',
+      returns: this.buildReturns(DebuggerUrlPayloadType),
+    };
+
+    this.addDomainType(DebuggerUrlPayloadType);
+    this.addCommand(debuggerUrlCommand);
   }
 }

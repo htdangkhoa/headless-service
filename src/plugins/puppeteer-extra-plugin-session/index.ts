@@ -12,6 +12,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
 
   private readonly PROTOCOL_METHODS = {
     KEEP_ALIVE: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.KEEP_ALIVE),
+    DEBUGGER_URL: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.DEBUGGER_URL),
   };
 
   constructor() {
@@ -27,19 +28,24 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
 
     const browserId = getBrowserId(browser);
 
-    const { eventNameForListener } = buildProtocolEventNames(
+    const { eventNameForListener: keepAliveEventNameForListener } = buildProtocolEventNames(
       browserId,
       this.PROTOCOL_METHODS.KEEP_ALIVE
     );
+    const { eventNameForListener: debuggerUrlEventNameForListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.DEBUGGER_URL
+    );
 
-    browser.on(eventNameForListener, this.onKeepAlive.bind(this));
+    browser.on(keepAliveEventNameForListener, this.onHeadlessServiceKeepAlive.bind(this));
+    browser.on(debuggerUrlEventNameForListener, this.onHeadlessServiceDebuggerUrl.bind(this));
   }
 
   async onDisconnected(): Promise<void> {
     this.browser = null;
   }
 
-  private async onKeepAlive(payload: any) {
+  private async onHeadlessServiceKeepAlive(payload: any) {
     const request = Request.parse(payload);
 
     if (!this.browser) return;
@@ -89,6 +95,60 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
 
     const response = Response.success(request.id!, { reconnectUrl }, request.sessionId);
     return this.browser.emit(eventNameForResult, response);
+  }
+
+  private async onHeadlessServiceDebuggerUrl(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    if (request.method !== this.PROTOCOL_METHODS.DEBUGGER_URL) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    let response: any = null;
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.DEBUGGER_URL
+    );
+
+    try {
+      const currentPage = await this.browser.currentPage();
+
+      const client = await currentPage.createCDPSession();
+
+      const {
+        targetInfo: { targetId },
+      } = await client.send('Target.getTargetInfo');
+
+      const wsUrl = makeExternalUrl('ws', 'devtools', 'page', targetId);
+
+      const webSocketDebuggerURL = new URL(wsUrl);
+
+      const wsProxyUrl = webSocketDebuggerURL.href.replace(
+        `${webSocketDebuggerURL.protocol}//`,
+        ''
+      );
+      const inspectUrl = makeExternalUrl('http', 'devtools', 'inspector.html');
+      const devtoolsFrontendURL = new URL(inspectUrl);
+      devtoolsFrontendURL.searchParams.set('ws', wsProxyUrl);
+
+      response = Response.success(
+        request.id!,
+        {
+          webSocketDebuggerUrl: webSocketDebuggerURL.href,
+          devtoolsFrontendUrl: devtoolsFrontendURL.href,
+        },
+        request.sessionId
+      );
+    } catch (error: any) {
+      const dispatchResponse = DispatchResponse.InternalError(error.message);
+
+      response = Response.error(request.id!, dispatchResponse, payload.sessionId);
+    } finally {
+      return this.browser.emit(eventNameForResult, response);
+    }
   }
 }
 

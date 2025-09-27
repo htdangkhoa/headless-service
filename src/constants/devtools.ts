@@ -7,6 +7,7 @@ export enum COMMANDS {
   START_RECORDING = 'startRecording',
   STOP_RECORDING = 'stopRecording',
   KEEP_ALIVE = 'keepAlive',
+  DEBUGGER_URL = 'debuggerUrl',
 }
 
 export enum EVENTS {
