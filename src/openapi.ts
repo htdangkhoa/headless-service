@@ -17,9 +17,16 @@ export class OpenAPI {
     description?: string;
     servers?: { url: string; description?: string }[];
   }) {
+    this.registry.registerComponent('securitySchemes', 'ApiToken', {
+      type: 'apiKey',
+      in: 'query',
+      name: 'token',
+      description: 'The token to authenticate the request',
+    });
+
     this.groups.forEach((groupRouter) => {
       groupRouter.getRoutes().forEach((route) => {
-        const { path, swagger } = route;
+        const { auth, path, swagger } = route;
 
         let method: Method = Method.GET;
         if ('method' in route) {
@@ -31,6 +38,13 @@ export class OpenAPI {
         const fullPath = getFullPath(path, groupRouter.prefix);
 
         const swaggerRouteConfig = {
+          security: auth
+            ? [
+                {
+                  ApiToken: [],
+                },
+              ]
+            : [],
           ...swagger,
           method,
           path: fullPath,
