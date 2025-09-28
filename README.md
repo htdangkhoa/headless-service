@@ -17,13 +17,13 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 | `HOST`                      | The host where the service will be listening                     |                    | `localhost`                     |
 | `PORT`                      | The port where the service will be listening                     |                    | `3000`                          |
 | `SECRET`                    | The secret to authenticate the internal requests                 | :white_check_mark: |                                 |
+| `HEADLESS_SERVICE_TOKEN`    | The token to authenticate the requests (separated by comma)      | :white_check_mark: |                                 |
 | `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service | :white_check_mark: |                                 |
 | `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                |                    | `false`                         |
 | `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   | :white_check_mark: |                                 |
 | `DEBUG`                     | Enable the debug mode                                            |                    | `headless-service*,-**:verbose` |
 | `DOWNLOAD_RECORDER_DIR`     | The directory where the downloaded recordings will be stored     |                    | None (`os.tmpdir()`)            |
 | `INITIALIZE_GHOSTERY`       | Initialize Ghostery                                              |                    | `false`                         |
-| `HEADLESS_SERVICE_TOKEN`    | The token to authenticate the requests                           |                    |                                 |
 
 ## Usage
 

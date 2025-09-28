@@ -122,8 +122,6 @@ export class Group {
 
     const token = env('HEADLESS_SERVICE_TOKEN');
 
-    if (!token) return true;
-
     if (!route.auth) return true;
 
     const requestToken = url.searchParams.get('token');
