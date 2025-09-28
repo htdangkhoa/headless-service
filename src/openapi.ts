@@ -17,10 +17,17 @@ export class OpenAPI {
     description?: string;
     servers?: { url: string; description?: string }[];
   }) {
-    this.registry.registerComponent('securitySchemes', 'ApiToken', {
+    this.registry.registerComponent('securitySchemes', 'ApiTokenQuery', {
       type: 'apiKey',
       in: 'query',
       name: 'token',
+      description: 'The token to authenticate the request',
+    });
+
+    this.registry.registerComponent('securitySchemes', 'ApiTokenHeader', {
+      type: 'apiKey',
+      in: 'header',
+      name: 'Authorization',
       description: 'The token to authenticate the request',
     });
 
@@ -41,7 +48,10 @@ export class OpenAPI {
           security: auth
             ? [
                 {
-                  ApiToken: [],
+                  ApiTokenQuery: [],
+                },
+                {
+                  ApiTokenHeader: [],
                 },
               ]
             : [],
