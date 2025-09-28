@@ -33,9 +33,11 @@ import puppeteer from 'puppeteer-core';
   await page.goto('https://example.com');
   const { liveURL } = await cdp.send('HeadlessService.liveURL');
 
-  // liveURL = `{{baseUrl}}/live?t=DC7B8FB6A70D37A8D57261EBB1446252&token=${TOKEN}`;
+  // liveURL = `{{baseUrl}}/live?session=eb7e3067-9d3c-40f6-91b6-0ef08f0c4c0d&token=${TOKEN}`;
 })();
 ```
+
+![Live Session](images/live-session.png)
 
 ---
 

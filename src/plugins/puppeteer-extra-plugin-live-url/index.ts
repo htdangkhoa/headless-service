@@ -2,6 +2,7 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import type { Page, CDPSession, Target, Browser } from 'puppeteer';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { IncomingMessage } from 'node:http';
+import { randomUUID } from 'node:crypto';
 
 import { COMMANDS, DOMAINS, EVENTS, LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
 import {
@@ -14,22 +15,22 @@ import {
 import { Logger } from '@/logger';
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
+interface PageMappedData {
+  page: Page;
+  cdp: CDPSession;
+  protocolInfo: {
+    id: number;
+    sessionId?: string;
+  };
+  targetId: string;
+}
+
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
 
   private browser: Browser | null = null;
 
-  private pageMap: Map<
-    string,
-    {
-      page: Page;
-      cdp: CDPSession;
-      protocolInfo: {
-        id: number;
-        sessionId?: string;
-      };
-    }
-  > = new Map();
+  private pageMap: Map<string, PageMappedData> = new Map();
 
   private readonly PROTOCOL_METHODS = {
     LIVE_URL: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.LIVE_URL),
@@ -85,11 +86,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
     const { searchParams } = parseUrlFromIncomingMessage(req);
 
-    const targetId = searchParams.get('t');
+    const liveSessionId = searchParams.get('session');
 
-    if (!targetId) return;
+    if (!liveSessionId) return;
 
-    const pageMapped = this.pageMap.get(targetId);
+    const pageMapped = this.pageMap.get(liveSessionId);
 
     if (!pageMapped) return;
 
@@ -158,7 +159,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           await client.send(payload.command);
 
-          this.handleTargetDestroyed(targetId, 'Screencast stopped');
+          this.handleTargetDestroyed(liveSessionId, 'Screencast stopped');
 
           break;
         }
@@ -213,17 +214,20 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         targetInfo: { targetId },
       } = await client.send('Target.getTargetInfo');
 
-      this.pageMap.set(targetId, {
+      const liveSessionId = randomUUID();
+
+      this.pageMap.set(liveSessionId, {
         page: currentPage,
         cdp: client,
         protocolInfo: {
           id: payload.id,
           sessionId: payload.sessionId,
         },
+        targetId,
       });
 
       const liveUrl = new URL(makeExternalUrl('http', `/live`));
-      liveUrl.searchParams.set('t', targetId);
+      liveUrl.searchParams.set('session', liveSessionId);
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
@@ -244,14 +248,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private handleTargetDestroyed(targetId: string, reason?: string) {
+  private handleTargetDestroyed(liveSessionId: string, reason?: string) {
     if (!this.browser) return;
 
-    const pageMapped = this.pageMap.get(targetId);
+    const pageMapped = this.pageMap.get(liveSessionId);
 
     if (!pageMapped) return;
 
-    const { protocolInfo } = pageMapped;
+    const { protocolInfo, targetId } = pageMapped;
 
     const browserId = getBrowserId(this.browser);
 

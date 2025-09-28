@@ -24,7 +24,7 @@ export class LiveIndexWsRoute extends ProxyWebSocketRoute {
     description: 'Websocket back-end that powers the live session experience.',
     request: {
       query: z.object({
-        t: z.string().describe('The targetId of the live session'),
+        session: z.string().describe('The sessionId of the live session'),
       }),
     },
     responses: {
@@ -50,11 +50,11 @@ export class LiveIndexWsRoute extends ProxyWebSocketRoute {
 
     const { searchParams } = parseUrlFromIncomingMessage(req);
 
-    const targetId = searchParams.get('t');
+    const sessionId = searchParams.get('session');
 
-    if (!targetId) {
+    if (!sessionId) {
       return writeResponse(socket, HttpStatus.BAD_REQUEST, {
-        message: 'Missing targetId',
+        message: 'Missing session id',
       });
     }
 
