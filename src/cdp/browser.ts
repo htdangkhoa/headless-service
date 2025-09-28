@@ -17,6 +17,8 @@ import GhosteryPlugin from '@/plugins/puppeteer-extra-plugin-ghostery';
 import { getBrowserId } from '@/utils/puppeteer';
 import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
 import { Logger } from '@/logger';
+import { FingerprintGeneratorOptions } from 'fingerprint-generator';
+import { UnblockOptions } from '@/schemas';
 
 export interface BrowserCDPOptions {
   // launch options
@@ -26,6 +28,7 @@ export interface BrowserCDPOptions {
   proxy?: string;
   block_ads?: boolean;
   unblock?: boolean;
+  unblock_options?: UnblockOptions;
   token?: string;
   request_id?: string;
 }
@@ -76,6 +79,7 @@ export class BrowserCDP extends EventEmitter {
       // ws,
       stealth,
       unblock,
+      unblock_options,
       block_ads: blockAds,
       proxy,
       launch: launchOptions,
@@ -94,7 +98,28 @@ export class BrowserCDP extends EventEmitter {
     }
 
     if (unblock) {
-      puppeteer.use(UnblockPlugin());
+      const fingerprintOptions: Partial<FingerprintGeneratorOptions> = {};
+      if (unblock_options) {
+        fingerprintOptions.browsers = unblock_options.browsers;
+        fingerprintOptions.browserListQuery = unblock_options.browserslist_query;
+        fingerprintOptions.operatingSystems = unblock_options.operating_systems;
+        fingerprintOptions.devices = unblock_options.devices;
+        fingerprintOptions.locales = unblock_options.locales;
+        fingerprintOptions.httpVersion = unblock_options.http_version;
+        fingerprintOptions.strict = unblock_options.strict;
+        if (unblock_options.screen) {
+          fingerprintOptions.screen = {
+            minWidth: unblock_options.screen.min_width,
+            maxWidth: unblock_options.screen.max_width,
+            minHeight: unblock_options.screen.min_height,
+            maxHeight: unblock_options.screen.max_height,
+          };
+        }
+        fingerprintOptions.mockWebRTC = unblock_options.mock_webrtc;
+        fingerprintOptions.slim = unblock_options.slim;
+      }
+
+      puppeteer.use(UnblockPlugin({ fingerprintOptions }));
     }
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
