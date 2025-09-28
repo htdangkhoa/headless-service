@@ -124,7 +124,11 @@ export class Group {
 
     if (!route.auth) return true;
 
-    const requestToken = url.searchParams.get('token');
+    const requestTokenInQuery = url.searchParams.get('token');
+
+    const requestTokenInHeader = req.headers.authorization;
+
+    const requestToken = requestTokenInQuery || requestTokenInHeader;
 
     if (!requestToken) return false;
 
