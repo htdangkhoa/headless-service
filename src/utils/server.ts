@@ -1,14 +1,14 @@
 import { Duplex } from 'node:stream';
-import { STATUS_CODES } from 'node:http';
+import { STATUS_CODES, IncomingMessage } from 'node:http';
 import { Request, Response } from 'express';
 import { ZodError, z } from 'zod';
 import qs from 'qs';
+import { isNil } from 'lodash-es';
 
-import { Dictionary } from '@/types';
 import { HttpStatus } from '@/constants';
 import { ResponseBody } from '@/schemas';
 import { Protocol } from '@/cdp/devtools';
-import { isNil } from 'lodash-es';
+import { parseUrlFromIncomingMessage } from './url';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;
 
@@ -105,4 +105,16 @@ export const writeResponse = async (
   socket.end();
 
   return;
+};
+
+export const retrieveTokenFromRequest = (req: IncomingMessage) => {
+  const url = parseUrlFromIncomingMessage(req);
+
+  const requestTokenInQuery = url.searchParams.get('token');
+
+  const requestTokenInHeader = req.headers.authorization;
+
+  const requestToken = requestTokenInQuery || requestTokenInHeader;
+
+  return requestToken;
 };

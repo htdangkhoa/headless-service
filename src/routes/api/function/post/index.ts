@@ -8,11 +8,18 @@ import dedent from 'dedent';
 
 import { ProxyHttpRoute, Method } from '@/router';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
-import { makeExternalUrl, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
+import {
+  makeExternalUrl,
+  parseSearchParams,
+  retrieveTokenFromRequest,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
 import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
 interface IPageFunctionArguments {
+  token: string;
   browserWSEndpoint: string;
   runtimeFunction: string;
 }
@@ -110,6 +117,8 @@ export class FunctionPostRoute extends ProxyHttpRoute {
       ''
     );
 
+    const token = retrieveTokenFromRequest(req);
+
     const externalWSEndpoint = makeExternalUrl('ws', browserWebSocketFullPath);
 
     const functionIndexHTML = makeExternalUrl('http', 'function', 'index.html');
@@ -167,7 +176,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     return page
       .evaluate(
         async (args: IPageFunctionArguments) => {
-          const { browserWSEndpoint, runtimeFunction } = args;
+          const { token, browserWSEndpoint, runtimeFunction } = args;
 
           const mod = await import('./' + runtimeFunction);
 
@@ -181,11 +190,15 @@ export class FunctionPostRoute extends ProxyHttpRoute {
             throw new Error('No default export or handler function found');
           }
 
-          const runner = new window.BrowserFunctionRunner(browserWSEndpoint);
+          const runner = new window.BrowserFunctionRunner({
+            token,
+            browserWSEndpoint,
+          });
 
           return runner.start(handler as ICodeRunner);
         },
         {
+          token,
           browserWSEndpoint: externalWSEndpoint,
           runtimeFunction,
         } as IPageFunctionArguments

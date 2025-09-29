@@ -3,7 +3,13 @@ import type { Server, IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 
 import { Maybe, Optional } from '@/types';
-import { env, getFullPath, parseUrlFromIncomingMessage, writeResponse } from '@/utils';
+import {
+  env,
+  getFullPath,
+  parseUrlFromIncomingMessage,
+  retrieveTokenFromRequest,
+  writeResponse,
+} from '@/utils';
 import { HttpStatus } from '@/constants';
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
@@ -124,11 +130,7 @@ export class Group {
 
     if (!route.auth) return true;
 
-    const requestTokenInQuery = url.searchParams.get('token');
-
-    const requestTokenInHeader = req.headers.authorization;
-
-    const requestToken = requestTokenInQuery || requestTokenInHeader;
+    const requestToken = retrieveTokenFromRequest(req);
 
     if (!requestToken) return false;
 

@@ -48,8 +48,6 @@ export class BrowserCDP extends EventEmitter {
 
   private protocol: Protocol | null = null;
 
-  private token: string | null | undefined = null;
-
   constructor(private options?: BrowserCDPOptions) {
     super();
 
@@ -83,11 +81,8 @@ export class BrowserCDP extends EventEmitter {
       block_ads: blockAds,
       proxy,
       launch: launchOptions,
-      token,
       request_id: requestId,
     } = this.options ?? {};
-
-    this.token = token;
 
     if (this.wsServer instanceof WebSocketServer) {
       puppeteer.use(LiveUrlPlugin(this.wsServer, requestId));
@@ -124,7 +119,10 @@ export class BrowserCDP extends EventEmitter {
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
 
-    (launchOptions?.args ?? []).forEach((arg) => setOfArgs.add(arg));
+    (launchOptions?.args ?? [])
+      .filter(Boolean)
+      .filter((arg) => !arg.includes('extension')) // remove extension args
+      .forEach((arg) => setOfArgs.add(arg));
 
     if (proxy) {
       setOfArgs.add(`--proxy-server=${proxy}`);
@@ -180,9 +178,6 @@ export class BrowserCDP extends EventEmitter {
 
     const browserWSEndpoint = vanillaBrowser.wsEndpoint();
     const browserWebSocketURL = new URL(browserWSEndpoint!);
-    if (this.token) {
-      browserWebSocketURL.searchParams.set('token', this.token);
-    }
     this.browserWSEndpoint = browserWebSocketURL.href;
   }
 

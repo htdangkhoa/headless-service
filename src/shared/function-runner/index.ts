@@ -1,9 +1,13 @@
-import { BrowserWebSocketTransport } from 'puppeteer-core/lib/esm/puppeteer/common/BrowserWebSocketTransport.js';
-import { _connectToCdpBrowser as connect } from 'puppeteer-core/lib/esm/puppeteer/cdp/BrowserConnector.js';
+import puppeteer from 'puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js';
 import { Browser } from 'puppeteer-core/lib/esm/puppeteer/api/Browser';
 import { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 
 import { Dictionary } from '@/types';
+
+export interface IFunctionRunnerConstructorConfigs {
+  token: string;
+  browserWSEndpoint: string;
+}
 
 export interface ICodeRunner {
   (params: { page: Page; context?: Dictionary }): Promise<any>;
@@ -13,17 +17,20 @@ export class FunctionRunner {
   private browser?: Browser;
   private page?: Page;
 
-  constructor(private browserWSEndpoint: string) {}
+  constructor(readonly configs: IFunctionRunnerConstructorConfigs) {}
 
   async start(codeRunner: ICodeRunner) {
-    const connectionTransport = await BrowserWebSocketTransport.create(this.browserWSEndpoint);
-    const cdpOptions = {
+    const { token, browserWSEndpoint } = this.configs;
+
+    const browserWsURL = new URL(browserWSEndpoint);
+    browserWsURL.searchParams.set('token', token);
+
+    this.browser = await puppeteer.connect({
+      browserWSEndpoint: browserWsURL.href,
       headers: {
         Host: '127.0.0.1',
       },
-    };
-
-    this.browser = await connect(connectionTransport, this.browserWSEndpoint, cdpOptions);
+    });
     this.browser.once('disconnected', this.stop.bind(this));
     this.page = await this.browser.newPage();
 
