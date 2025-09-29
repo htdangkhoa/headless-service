@@ -50,6 +50,8 @@ export class BrowserCDP extends EventEmitter {
 
   private protocol: Protocol | null = null;
 
+  private proxyUrl: string | null = null;
+
   constructor(private options?: BrowserCDPOptions) {
     super();
 
@@ -127,8 +129,8 @@ export class BrowserCDP extends EventEmitter {
       .forEach((arg) => setOfArgs.add(arg));
 
     if (proxy) {
-      const newUrl = await proxyChain.anonymizeProxy(proxy);
-      setOfArgs.add(`--proxy-server=${newUrl}`);
+      this.proxyUrl = await proxyChain.anonymizeProxy(proxy);
+      setOfArgs.add(`--proxy-server=${this.proxyUrl}`);
     }
 
     const _launchOptions = Object.assign({}, launchOptions);
@@ -201,6 +203,11 @@ export class BrowserCDP extends EventEmitter {
       this.browserWSEndpoint = null;
       this.wsServer = null;
       this.expiresAt = null;
+    }
+
+    if (this.proxyUrl) {
+      proxyChain.closeAnonymizedProxy(this.proxyUrl, true);
+      this.proxyUrl = null;
     }
   }
 
