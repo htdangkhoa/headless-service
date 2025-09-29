@@ -1,7 +1,7 @@
 import { debounce } from 'lodash-es';
 
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants/live';
-import { Dictionary } from '@/types';
+import type { Dictionary } from '@/types';
 
 const MOUSE_BUTTONS = ['none', 'left', 'middle', 'right'];
 

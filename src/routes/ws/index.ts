@@ -1,7 +1,9 @@
 import type { IncomingMessage } from 'node:http';
 import dedent from 'dedent';
 
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { CodeSample, ProxyWebSocketRoute, WsHandler } from '@/router';
+import { WSDefaultQuerySchema } from '@/schemas';
 import {
   getZodErrorMessages,
   makeExternalUrl,
@@ -10,8 +12,6 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { WSDefaultQuerySchema } from '@/schemas';
-import { OPENAPI_TAGS, HttpStatus } from '@/constants';
 
 const basicExample: CodeSample = {
   lang: 'TypeScript',

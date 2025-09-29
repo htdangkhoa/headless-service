@@ -1,4 +1,5 @@
 import { z } from 'zod';
+
 import { BooleanOrStringSchema } from './common';
 
 export const SupportedBrowsersSchema = z.enum(['chrome', 'firefox', 'safari', 'edge']);

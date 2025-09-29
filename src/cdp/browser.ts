@@ -1,24 +1,25 @@
 import EventEmitter from 'events';
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
 import { resolve } from 'node:path';
-import { WebSocketServer } from 'ws';
+import { FingerprintGeneratorOptions } from 'fingerprint-generator';
 import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-import os from 'node:os';
-import { randomUUID } from 'node:crypto';
+import { WebSocketServer } from 'ws';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
-import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
+import { Logger } from '@/logger';
+import GhosteryPlugin from '@/plugins/puppeteer-extra-plugin-ghostery';
 import HelperPlugin from '@/plugins/puppeteer-extra-plugin-helper';
 import LiveUrlPlugin from '@/plugins/puppeteer-extra-plugin-live-url';
-import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
-import GhosteryPlugin from '@/plugins/puppeteer-extra-plugin-ghostery';
-import { getBrowserId } from '@/utils/puppeteer';
-import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
-import { Logger } from '@/logger';
-import { FingerprintGeneratorOptions } from 'fingerprint-generator';
+import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
+import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import { UnblockOptions } from '@/schemas';
+import { getBrowserId } from '@/utils/puppeteer';
+
+import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
 
 export interface BrowserCDPOptions {
   // launch options

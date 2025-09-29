@@ -1,10 +1,12 @@
-import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import type { Page, CDPSession, Target, Browser } from 'puppeteer';
-import { WebSocketServer, WebSocket, RawData } from 'ws';
-import { IncomingMessage } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
+import type { Browser, CDPSession, Page, Target } from 'puppeteer';
+import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
+import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 
+import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 import { COMMANDS, DOMAINS, EVENTS, LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
+import { Logger } from '@/logger';
 import {
   buildProtocolEventNames,
   buildProtocolMethod,
@@ -12,8 +14,6 @@ import {
   makeExternalUrl,
   parseUrlFromIncomingMessage,
 } from '@/utils';
-import { Logger } from '@/logger';
-import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 
 interface PageMappedData {
   page: Page;

@@ -1,6 +1,7 @@
 import dedent from 'dedent';
-import { z } from 'zod';
 import { capitalize } from 'lodash-es';
+import { z } from 'zod';
+
 import { NumberOrStringSchema } from './common';
 
 export const PuppeteerUrlSchema = z.string().describe('The URL to take a screenshot of.');

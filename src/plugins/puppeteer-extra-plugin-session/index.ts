@@ -1,11 +1,16 @@
+import { get, isNil } from 'lodash-es';
 import type { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { get, isNil } from 'lodash-es';
 
-import { buildProtocolEventNames, buildProtocolMethod, env, getBrowserId } from '@/utils';
-import { makeExternalUrl } from '@/utils';
-import { COMMANDS, DOMAINS } from '@/constants';
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
+import { COMMANDS, DOMAINS } from '@/constants';
+import {
+  buildProtocolEventNames,
+  buildProtocolMethod,
+  env,
+  getBrowserId,
+  makeExternalUrl,
+} from '@/utils';
 
 export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
   private browser: Browser | null = null;

@@ -1,5 +1,5 @@
-import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import type { Browser, Page } from 'puppeteer';
+import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 
 import { DEFAULT_TIMEOUT } from '@/constants';
 import { sleep } from '@/utils';

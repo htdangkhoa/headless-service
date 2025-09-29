@@ -1,5 +1,4 @@
 import * as ZodToOpenapi from '@asteasolutions/zod-to-openapi';
-import * as http from 'node:http';
 
 export interface CodeSample {
   lang: string;

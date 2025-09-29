@@ -1,12 +1,12 @@
-import type { Handler } from 'express';
 import dedent from 'dedent';
+import type { Handler } from 'express';
 import { z } from 'zod';
 
-import { Method, ProxyHttpRoute } from '@/router';
+import { ProtocolSchema } from '@/cdp/devtools';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { Method, ProxyHttpRoute } from '@/router';
 import { ResponseBodySchema as ResponseDefaultBodySchema } from '@/schemas';
 import { writeResponse } from '@/utils';
-import { ProtocolSchema } from '@/cdp/devtools';
 
 export class JSONProtocolGetRoute extends ProxyHttpRoute {
   method = Method.GET;

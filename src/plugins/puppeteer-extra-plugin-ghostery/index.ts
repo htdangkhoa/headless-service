@@ -1,6 +1,7 @@
+import { PuppeteerBlocker } from '@ghostery/adblocker-puppeteer';
 import { Browser, Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { PuppeteerBlocker, fullLists } from '@ghostery/adblocker-puppeteer';
+
 import { Ghostery } from '@/utils';
 
 export class PuppeteerExtraPluginGhostery extends PuppeteerExtraPlugin {

@@ -1,10 +1,10 @@
+import dedent from 'dedent';
 import type { Handler } from 'express';
 import { z } from 'zod';
-import dedent from 'dedent';
 
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute, RouteConfig } from '@/router';
 import { useTypedParsers, writeResponse } from '@/utils';
-import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 
 const RequestJsonActivateParamsSchema = z.object({
   targetId: z.string().optional().describe('The target ID to activate'),

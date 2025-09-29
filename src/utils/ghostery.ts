@@ -1,4 +1,4 @@
-import { PuppeteerBlocker, fullLists } from '@ghostery/adblocker-puppeteer';
+import { fullLists, PuppeteerBlocker } from '@ghostery/adblocker-puppeteer';
 
 export class Ghostery {
   private static blocker: PuppeteerBlocker;

@@ -1,4 +1,5 @@
 import type { Browser, Page } from 'puppeteer';
+
 import { HEADLESS_PAGE_IDENTIFIER } from '@/constants';
 
 export const getBrowserId = (browser: Browser): string => {

@@ -1,8 +1,12 @@
-import { IncomingMessage } from 'node:http';
+import type { IncomingMessage } from 'node:http';
 import dedent from 'dedent';
 import { head as _head } from 'lodash-es';
 
+import { BrowserCDP } from '@/cdp';
+import { HEADLESS_PAGE_IDENTIFIER, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
+import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
+import type { Dictionary } from '@/types';
 import {
   getZodErrorMessages,
   makeExternalUrl,
@@ -11,10 +15,6 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { HEADLESS_PAGE_IDENTIFIER, HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { BrowserCDP } from '@/cdp';
-import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
-import { Dictionary } from '@/types';
 
 // /devtools/page/9D8F0DE47A20F0181D65B251A6F59ACC
 const DEVTOOLS_PATH_REGEX = /\/devtools\/page\/([A-Z0-9]{32})/;

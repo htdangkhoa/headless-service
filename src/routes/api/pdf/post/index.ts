@@ -1,24 +1,17 @@
+import dedent from 'dedent';
+import type { Protocol } from 'devtools-protocol';
 import type { Handler } from 'express';
-import { z } from 'zod';
 import type {
-  Viewport,
   CookieParam,
   GoToOptions,
-  WaitForOptions,
   PDFOptions,
+  Viewport,
+  WaitForOptions,
 } from 'puppeteer-core';
-import type { Protocol } from 'devtools-protocol';
-import dedent from 'dedent';
+import { z } from 'zod';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ProxyHttpRoute, Method } from '@/router';
-import {
-  parseSearchParams,
-  sleep,
-  transformKeysToCamelCase,
-  useTypedParsers,
-  writeResponse,
-} from '@/utils';
+import { Method, ProxyHttpRoute } from '@/router';
 import {
   PuppeteerAddScriptTagsSchema,
   PuppeteerAddStyleTagsSchema,
@@ -27,16 +20,23 @@ import {
   PuppeteerEmulateMediaTypeSchema,
   PuppeteerGoToOptionsSchema,
   PuppeteerHtmlSchema,
-  PuppeteerRequestInterceptionSchema,
   PuppeteerPDFOptionsSchema,
+  PuppeteerRequestInterceptionSchema,
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
   PuppeteerViewportSchema,
-  PuppeteerWaitForSelectorOptionsSchema,
-  RequestDefaultQuerySchema,
   PuppeteerWaitForEventSchema,
   PuppeteerWaitForFunctionSchema,
+  PuppeteerWaitForSelectorOptionsSchema,
+  RequestDefaultQuerySchema,
 } from '@/schemas';
+import {
+  parseSearchParams,
+  sleep,
+  transformKeysToCamelCase,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
 
 const RequestPdfBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),

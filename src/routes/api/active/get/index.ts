@@ -1,5 +1,5 @@
-import type { Handler } from 'express';
 import dedent from 'dedent';
+import type { Handler } from 'express';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';

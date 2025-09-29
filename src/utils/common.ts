@@ -1,5 +1,6 @@
 import { camelCase } from 'lodash-es';
-import { Dictionary } from '@/types';
+
+import type { Dictionary } from '@/types';
 
 export const transformKeysToCamelCase = <T>(obj: any): T => {
   return Object.entries(obj).reduce((acc, [key, value]) => {

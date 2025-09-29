@@ -1,8 +1,9 @@
-import { OpenAPIRegistry, OpenApiGeneratorV31, RouteConfig } from '@asteasolutions/zod-to-openapi';
 import fs from 'node:fs';
+import { OpenApiGeneratorV31, OpenAPIRegistry, RouteConfig } from '@asteasolutions/zod-to-openapi';
 
-import { Method, Group } from '@/router';
 import { OPENAPI_VERSION } from '@/constants';
+import { Group, Method } from '@/router';
+
 import { getFullPath } from './utils';
 
 export class OpenAPI {

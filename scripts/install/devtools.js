@@ -1,7 +1,8 @@
+import { createWriteStream, existsSync, ReadStream, renameSync, rmSync } from 'node:fs';
 import os from 'node:os';
-import { createWriteStream, ReadStream, renameSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import extractZip from 'extract-zip';
+
 import { downloadFile } from './utils/download.js';
 
 const tmpdir = os.tmpdir();

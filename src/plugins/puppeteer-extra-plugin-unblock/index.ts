@@ -1,11 +1,11 @@
-import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import type { Frame, Page } from 'puppeteer';
 import {
   FingerprintGenerator,
-  BrowserFingerprintWithHeaders,
-  FingerprintGeneratorOptions,
+  type BrowserFingerprintWithHeaders,
+  type FingerprintGeneratorOptions,
 } from 'fingerprint-generator';
 import { FingerprintInjector } from 'fingerprint-injector';
+import type { Frame, Page } from 'puppeteer';
+import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 
 export interface UnblockOptions {
   fingerprint?: BrowserFingerprintWithHeaders;

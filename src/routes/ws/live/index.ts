@@ -2,6 +2,7 @@ import type { IncomingMessage } from 'node:http';
 import { z } from 'zod';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { PuppeteerExtraPluginLiveUrl } from '@/plugins/puppeteer-extra-plugin-live-url';
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
 import {
   makeExternalUrl,
@@ -9,7 +10,6 @@ import {
   removeTrailingSlash,
   writeResponse,
 } from '@/utils';
-import { PuppeteerExtraPluginLiveUrl } from '@/plugins/puppeteer-extra-plugin-live-url';
 
 export class LiveIndexWsRoute extends ProxyWebSocketRoute {
   path = '/live';

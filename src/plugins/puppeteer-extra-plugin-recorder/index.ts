@@ -1,14 +1,14 @@
-import type { Browser } from 'puppeteer';
-import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import fs from 'node:fs';
+import type { Browser } from 'puppeteer';
+import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 
-import { buildProtocolEventNames, buildProtocolMethod, env, getBrowserId } from '@/utils';
-import { ACTIONS as SHARED_ACTIONS, EXTENSION_TITLE, DOMAINS, COMMANDS } from '@/constants';
-import { Logger } from '@/logger';
-import { ValueOf } from '@/types';
 import { Request, Response } from '@/cdp/devtools';
+import { COMMANDS, DOMAINS, EXTENSION_TITLE, ACTIONS as SHARED_ACTIONS } from '@/constants';
+import { Logger } from '@/logger';
+import type { ValueOf } from '@/types';
+import { buildProtocolEventNames, buildProtocolMethod, env, getBrowserId } from '@/utils';
 
 interface RecordingParams {
   action: ValueOf<typeof SHARED_ACTIONS>;

@@ -1,3 +1,5 @@
+import { DEFAULT_SAMPLE_RATE, ACTIONS as INTERNAL_ACTIONS } from './constants';
+
 /// <reference types="chrome"/>
 
 export {};
@@ -7,8 +9,6 @@ declare global {
     recorderInjected: boolean;
   }
 }
-
-import { ACTIONS as INTERNAL_ACTIONS, DEFAULT_SAMPLE_RATE } from './constants';
 
 chrome.runtime.onMessage.addListener(function (msg, sender, response) {
   console.log('🚀 ~ msg:', msg);

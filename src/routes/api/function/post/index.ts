@@ -1,13 +1,15 @@
-import { Handler } from 'express';
-import tsc from 'typescript';
 import { randomUUID } from 'node:crypto';
-import type { HTTPRequest, HTTPResponse, ConsoleMessage } from 'puppeteer';
 import path from 'node:path';
-import { z } from 'zod';
 import dedent from 'dedent';
+import { Handler } from 'express';
+import type { ConsoleMessage, HTTPRequest, HTTPResponse } from 'puppeteer';
+import tsc from 'typescript';
+import { z } from 'zod';
 
-import { ProxyHttpRoute, Method } from '@/router';
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { Method, ProxyHttpRoute } from '@/router';
 import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
+import { FunctionRunner, ICodeRunner } from '@/shared/function-runner';
 import {
   makeExternalUrl,
   parseSearchParams,
@@ -15,8 +17,6 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { OPENAPI_TAGS, HttpStatus } from '@/constants';
-import { ICodeRunner, FunctionRunner } from '@/shared/function-runner';
 
 interface IPageFunctionArguments {
   token: string;

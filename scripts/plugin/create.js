@@ -1,6 +1,6 @@
-import _ from 'lodash-es';
 import fs from 'fs';
 import path from 'path';
+import _ from 'lodash-es';
 
 const name = process.argv[2];
 

@@ -1,7 +1,7 @@
 import debug from 'debug';
 
-import { env } from './utils';
 import { RequestIdContext } from './request-id-context';
+import { env } from './utils';
 
 export class Logger {
   private serviceName = env('SERVICE_NAME');

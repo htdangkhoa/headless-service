@@ -1,10 +1,10 @@
-import type { Handler } from 'express';
 import dedent from 'dedent';
-import z from 'zod';
+import type { Handler } from 'express';
 import { head } from 'lodash-es';
+import z from 'zod';
 
-import { Method, ProxyHttpRoute } from '@/router';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { Method, ProxyHttpRoute } from '@/router';
 import { ResponseBodySchema as ResponseDefaultBodySchema } from '@/schemas';
 import { generatePageId, makeExternalUrl, useTypedParsers, writeResponse } from '@/utils';
 

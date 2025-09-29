@@ -1,12 +1,13 @@
 import { IncomingMessage } from 'node:http';
-import treeKill from 'tree-kill';
 import dayjs from 'dayjs';
 import type { Page } from 'puppeteer';
+import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
 
-import { BrowserCDP, BrowserCDPOptions } from './browser';
-import { makeExternalUrl } from '@/utils';
 import { Logger } from '@/logger';
+import { makeExternalUrl } from '@/utils';
+
+import { BrowserCDP, BrowserCDPOptions } from './browser';
 
 export interface IRequestBrowserOptions extends BrowserCDPOptions {
   browserId?: string;

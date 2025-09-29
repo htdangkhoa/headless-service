@@ -1,9 +1,9 @@
+import dedent from 'dedent';
 import type { Handler } from 'express';
 import { z } from 'zod';
-import dedent from 'dedent';
 
-import { Method, ProxyHttpRoute } from '@/router';
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { Method, ProxyHttpRoute } from '@/router';
 import { useTypedParsers, writeResponse } from '@/utils';
 
 const RequestJsonCloseParamsSchema = z.object({

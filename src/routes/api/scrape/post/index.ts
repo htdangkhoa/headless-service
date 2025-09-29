@@ -1,18 +1,11 @@
-import type { Handler } from 'express';
-import { z } from 'zod';
-import type { Viewport, CookieParam, GoToOptions, WaitForOptions } from 'puppeteer-core';
-import type { Protocol } from 'devtools-protocol';
 import dedent from 'dedent';
+import type { Protocol } from 'devtools-protocol';
+import type { Handler } from 'express';
+import type { CookieParam, GoToOptions, Viewport, WaitForOptions } from 'puppeteer-core';
+import { z } from 'zod';
 
 import { DEFAULT_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ProxyHttpRoute, Method } from '@/router';
-import {
-  parseSearchParams,
-  sleep,
-  transformKeysToCamelCase,
-  useTypedParsers,
-  writeResponse,
-} from '@/utils';
+import { Method, ProxyHttpRoute } from '@/router';
 import {
   PuppeteerAddScriptTagsSchema,
   PuppeteerAddStyleTagsSchema,
@@ -25,11 +18,19 @@ import {
   PuppeteerUrlSchema,
   PuppeteerUserAgentSchema,
   PuppeteerViewportSchema,
-  PuppeteerWaitForSelectorOptionsSchema,
-  RequestDefaultQuerySchema,
   PuppeteerWaitForEventSchema,
   PuppeteerWaitForFunctionSchema,
+  PuppeteerWaitForSelectorOptionsSchema,
+  RequestDefaultQuerySchema,
 } from '@/schemas';
+import {
+  parseSearchParams,
+  sleep,
+  transformKeysToCamelCase,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
+
 import { IBoundRequest } from './interfaces';
 
 const ElementSelectorSchema = z
@@ -53,7 +54,7 @@ const DebugOptionsSchema = z
   })
   .strict();
 
-const RequestScreenshotBodySchema = z.object({
+const RequestScrapeBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),
   html: PuppeteerHtmlSchema.optional(),
   elements: ElementsSelectorSchema,
@@ -148,7 +149,7 @@ export class ScrapePostRoute extends ProxyHttpRoute {
         description: 'The performance data',
         content: {
           'application/json': {
-            schema: RequestScreenshotBodySchema.meta({
+            schema: RequestScrapeBodySchema.meta({
               example: {
                 url: 'https://example.com',
                 elements: [
@@ -181,7 +182,7 @@ export class ScrapePostRoute extends ProxyHttpRoute {
       });
     }
 
-    const bodyValidation = useTypedParsers(RequestScreenshotBodySchema).safeParse(req.body);
+    const bodyValidation = useTypedParsers(RequestScrapeBodySchema).safeParse(req.body);
 
     if (!bodyValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

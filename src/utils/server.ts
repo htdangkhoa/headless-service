@@ -1,13 +1,14 @@
+import { IncomingMessage, STATUS_CODES } from 'node:http';
 import { Duplex } from 'node:stream';
-import { STATUS_CODES, IncomingMessage } from 'node:http';
 import { Request, Response } from 'express';
-import { ZodError, z } from 'zod';
-import qs from 'qs';
 import { isNil } from 'lodash-es';
+import qs from 'qs';
+import { z, ZodError } from 'zod';
 
+import { Protocol } from '@/cdp/devtools';
 import { HttpStatus } from '@/constants';
 import { ResponseBody } from '@/schemas';
-import { Protocol } from '@/cdp/devtools';
+
 import { parseUrlFromIncomingMessage } from './url';
 
 const isHTTP = (writable: Response | Duplex) => 'writeHead' in writable;

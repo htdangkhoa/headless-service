@@ -1,8 +1,10 @@
-import type { Express, Handler } from 'express';
-import type { Server, IncomingMessage } from 'node:http';
+import type { IncomingMessage, Server } from 'node:http';
 import type { Duplex } from 'node:stream';
+import type { Express, Handler } from 'express';
 
-import { Maybe, Optional } from '@/types';
+import { HttpStatus } from '@/constants';
+import { RequestIdContext } from '@/request-id-context';
+import type { Maybe, Optional } from '@/types';
 import {
   env,
   getFullPath,
@@ -10,10 +12,9 @@ import {
   retrieveTokenFromRequest,
   writeResponse,
 } from '@/utils';
-import { HttpStatus } from '@/constants';
+
 import { HeadlessServerContext, ProxyHttpRoute } from './http.route';
 import { HeadlessServerWebSocketContext, ProxyWebSocketRoute } from './ws.route';
-import { RequestIdContext } from '@/request-id-context';
 
 export type Route = ProxyHttpRoute | ProxyWebSocketRoute;
 

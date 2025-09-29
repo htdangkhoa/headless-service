@@ -2,8 +2,8 @@ import type { Handler } from 'express';
 
 import type { BrowserManager } from '@/cdp';
 import { Logger } from '@/logger';
+
 import { OpenApiRoute, RouteConfig } from './interfaces';
-import { IncomingMessage } from 'http';
 
 export enum Method {
   GET = 'get',

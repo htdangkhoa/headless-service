@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { join } from 'path';
+import dedent from 'dedent';
 import { build } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
-import dedent from 'dedent';
 import * as glob from 'glob';
 
 const cwd = process.cwd();

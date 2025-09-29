@@ -1,6 +1,6 @@
-import lighthouse, { Flags, Config } from 'lighthouse';
+import lighthouse, { Config, Flags } from 'lighthouse';
 
-import { Dictionary } from '@/types';
+import type { Dictionary } from '@/types';
 
 export enum Events {
   INIT = 'init',

@@ -4,12 +4,13 @@ import type { WebSocketServer } from 'ws';
 import WebSocket from 'ws';
 
 import type { BrowserCDP } from '@/cdp';
+import { DispatchResponse, ProtocolRequest, Request, Response } from '@/cdp/devtools';
+import { DOMAINS } from '@/constants';
 import { Logger } from '@/logger';
 import { buildProtocolEventNames } from '@/utils';
-import { OpenApiRoute, RouteConfig } from './interfaces';
+
 import { HeadlessServerContext } from './http.route';
-import { DOMAINS } from '@/constants';
-import { DispatchResponse, ProtocolRequest, Request, Response } from '@/cdp/devtools';
+import { OpenApiRoute, RouteConfig } from './interfaces';
 
 export type WsHandler = (req: IncomingMessage, socket: Duplex, head: Buffer) => any | Promise<any>;
 

@@ -1,24 +1,17 @@
+import dedent from 'dedent';
+import type { Protocol } from 'devtools-protocol';
 import type { Handler } from 'express';
-import { z } from 'zod';
 import type {
-  Viewport,
   CookieParam,
   GoToOptions,
-  WaitForOptions,
   ScreenshotOptions,
+  Viewport,
+  WaitForOptions,
 } from 'puppeteer-core';
-import type { Protocol } from 'devtools-protocol';
-import dedent from 'dedent';
+import { z } from 'zod';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { ProxyHttpRoute, Method } from '@/router';
-import {
-  parseSearchParams,
-  sleep,
-  transformKeysToCamelCase,
-  useTypedParsers,
-  writeResponse,
-} from '@/utils';
+import { Method, ProxyHttpRoute } from '@/router';
 import {
   BooleanOrStringSchema,
   PuppeteerAddScriptTagsSchema,
@@ -39,6 +32,13 @@ import {
   PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
 } from '@/schemas';
+import {
+  parseSearchParams,
+  sleep,
+  transformKeysToCamelCase,
+  useTypedParsers,
+  writeResponse,
+} from '@/utils';
 
 const RequestScreenshotBodySchema = z.object({
   url: PuppeteerUrlSchema.optional(),

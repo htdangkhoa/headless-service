@@ -1,1 +1,1 @@
-import {} from 'puppeteer';
+import 'puppeteer';

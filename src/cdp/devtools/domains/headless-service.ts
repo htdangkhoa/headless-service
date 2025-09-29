@@ -1,5 +1,6 @@
 import { COMMANDS, DOMAINS, EVENTS } from '@/constants';
-import { Event, Command, Domain, DomainRegistry, DomainType } from '../base';
+
+import { Command, Domain, DomainRegistry, DomainType, Event } from '../base';
 
 export class HeadlessServiceDomainRegistry extends DomainRegistry {
   constructor() {

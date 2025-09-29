@@ -20,13 +20,13 @@ already come to know.
 Gets the live streaming URL for the current session.
 
 **Example:**
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
 (async () => {
   const TOKEN = '<token>';
-  const browserWSEndpoint =
-    '{{wsUrl}}/?token=${TOKEN}';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}';
   const browser = await puppeteer.connect({ browserWSEndpoint });
   const page = await browser.newPage();
   const cdp = await page.createCDPSession();
@@ -46,13 +46,13 @@ import puppeteer from 'puppeteer-core';
 Starts recording the current session.
 
 **Example:**
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
 (async () => {
   const TOKEN = '<token>';
-  const browserWSEndpoint =
-    '{{wsUrl}}/?token=${TOKEN}&record=true';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}&record=true';
   const browser = await puppeteer.connect({ browserWSEndpoint });
   const page = await browser.newPage();
   const cdp = await page.createCDPSession();
@@ -68,6 +68,7 @@ import puppeteer from 'puppeteer-core';
 Stops recording the current session.
 
 **Example:**
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
@@ -84,13 +85,13 @@ import puppeteer from 'puppeteer-core';
 Keeps the browser session alive.
 
 **Example:**
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
 (async () => {
   const TOKEN = '<token>';
-  const browserWSEndpoint =
-    '{{wsUrl}}/?token=${TOKEN}';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}';
   const browser = await puppeteer.connect({ browserWSEndpoint });
   const page = await browser.newPage();
   const cdp = await page.createCDPSession();
@@ -108,18 +109,20 @@ import puppeteer from 'puppeteer-core';
 Gets the debugger URL for the current session.
 
 **Example:**
+
 ```typescript
 import puppeteer from 'puppeteer-core';
 
 (async () => {
   const TOKEN = '<token>';
-  const browserWSEndpoint =
-    '{{wsUrl}}/?token=${TOKEN}';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}';
   const browser = await puppeteer.connect({ browserWSEndpoint });
   const page = await browser.newPage();
   const cdp = await page.createCDPSession();
   await page.goto('https://example.com');
-  const { webSocketDebuggerUrl, devtoolsFrontendUrl } = await cdp.send('HeadlessService.debuggerUrl');
+  const { webSocketDebuggerUrl, devtoolsFrontendUrl } = await cdp.send(
+    'HeadlessService.debuggerUrl'
+  );
 
   // webSocketDebuggerUrl = `{{baseUrl}}/devtools/page/B9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
   // devtoolsFrontendUrl = `{{baseUrl}}/devtools/inspector.html?ws=localhost%3A3000%2Fdevtools%2Fpage%2FB9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;

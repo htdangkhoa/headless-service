@@ -1,8 +1,8 @@
+import type { Browser } from 'puppeteer-core/lib/esm/puppeteer/api/Browser';
+import type { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 import puppeteer from 'puppeteer-core/lib/esm/puppeteer/puppeteer-core-browser.js';
-import { Browser } from 'puppeteer-core/lib/esm/puppeteer/api/Browser';
-import { Page } from 'puppeteer-core/lib/esm/puppeteer/api/Page';
 
-import { Dictionary } from '@/types';
+import type { Dictionary } from '@/types';
 
 export interface IFunctionRunnerConstructorConfigs {
   token: string;

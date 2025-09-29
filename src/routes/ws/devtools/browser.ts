@@ -1,6 +1,9 @@
-import { IncomingMessage } from 'node:http';
+import type { IncomingMessage } from 'node:http';
+import dedent from 'dedent';
 
+import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
+import { WSDefaultQuerySchema } from '@/schemas';
 import {
   getZodErrorMessages,
   makeExternalUrl,
@@ -9,9 +12,6 @@ import {
   useTypedParsers,
   writeResponse,
 } from '@/utils';
-import { HttpStatus, OPENAPI_TAGS } from '@/constants';
-import { WSDefaultQuerySchema } from '@/schemas';
-import dedent from 'dedent';
 
 // /devtools/browser/00000000-0000-0000-0000-000000000000
 const DEVTOOLS_PATH_REGEX = /\/devtools\/browser\/([a-f0-9-]+)$/;

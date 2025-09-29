@@ -11,8 +11,8 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 
 ## Environment Variables
 
-| Name                        | Description                                                      | Required           | Default                         |
-|-----------------------------|------------------------------------------------------------------|:------------------:|---------------------------------|
+| Name                        | Description                                                      |      Required      | Default                         |
+| --------------------------- | ---------------------------------------------------------------- | :----------------: | ------------------------------- |
 | `SERVICE_NAME`              | The name of the service                                          | :white_check_mark: | `headless-service`              |
 | `HOST`                      | The host where the service will be listening                     |                    | `localhost`                     |
 | `PORT`                      | The port where the service will be listening                     |                    | `3000`                          |
@@ -86,28 +86,28 @@ main().catch(console.error);
 
 ### Supported Browsers
 
-| Browser | Dockerfile                                    |
-|---------|-----------------------------------------------|
-| Chrome  | [Dockerfile.chrome](./docker/Dockerfile.chrome)      |
-| Brave   | [Dockerfile.brave](./docker/Dockerfile.brave) |
+| Browser | Dockerfile                                      |
+| ------- | ----------------------------------------------- |
+| Chrome  | [Dockerfile.chrome](./docker/Dockerfile.chrome) |
+| Brave   | [Dockerfile.brave](./docker/Dockerfile.brave)   |
 
 ### Usage
 
 1. Build the Docker image:
 
-    ```bash
-    docker build -t headless-service/<browser> . -f ./docker/Dockerfile.<browser>
-    ```
+   ```bash
+   docker build -t headless-service/<browser> . -f ./docker/Dockerfile.<browser>
+   ```
 
 2. Run the Docker container:
 
-    ```bash
-    docker run \
-      -e HOST='0.0.0.0' \
-      -e PORT='3000' \
-      -e EXTERNAL_ADDRESS='http://localhost:3000' \
-      -e SERVICE_NAME='headless-service' \
-      -e DEBUG='headless-service*,-**:verbose' \
-      -p 3000:3000 \
-      headless-service/<browser>
-    ```
+   ```bash
+   docker run \
+     -e HOST='0.0.0.0' \
+     -e PORT='3000' \
+     -e EXTERNAL_ADDRESS='http://localhost:3000' \
+     -e SERVICE_NAME='headless-service' \
+     -e DEBUG='headless-service*,-**:verbose' \
+     -p 3000:3000 \
+     headless-service/<browser>
+   ```

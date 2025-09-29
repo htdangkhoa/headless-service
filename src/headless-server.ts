@@ -1,36 +1,37 @@
-import path from 'node:path';
 import fs from 'node:fs';
 import { createServer, type Server } from 'node:http';
-import express, { ErrorRequestHandler } from 'express';
+import path from 'node:path';
 import timeout from 'connect-timeout';
 import cors from 'cors';
-import { WebSocketServer } from 'ws';
 import dedent from 'dedent';
+import express, { ErrorRequestHandler } from 'express';
+import { WebSocketServer } from 'ws';
 
+import { HttpStatus } from '@/constants';
+import { OpenAPI } from '@/openapi';
+import { Group } from '@/router';
 import {
+  ActiveGetRoute,
+  DevtoolsBrowserWsRoute,
+  DevtoolsPageWsRoute,
   FunctionPostRoute,
+  IndexWsRoute,
+  InternalBrowserSessionPutRoute,
+  JSONActivateGetRoute,
+  JSONCloseGetRoute,
+  JSONGetRoute,
+  JSONListGetRoute,
+  JSONNewPutRoute,
+  JSONProtocolGetRoute,
+  JSONVersionGetRoute,
+  LiveIndexWsRoute,
   PdfPostRoute,
   PerformancePostRoute,
   ScrapePostRoute,
   ScreenshotPostRoute,
-  JSONGetRoute,
-  JSONListGetRoute,
-  JSONNewPutRoute,
-  JSONActivateGetRoute,
-  JSONProtocolGetRoute,
-  JSONVersionGetRoute,
-  DevtoolsBrowserWsRoute,
-  DevtoolsPageWsRoute,
-  LiveIndexWsRoute,
-  IndexWsRoute,
-  InternalBrowserSessionPutRoute,
-  JSONCloseGetRoute,
-  ActiveGetRoute,
 } from '@/routes';
 import { env, Ghostery, makeExternalUrl, writeResponse } from '@/utils';
-import { Group } from '@/router';
-import { OpenAPI } from '@/openapi';
-import { HttpStatus } from '@/constants';
+
 import { BrowserManager } from './cdp';
 import { Logger } from './logger';
 

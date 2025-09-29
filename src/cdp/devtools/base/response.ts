@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { ProtocolPayloadSchema } from './request';
+
 import { DispatchResponse } from './dispatch';
+import { ProtocolPayloadSchema } from './request';
 
 export const ProtocolResponseSchema = ProtocolPayloadSchema.extend({
   id: z.number(),

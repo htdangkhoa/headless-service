@@ -2,7 +2,7 @@
 
 /* global chrome, MediaRecorder, FileReader */
 
-import { ACTIONS as SHARED_ACTIONS, CUSTOM_EVENT_NAME } from '../../constants/recorder';
+import { CUSTOM_EVENT_NAME, ACTIONS as SHARED_ACTIONS } from '../../constants/recorder';
 import { ACTIONS as INTERNAL_ACTIONS } from './constants';
 
 export {};

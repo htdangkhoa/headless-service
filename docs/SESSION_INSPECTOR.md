@@ -33,6 +33,7 @@ The DevTools frontend provides a full Chrome DevTools experience including:
 ### URL Structure
 
 The DevTools frontend URL follows this pattern:
+
 ```
 {{baseUrl}}/devtools/inspector.html?ws=<websocket-url>
 ```
