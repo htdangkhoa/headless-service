@@ -44,6 +44,9 @@ dependencies:
   lodash-es:
     specifier: 4.17.21
     version: 4.17.21
+  proxy-chain:
+    specifier: 2.5.9
+    version: 2.5.9
   puppeteer:
     specifier: 24.22.3
     version: 24.22.3(bufferutil@4.0.9)(typescript@5.9.2)
@@ -3151,6 +3154,17 @@ packages:
       pac-proxy-agent: 7.2.0
       proxy-from-env: 1.1.0
       socks-proxy-agent: 8.0.5
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /proxy-chain@2.5.9:
+    resolution: {integrity: sha512-DZZKtRz92WuXd7fzRTKgI/oGhjmSgGMgT3FweLunCztpaG5jDVOJp1jgRPAVLQD1SG6HhkOyRkj6RTF3A214bg==}
+    engines: {node: '>=14'}
+    dependencies:
+      socks: 2.8.7
+      socks-proxy-agent: 8.0.5
+      tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
     dev: false

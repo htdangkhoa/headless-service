@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import os from 'node:os';
 import { resolve } from 'node:path';
 import { FingerprintGeneratorOptions } from 'fingerprint-generator';
+import proxyChain from 'proxy-chain';
 import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
@@ -126,7 +127,8 @@ export class BrowserCDP extends EventEmitter {
       .forEach((arg) => setOfArgs.add(arg));
 
     if (proxy) {
-      setOfArgs.add(`--proxy-server=${proxy}`);
+      const newUrl = await proxyChain.anonymizeProxy(proxy);
+      setOfArgs.add(`--proxy-server=${newUrl}`);
     }
 
     const _launchOptions = Object.assign({}, launchOptions);

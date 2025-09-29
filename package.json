@@ -58,6 +58,7 @@
     "fingerprint-injector": "2.1.73",
     "lighthouse": "12.8.2",
     "lodash-es": "4.17.21",
+    "proxy-chain": "2.5.9",
     "puppeteer": "24.22.3",
     "puppeteer-core": "24.22.3",
     "puppeteer-extra": "3.3.6",
