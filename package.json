@@ -39,10 +39,10 @@
     "extract-zip": "2.0.1",
     "glob": "11.0.3",
     "nodemon": "3.1.10",
-    "prettier": "3.5.3",
+    "prettier": "3.6.2",
     "rimraf": "6.0.1",
     "tsc-alias": "1.8.16",
-    "tsx": "4.20.5"
+    "tsx": "4.20.6"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "8.1.0",
@@ -52,14 +52,14 @@
     "dayjs": "1.11.18",
     "debug": "4.4.3",
     "dedent": "1.7.0",
-    "devtools-protocol": "0.0.1517051",
+    "devtools-protocol": "0.0.1521046",
     "express": "5.1.0",
     "fingerprint-generator": "2.1.73",
     "fingerprint-injector": "2.1.73",
     "lighthouse": "12.8.2",
     "lodash-es": "4.17.21",
-    "puppeteer": "24.22.0",
-    "puppeteer-core": "24.22.0",
+    "puppeteer": "24.22.3",
+    "puppeteer-core": "24.22.3",
     "puppeteer-extra": "3.3.6",
     "puppeteer-extra-plugin": "3.2.3",
     "puppeteer-extra-plugin-stealth": "2.11.2",
@@ -67,7 +67,7 @@
     "tree-kill": "1.2.2",
     "typescript": "5.9.2",
     "ws": "8.18.3",
-    "zod": "4.1.9"
+    "zod": "4.1.11"
   },
   "engines": {
     "node": ">=22.0.0",
