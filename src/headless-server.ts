@@ -85,7 +85,7 @@ export class HeadlessServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.raw({ type: 'application/javascript' }));
-    this.app.use(timeout('30s'));
+    this.app.use(timeout('60s'));
 
     // Routes
     this.apiInternalGroup = new Group(
