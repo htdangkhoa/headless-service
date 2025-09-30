@@ -25,6 +25,7 @@ import {
   JSONProtocolGetRoute,
   JSONVersionGetRoute,
   LiveIndexWsRoute,
+  ManagementKillGetRoute,
   PdfPostRoute,
   PerformancePostRoute,
   ScrapePostRoute,
@@ -69,6 +70,8 @@ export class HeadlessServer {
   private apiGroup: Group;
 
   private jsonGroup: Group;
+
+  private managementGroup: Group;
 
   private wsGroup: Group;
 
@@ -125,6 +128,13 @@ export class HeadlessServer {
       '/json'
     );
 
+    this.managementGroup = new Group(
+      [ManagementKillGetRoute],
+      this.app,
+      this.headlessServerContext,
+      '/management'
+    );
+
     this.wsGroup = new Group(
       [DevtoolsBrowserWsRoute, DevtoolsPageWsRoute, LiveIndexWsRoute, IndexWsRoute],
       this.server!,
@@ -155,6 +165,7 @@ export class HeadlessServer {
       this.apiInternalGroup,
       this.apiGroup,
       this.jsonGroup,
+      this.managementGroup,
       this.wsGroup,
     ]);
   }
