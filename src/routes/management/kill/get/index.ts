@@ -3,6 +3,7 @@ import { Handler } from 'express';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
+import { ResponseBodySchema } from '@/schemas';
 import { writeResponse } from '@/utils';
 
 export class ManagementKillGetRoute extends ProxyHttpRoute {
@@ -18,6 +19,14 @@ export class ManagementKillGetRoute extends ProxyHttpRoute {
       204: {
         description: 'Browser killed',
       },
+      404: {
+        description: 'Bad request',
+        content: {
+          'application/json': {
+            schema: ResponseBodySchema.omit({ data: true }),
+          },
+        },
+      },
     },
   };
   handler?: Handler = async (req, res) => {
@@ -28,8 +37,10 @@ export class ManagementKillGetRoute extends ProxyHttpRoute {
     const browser = browserManager.getBrowserById(browserId);
 
     if (!browser) {
+      const error = new Error(`Browser with id "${browserId}" not found`);
+
       return writeResponse(res, HttpStatus.NOT_FOUND, {
-        body: `Browser with id "${browserId}" not found`,
+        body: error,
       });
     }
 
