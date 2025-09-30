@@ -74,17 +74,21 @@ const PropertyTypeSchemaFinal = z.lazy(() =>
 
 type PropertyTypeFinal = z.infer<typeof PropertyTypeSchemaFinal>;
 
+const PayloadTypeSchema = z.array(PropertyTypeSchemaFinal);
+
+export type PayloadType = z.infer<typeof PayloadTypeSchema>;
+
 // Define Event schema
 export const EventSchema = z.object({
   name: z.string(),
-  parameters: z.array(PropertyTypeSchema).optional(),
+  parameters: PayloadTypeSchema.optional(),
   description: z.string().optional(),
 });
 
 export type Event = z.infer<typeof EventSchema>;
 
 export const CommandSchema = EventSchema.extend({
-  returns: z.array(PropertyTypeSchema).optional(),
+  returns: PayloadTypeSchema.optional(),
   async: z.boolean().optional(),
   redirect: z.string().optional(),
 });
