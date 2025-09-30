@@ -43,7 +43,7 @@ export const writeResponse = async (
     const { body, skipValidateBody } = options ?? {};
 
     if (isNil(body)) {
-      response.status(HttpStatus.NO_CONTENT).send('');
+      response.status(status).send('');
 
       return;
     }
