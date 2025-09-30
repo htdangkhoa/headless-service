@@ -11,7 +11,6 @@ import { HttpStatus } from '@/constants';
 import { OpenAPI } from '@/openapi';
 import { Group } from '@/router';
 import {
-  ActiveGetRoute,
   DevtoolsBrowserWsRoute,
   DevtoolsPageWsRoute,
   FunctionPostRoute,
@@ -25,6 +24,7 @@ import {
   JSONProtocolGetRoute,
   JSONVersionGetRoute,
   LiveIndexWsRoute,
+  ManagementActiveGetRoute,
   ManagementKillGetRoute,
   ManagementSessionsGetRoute,
   PdfPostRoute,
@@ -101,14 +101,7 @@ export class HeadlessServer {
     );
 
     this.apiGroup = new Group(
-      [
-        ActiveGetRoute,
-        FunctionPostRoute,
-        PerformancePostRoute,
-        ScreenshotPostRoute,
-        PdfPostRoute,
-        ScrapePostRoute,
-      ],
+      [FunctionPostRoute, PerformancePostRoute, ScreenshotPostRoute, PdfPostRoute, ScrapePostRoute],
       this.app,
       this.headlessServerContext,
       '/api'
@@ -130,7 +123,7 @@ export class HeadlessServer {
     );
 
     this.managementGroup = new Group(
-      [ManagementKillGetRoute, ManagementSessionsGetRoute],
+      [ManagementActiveGetRoute, ManagementKillGetRoute, ManagementSessionsGetRoute],
       this.app,
       this.headlessServerContext,
       '/management'
