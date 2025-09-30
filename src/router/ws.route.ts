@@ -76,7 +76,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
         client.on('message', (data: any) => {
           const message = Buffer.from(data).toString('utf-8');
 
-          this.logger.info(`Received message:`, message);
+          this.logger.debug(`Received message:`, message);
 
           return s.send(message);
         });
@@ -111,7 +111,7 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
     request: ProtocolRequest,
     browser: BrowserCDP
   ) {
-    this.logger.info('Received custom CDP command:', request);
+    this.logger.debug('Received custom CDP command:', request);
 
     const protocol = await browser.getJSONProtocol();
 

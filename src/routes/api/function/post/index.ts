@@ -168,7 +168,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
     };
 
     const onConsole = (message: ConsoleMessage) => {
-      this.logger.info(`${message.type()}: ${message.text()}`);
+      this.logger.trace(`${message.type()}: ${message.text()}`);
     };
 
     page.on('request', onRequest);

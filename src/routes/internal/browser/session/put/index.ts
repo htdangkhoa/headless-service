@@ -20,7 +20,6 @@ export class InternalBrowserSessionPutRoute extends ProxyHttpRoute {
   method = Method.PUT;
   internal = true;
   handler = (req: Request, res: Response) => {
-    this.logger.info('InternalBrowserSessionPutRoute');
     const paramsValidation = useTypedParsers(RequestSessionParamsSchema).safeParse(
       req.params as any
     );
