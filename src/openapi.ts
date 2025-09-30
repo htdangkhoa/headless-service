@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { OpenApiGeneratorV31, OpenAPIRegistry, RouteConfig } from '@asteasolutions/zod-to-openapi';
 
-import { OPENAPI_VERSION } from '@/constants';
+import { OPENAPI_BADGES, OPENAPI_VERSION } from '@/constants';
 import { Group, Method } from '@/router';
 
 import { getFullPath } from './utils';
@@ -56,6 +56,7 @@ export class OpenAPI {
                 },
               ]
             : [],
+          'x-badges': swagger['x-badges'] ?? [OPENAPI_BADGES.STABLE],
           ...swagger,
           method,
           path: fullPath,

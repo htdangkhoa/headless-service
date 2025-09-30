@@ -5,6 +5,7 @@ import treeKill from 'tree-kill';
 import { WebSocketServer } from 'ws';
 
 import { Logger } from '@/logger';
+import { IBrowserSession } from '@/schemas';
 import { makeExternalUrl } from '@/utils';
 
 import { BrowserCDP, BrowserCDPOptions } from './browser';
@@ -231,5 +232,27 @@ export class BrowserManager {
     }
 
     return foundBrowser;
+  }
+
+  getAllSessions() {
+    const cdpBrowsers = Array.from(this.browsers.values()).filter(Boolean);
+
+    const sessions: IBrowserSession[] = [];
+
+    for (const browser of cdpBrowsers) {
+      const browserId = browser.id();
+
+      const userDataDir = browser.userDataDir();
+
+      const externalAddress = makeExternalUrl('http', 'management', 'kill', browserId);
+
+      sessions.push({
+        browserId,
+        killUrl: externalAddress,
+        userDataDir,
+      });
+    }
+
+    return sessions;
   }
 }

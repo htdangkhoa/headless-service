@@ -17,3 +17,4 @@ export * from './ws/devtools/page';
 export * from './ws/live';
 export * from './ws';
 export * from './management/kill/get';
+export * from './management/sessions/get';

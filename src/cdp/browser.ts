@@ -1,5 +1,6 @@
 import EventEmitter from 'events';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import os from 'node:os';
 import { resolve } from 'node:path';
 import { FingerprintGeneratorOptions } from 'fingerprint-generator';
@@ -37,6 +38,8 @@ export interface BrowserCDPOptions {
 
 export class BrowserCDP extends EventEmitter {
   private readonly logger = new Logger(this.constructor.name);
+
+  private virtualProfileDir: string | null = resolve(os.tmpdir(), 'headless-service', randomUUID());
 
   private browser: Browser | null = null;
 
@@ -162,8 +165,6 @@ export class BrowserCDP extends EventEmitter {
 
     const launchArgs = Array.from(setOfArgs);
 
-    const virtualProfileDir = resolve(os.tmpdir(), 'headless-service', randomUUID());
-
     const opts: LaunchOptions = {
       ..._launchOptions,
       executablePath: puppeteer.executablePath(),
@@ -174,7 +175,7 @@ export class BrowserCDP extends EventEmitter {
       handleSIGHUP: false,
       waitForInitialPage: false,
       acceptInsecureCerts: true,
-      userDataDir: virtualProfileDir,
+      userDataDir: this.virtualProfileDir ?? undefined,
     };
 
     const vanillaBrowser = await puppeteer.launch(opts);
@@ -192,6 +193,10 @@ export class BrowserCDP extends EventEmitter {
     return getBrowserId(this.browser);
   }
 
+  userDataDir() {
+    return this.virtualProfileDir;
+  }
+
   close() {
     if (this.browser) {
       this.emit('close');
@@ -199,6 +204,10 @@ export class BrowserCDP extends EventEmitter {
       this.wsServer?.removeAllListeners();
       this.removeAllListeners();
       this.browser.close();
+      if (this.virtualProfileDir) {
+        fs.rmSync(this.virtualProfileDir, { recursive: true });
+      }
+      this.virtualProfileDir = null;
       this.browser = null;
       this.browserWSEndpoint = null;
       this.wsServer = null;

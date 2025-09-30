@@ -1,7 +1,7 @@
 import dedent from 'dedent';
 import { Handler } from 'express';
 
-import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { HttpStatus, OPENAPI_BADGES, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
 import { ResponseBodySchema } from '@/schemas';
 import { writeResponse } from '@/utils';
@@ -15,6 +15,7 @@ export class ManagementKillGetRoute extends ProxyHttpRoute {
     description: dedent`
       Returns a simple "204" HTTP code, with no response, killing the browser with the given id.
     `,
+    'x-badges': [OPENAPI_BADGES.BETA],
     responses: {
       204: {
         description: 'Browser killed',

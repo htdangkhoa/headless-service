@@ -26,6 +26,7 @@ import {
   JSONVersionGetRoute,
   LiveIndexWsRoute,
   ManagementKillGetRoute,
+  ManagementSessionsGetRoute,
   PdfPostRoute,
   PerformancePostRoute,
   ScrapePostRoute,
@@ -129,7 +130,7 @@ export class HeadlessServer {
     );
 
     this.managementGroup = new Group(
-      [ManagementKillGetRoute],
+      [ManagementKillGetRoute, ManagementSessionsGetRoute],
       this.app,
       this.headlessServerContext,
       '/management'
