@@ -7,7 +7,8 @@ export const OPENAPI_TAGS = {
 };
 
 export const OPENAPI_BADGES = {
-  ALPHA: { name: 'Alpha', position: 'before', color: '#ffcc00' },
-  BETA: { name: 'Beta', position: 'before', color: '#51e8ff' },
-  STABLE: { name: 'Stable', position: 'before', color: '#28a745' },
+  ALPHA: { name: 'Alpha', position: 'before', color: '#ffad6f' },
+  BETA: { name: 'Beta', position: 'before', color: '#b0f9ff' },
+  STABLE: { name: 'Stable', position: 'before', color: '#7d8397' },
+  DEPRECATED: { name: 'Deprecated', position: 'before', color: '#ff8b77' },
 };
