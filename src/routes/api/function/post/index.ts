@@ -8,7 +8,11 @@ import { z } from 'zod';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
-import { RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
+import {
+  RequestDefaultQuerySchema,
+  RequestDefaultQueryWithTokenSchema,
+  ResponseBodySchema,
+} from '@/schemas';
 import { FunctionRunner, ICodeRunner } from '@/shared/function-runner';
 import {
   makeExternalUrl,
@@ -98,7 +102,7 @@ export class FunctionPostRoute extends ProxyHttpRoute {
 
     const query = parseSearchParams(req.query);
 
-    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQueryWithTokenSchema).safeParse(query);
 
     if (queryValidation.error) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

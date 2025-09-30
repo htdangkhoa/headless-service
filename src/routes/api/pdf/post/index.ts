@@ -29,6 +29,7 @@ import {
   PuppeteerWaitForFunctionSchema,
   PuppeteerWaitForSelectorOptionsSchema,
   RequestDefaultQuerySchema,
+  RequestDefaultQueryWithTokenSchema,
 } from '@/schemas';
 import {
   parseSearchParams,
@@ -93,7 +94,7 @@ export class PdfPostRoute extends ProxyHttpRoute {
 
     const query = parseSearchParams(req.query);
 
-    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQueryWithTokenSchema).safeParse(query);
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {

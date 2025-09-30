@@ -3,7 +3,7 @@ import dedent from 'dedent';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { CodeSample, ProxyWebSocketRoute, WsHandler } from '@/router';
-import { WSDefaultQuerySchema } from '@/schemas';
+import { WSDefaultQuerySchema, WSDefaultQueryWithTokenSchema } from '@/schemas';
 import {
   getZodErrorMessages,
   makeExternalUrl,
@@ -189,7 +189,7 @@ export class IndexWsRoute extends ProxyWebSocketRoute {
 
     const query = parseSearchParams(url.search);
 
-    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(WSDefaultQueryWithTokenSchema).safeParse(query);
 
     if (queryValidation.error) {
       const errorDetails = getZodErrorMessages(queryValidation.error);

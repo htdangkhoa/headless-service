@@ -5,7 +5,11 @@ import { head as _head } from 'lodash-es';
 import { BrowserCDP } from '@/cdp';
 import { HEADLESS_PAGE_IDENTIFIER, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { ProxyWebSocketRoute, WsHandler } from '@/router';
-import { BooleanOrStringSchema, WSDefaultQuerySchema } from '@/schemas';
+import {
+  BooleanOrStringSchema,
+  WSDefaultQuerySchema,
+  WSDefaultQueryWithTokenSchema,
+} from '@/schemas';
 import type { Dictionary } from '@/types';
 import {
   getZodErrorMessages,
@@ -88,7 +92,7 @@ export class DevtoolsPageWsRoute extends ProxyWebSocketRoute {
 
     const openUrl = _head(Object.keys(invalidQuery));
 
-    const queryValidation = useTypedParsers(WSDefaultQuerySchema).safeParse(validQuery);
+    const queryValidation = useTypedParsers(WSDefaultQueryWithTokenSchema).safeParse(validQuery);
 
     if (queryValidation.error) {
       const errorDetails = getZodErrorMessages(queryValidation.error);

@@ -5,7 +5,12 @@ import { z } from 'zod';
 
 import { HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
-import { NumberOrStringSchema, RequestDefaultQuerySchema, ResponseBodySchema } from '@/schemas';
+import {
+  NumberOrStringSchema,
+  RequestDefaultQuerySchema,
+  RequestDefaultQueryWithTokenSchema,
+  ResponseBodySchema,
+} from '@/schemas';
 import { env, parseSearchParams, useTypedParsers, writeResponse } from '@/utils';
 
 import { Events, IChildProcessInput, IChildProcessOutput } from './child';
@@ -76,7 +81,7 @@ export class PerformancePostRoute extends ProxyHttpRoute {
 
     const query = parseSearchParams(req.query);
 
-    const queryValidation = useTypedParsers(RequestDefaultQuerySchema).safeParse(query);
+    const queryValidation = useTypedParsers(RequestDefaultQueryWithTokenSchema).safeParse(query);
 
     if (!queryValidation.success) {
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
