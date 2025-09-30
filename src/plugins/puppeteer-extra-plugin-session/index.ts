@@ -96,9 +96,18 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       return this.browser.emit(eventNameForResult, response);
     }
 
+    const { data: expiresAt } = await fetchResponse.json();
+
     const reconnectUrl = makeExternalUrl('ws', 'devtools', 'browser', browserId);
 
-    const response = Response.success(request.id!, { reconnectUrl }, request.sessionId);
+    const response = Response.success(
+      request.id!,
+      {
+        reconnectUrl,
+        expiresAt,
+      },
+      request.sessionId
+    );
     return this.browser.emit(eventNameForResult, response);
   }
 

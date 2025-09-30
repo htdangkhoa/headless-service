@@ -1,6 +1,6 @@
 import { COMMANDS, DOMAINS, EVENTS } from '@/constants';
 
-import { Command, Domain, DomainRegistry, DomainType, Event } from '../base';
+import { Command, Domain, DomainRegistry, DomainType, Event, PayloadType } from '../base';
 
 export class HeadlessServiceDomainRegistry extends DomainRegistry {
   constructor() {
@@ -72,22 +72,35 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
   }
 
   private createKeepAliveCommand() {
-    const keepAliveCommand: Command = {
-      name: COMMANDS.KEEP_ALIVE,
-      description: 'Keep alive',
-      parameters: [
-        {
-          name: 'ms',
-          type: 'number',
-          description: 'Milliseconds to keep alive',
-        },
-      ],
-      returns: [
+    const KeepAliveParametersType: PayloadType = [
+      {
+        name: 'ms',
+        type: 'number',
+        description: 'Milliseconds to keep alive',
+      },
+    ];
+
+    const KeepAlivePayloadType: DomainType = {
+      id: 'KeepAlivePayload',
+      description: 'Payload for keepAlive command',
+      type: 'object',
+      properties: [
         {
           name: 'reconnectUrl',
           type: 'string',
         },
+        {
+          name: 'expiresAt',
+          type: 'string',
+        },
       ],
+    };
+
+    const keepAliveCommand: Command = {
+      name: COMMANDS.KEEP_ALIVE,
+      description: 'Keep alive',
+      parameters: KeepAliveParametersType,
+      returns: this.buildReturns(KeepAlivePayloadType),
     };
 
     this.addCommand(keepAliveCommand);
