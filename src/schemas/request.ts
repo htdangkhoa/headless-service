@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { BooleanOrStringSchema, NumberOrStringSchema } from './common';
+import { BooleanOrStringSchema, CommaSeparatedStringSchema, NumberOrStringSchema } from './common';
 import { UnblockOptionsSchema } from './unblock';
 
 export const RequestTokenQuerySchema = z.object({
@@ -28,6 +28,7 @@ export const RequestDefaultQuerySchema = z
     unblock_options: UnblockOptionsSchema.describe(
       'The options for customizing the fingerprint'
     ).optional(),
+    extensions: CommaSeparatedStringSchema.describe('The names of the extensions').optional(),
     request_id: z.string().describe('The request ID').optional(),
   })
   .strict();

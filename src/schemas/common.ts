@@ -12,3 +12,7 @@ export const NumberOrStringSchema = z.number().or(
     })
     .transform((value) => Number(value))
 );
+
+export const CommaSeparatedStringSchema = z
+  .string()
+  .transform((value) => value.split(',').map((v) => v.trim()));

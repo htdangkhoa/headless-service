@@ -24,6 +24,7 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 | `DEBUG`                     | Enable the debug mode                                            |                    | `headless-service*,-**:verbose` |
 | `DOWNLOAD_RECORDER_DIR`     | The directory where the downloaded recordings will be stored     |                    | None (`os.tmpdir()`)            |
 | `INITIALIZE_GHOSTERY`       | Initialize Ghostery                                              |                    | `false`                         |
+| `EXTENSIONS_PATH`           | The path to the extensions directory                             |                    | None                            |
 
 ## Usage
 
