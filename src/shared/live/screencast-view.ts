@@ -1,4 +1,6 @@
 import { debounce } from 'lodash-es';
+import { X as XIcon } from 'lucide-static';
+import EarthIcon from 'lucide-static/icons/earth.svg';
 
 import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants/live';
 import type { Dictionary } from '@/types';
@@ -16,6 +18,7 @@ const MOUSE_EVENTS: Dictionary<string> = {
 };
 
 export class ScreencastView {
+  private $tabs: HTMLDivElement;
   private $navigation: HTMLDivElement;
   private $viewer: HTMLDivElement;
   private $canvas: HTMLCanvasElement;
@@ -27,6 +30,47 @@ export class ScreencastView {
 
   constructor(private container: HTMLElement) {
     this.container.classList.add('flex-auto', 'widget', 'vbox');
+
+    /* ===== Tabs ===== */
+    this.$tabs = document.createElement('div');
+    this.$tabs.classList.add('flex', 'screencast-tabs');
+
+    const tabItem1 = document.createElement('div');
+    tabItem1.classList.add('screencast-tab-item', 'active');
+
+    const tabItem1Icon = document.createElement('img');
+    tabItem1Icon.classList.add('favicon');
+    tabItem1Icon.src = EarthIcon;
+    tabItem1.appendChild(tabItem1Icon);
+
+    const tabItem1Text = document.createElement('span');
+    tabItem1Text.classList.add('title');
+    tabItem1Text.textContent = 'Tab 1';
+    tabItem1.appendChild(tabItem1Text);
+
+    const tabItem1CloseButton = document.createElement('div');
+    tabItem1CloseButton.classList.add('close-button');
+    tabItem1CloseButton.role = 'button';
+    tabItem1CloseButton.innerHTML = XIcon;
+    // tabItem1CloseButton.style.backgroundImage = `url(${XIcon})`;
+    // tabItem1CloseButton.style.backgroundColor = 'red';
+    // tabItem1CloseButton.style.backgroundBlendMode = 'multiply';
+    // tabItem1CloseButton.style.backgroundSize = 'contain';
+    // tabItem1CloseButton.style.backgroundPosition = 'center';
+    // tabItem1CloseButton.style.backgroundRepeat = 'no-repeat';
+    // tabItem1CloseButton.style.width = '16px';
+    // tabItem1CloseButton.style.height = '16px';
+    // tabItem1CloseButton.src = XIcon;
+    tabItem1.appendChild(tabItem1CloseButton);
+
+    this.$tabs.appendChild(tabItem1);
+
+    const tabItem2 = document.createElement('div');
+    tabItem2.classList.add('screencast-tab-item');
+    tabItem2.textContent = 'Tab 2';
+    this.$tabs.appendChild(tabItem2);
+
+    container.appendChild(this.$tabs);
 
     /* ===== Navigation ===== */
     this.$navigation = document.createElement('div');

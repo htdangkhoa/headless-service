@@ -138,7 +138,7 @@ export class BrowserCDP extends EventEmitter {
 
     const _launchOptions = Object.assign({}, launchOptions);
 
-    const extensionPaths: string[] = [];
+    const extensionPaths: string[] = [resolve(process.cwd(), 'extensions', 'tabs-management')];
 
     if (blockAds) {
       puppeteer.use(GhosteryPlugin());

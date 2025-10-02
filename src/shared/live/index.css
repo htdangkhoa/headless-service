@@ -134,6 +134,59 @@ main {
   display: none;
 }
 
+.screencast-tabs {
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.screencast-tab-item {
+  flex: 0 0 auto;
+  max-width: 12rem;
+  width: 100%;
+  /* height: 24px; */
+  /* background-color: rgb(92 92 92); */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+}
+.screencast-tab-item.active {
+  background-color: rgb(92 92 92);
+}
+.screencast-tab-item:not(.active):hover {
+  background-color: rgb(46, 46, 46);
+}
+
+.screencast-tab-item .favicon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.screencast-tab-item .title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screencast-tab-item .close-button {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  cursor: pointer;
+}
+.screencast-tab-item .close-button svg {
+  width: 16px;
+  height: 16px;
+  fill: #fff;
+  object-fit: contain;
+}
+.screencast-tab-item .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
 .screencast-navigation {
   border-bottom: 1px solid rgb(92 92 92);
 }

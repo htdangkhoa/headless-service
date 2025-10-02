@@ -1,6 +1,12 @@
-import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
-import type { Browser, CDPSession, Page, Target } from 'puppeteer';
+import {
+  TargetType,
+  type Browser,
+  type CDPSession,
+  type ConsoleMessage,
+  type Page,
+  type Target,
+} from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 
@@ -30,6 +36,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   private browser: Browser | null = null;
 
+  private consoleListeners: Map<string, (message: ConsoleMessage) => void> = new Map();
+
   private pageMap: Map<string, PageMappedData> = new Map();
 
   private readonly PROTOCOL_METHODS = {
@@ -57,6 +65,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   async onBrowser(browser: Browser, opts: any): Promise<void> {
     this.browser = browser;
 
+    const cdp = await browser.target().createCDPSession();
+    await cdp.send('Target.setDiscoverTargets', { discover: true });
+
+    // cdp.on('Target.targetInfoChanged', (event) => {
+    //   if (event.targetInfo.type === 'page') {
+    //     console.log('Tab changed:', event.targetInfo);
+    //   }
+    // });
+
     const browserId = getBrowserId(browser);
 
     const { eventNameForListener } = buildProtocolEventNames(
@@ -65,32 +82,151 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     );
 
     browser.on(eventNameForListener, this.onHeadlessServiceLiveURL.bind(this));
+
+    const targets = browser.targets();
+    const extTarget = targets.find((t) => {
+      return t.type() === 'background_page' && t.url().startsWith('chrome-extension://');
+    });
+    console.log('🚀 ~ PuppeteerExtraPluginLiveUrl ~ onBrowser ~ extTarget:', extTarget);
   }
 
   async onDisconnected(): Promise<void> {
     this.browser = null;
-    Array.from(this.pageMap.values()).forEach(({ cdp }) => {
-      cdp.removeAllListeners();
-    });
 
+    const pageMapValues = Array.from(this.pageMap.values());
+
+    for (const { page, cdp } of pageMapValues) {
+      const { targetInfo } = await cdp.send('Target.getTargetInfo');
+
+      const consoleListener = this.consoleListeners.get(targetInfo.targetId);
+      if (consoleListener) {
+        page.off('console', consoleListener);
+      }
+
+      cdp.removeAllListeners();
+    }
+
+    this.consoleListeners.clear();
     this.pageMap.clear();
   }
 
-  onTargetDestroyed(target: Target): Promise<void> {
-    // @ts-ignore
-    const targetId = target._targetId;
+  async onTargetCreated(target: Target): Promise<void> {
+    console.log('onTargetCreated', target.type(), target.url());
 
-    return Promise.resolve(this.handleTargetDestroyed.call(this, targetId));
+    // extension
+    if (target.type() === TargetType.SERVICE_WORKER) {
+      const cdp = await target.createCDPSession();
+
+      await cdp.send('Runtime.enable');
+
+      cdp.on('Runtime.consoleAPICalled', async (event) => {
+        const args = await Promise.all(
+          (event.args || []).map(async (arg) => {
+            try {
+              const res = await cdp
+                .send('Runtime.getProperties', { objectId: arg.objectId! })
+                .catch(() => null);
+              return arg.value ?? (res ? JSON.stringify(res) : '<complex>');
+            } catch (e) {
+              return '<cannot-serialize>';
+            }
+          })
+        );
+        console.log('[EXT-SW-CONSOLE]', event.type, args);
+      });
+
+      // uncaught exceptions in worker
+      cdp.on('Runtime.exceptionThrown', (ex) => {
+        console.error('[EXT-SW-EX]', ex.exceptionDetails?.text || ex);
+      });
+    }
+
+    // if (target.type() === TargetType.PAGE) {
+    //   const cdp = await target.createCDPSession();
+
+    //   const { targetInfo } = await cdp.send('Target.getTargetInfo');
+
+    //   const page = await target.asPage();
+
+    //   const consoleListener = (message: ConsoleMessage) => {
+    //     console.log('Console log:', `${message.type()}: ${message.text()}`);
+    //   };
+
+    //   this.consoleListeners.set(targetInfo.targetId, consoleListener);
+
+    //   page.on('console', consoleListener);
+
+    //   return Promise.resolve();
+    // }
+
+    return Promise.resolve();
+  }
+
+  async onTargetChanged(target: Target): Promise<void> {
+    // console.log('onTargetChanged', target.type(), target.url());
+
+    if (target.type() === TargetType.PAGE) {
+      const cdp = await target.createCDPSession();
+
+      const { targetInfo } = await cdp.send('Target.getTargetInfo');
+
+      const page = await target.asPage();
+
+      console.log('url:', target.url());
+
+      await page.evaluateOnNewDocument((pageId: string) => {
+        console.log('🚀 ~ PuppeteerExtraPluginLiveUrl ~ onTargetChanged ~ pageId:', pageId);
+        window.addEventListener('load', () => {
+          let pageIdEle = document.getElementById('page-id');
+          if (!pageIdEle) {
+            pageIdEle = document.createElement('meta');
+            pageIdEle.id = 'page-id';
+            pageIdEle.setAttribute('property', 'page-id');
+            document.head.appendChild(pageIdEle);
+          }
+
+          pageIdEle.setAttribute('content', pageId);
+        });
+      }, targetInfo.targetId);
+
+      return Promise.resolve();
+    }
+
+    return Promise.resolve();
+  }
+
+  async onTargetDestroyed(target: Target): Promise<void> {
+    // // @ts-ignore
+    // const targetId = target._targetId;
+
+    const cdp = await target.createCDPSession();
+
+    const { targetInfo } = await cdp.send('Target.getTargetInfo');
+
+    const consoleListener = this.consoleListeners.get(targetInfo.targetId);
+    if (consoleListener) {
+      this.consoleListeners.delete(targetInfo.targetId);
+    }
+
+    if (target.type() === TargetType.PAGE) {
+      const page = await target.asPage();
+      page.off('console', consoleListener);
+      const browser = page.browser();
+      const browserId = getBrowserId(browser);
+      return Promise.resolve(this.handleTargetDestroyed.call(this, browserId));
+    }
+
+    return Promise.resolve();
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
     const { searchParams } = parseUrlFromIncomingMessage(req);
 
-    const liveSessionId = searchParams.get('session');
+    const browserId = searchParams.get('session');
 
-    if (!liveSessionId) return;
+    if (!browserId) return;
 
-    const pageMapped = this.pageMap.get(liveSessionId);
+    const pageMapped = this.pageMap.get(browserId);
 
     if (!pageMapped) return;
 
@@ -159,7 +295,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           await client.send(payload.command);
 
-          this.handleTargetDestroyed(liveSessionId, 'Screencast stopped');
+          this.handleTargetDestroyed(browserId, 'Screencast stopped');
 
           break;
         }
@@ -214,9 +350,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         targetInfo: { targetId },
       } = await client.send('Target.getTargetInfo');
 
-      const liveSessionId = randomUUID();
+      const browserId = getBrowserId(this.browser);
 
-      this.pageMap.set(liveSessionId, {
+      this.pageMap.set(browserId, {
         page: currentPage,
         cdp: client,
         protocolInfo: {
@@ -227,7 +363,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       });
 
       const liveUrl = new URL(makeExternalUrl('http', `/live`));
-      liveUrl.searchParams.set('session', liveSessionId);
+      liveUrl.searchParams.set('session', browserId);
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
@@ -248,16 +384,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private handleTargetDestroyed(liveSessionId: string, reason?: string) {
+  private handleTargetDestroyed(browserId: string, reason?: string) {
     if (!this.browser) return;
 
-    const pageMapped = this.pageMap.get(liveSessionId);
+    const pageMapped = this.pageMap.get(browserId);
 
     if (!pageMapped) return;
 
     const { protocolInfo, targetId } = pageMapped;
-
-    const browserId = getBrowserId(this.browser);
 
     const payload = {
       // id: protocolInfo.id,

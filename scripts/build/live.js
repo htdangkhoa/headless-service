@@ -45,7 +45,7 @@ async function main() {
       '.jpg': 'copy',
       '.jpeg': 'copy',
       '.gif': 'copy',
-      '.svg': 'copy',
+      '.svg': 'file',
       '.webp': 'copy',
       '.ico': 'copy',
     },
