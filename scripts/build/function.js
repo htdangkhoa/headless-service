@@ -2,6 +2,7 @@ import fs from 'fs';
 import { join } from 'path';
 import { build } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';
+import { rimrafSync } from 'rimraf';
 
 const html = (contents) => `
 <!DOCTYPE html>
@@ -44,7 +45,7 @@ async function main() {
   const finalHtml = html(contents);
 
   fs.writeFileSync(htmlLocation, finalHtml);
-  fs.rmSync(outfile);
+  rimrafSync(outfile);
 }
 
 main().catch((e) => {

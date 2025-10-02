@@ -2,12 +2,14 @@ import EventEmitter from 'events';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { FingerprintGeneratorOptions } from 'fingerprint-generator';
+import * as glob from 'glob';
 import proxyChain from 'proxy-chain';
 import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { rimraf } from 'rimraf';
 import { WebSocketServer } from 'ws';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
@@ -19,6 +21,7 @@ import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
 import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import { UnblockOptions } from '@/schemas';
+import { env, isDirectory } from '@/utils';
 import { getBrowserId } from '@/utils/puppeteer';
 
 import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
@@ -34,6 +37,7 @@ export interface BrowserCDPOptions {
   unblock_options?: UnblockOptions;
   token?: string;
   request_id?: string;
+  extensions?: string[];
 }
 
 export class BrowserCDP extends EventEmitter {
@@ -89,6 +93,7 @@ export class BrowserCDP extends EventEmitter {
       proxy,
       launch: launchOptions,
       request_id: requestId,
+      extensions,
     } = this.options ?? {};
 
     if (this.wsServer instanceof WebSocketServer) {
@@ -138,7 +143,33 @@ export class BrowserCDP extends EventEmitter {
 
     const _launchOptions = Object.assign({}, launchOptions);
 
-    const extensionPaths: string[] = [resolve(process.cwd(), 'extensions', 'tabs-management')];
+    const builtInExtensionPaths: string[] = [
+      resolve(process.cwd(), 'extensions', 'tabs-management'),
+    ];
+
+    const EXTENSIONS_PATH = env('EXTENSIONS_PATH', '');
+
+    if (EXTENSIONS_PATH) {
+      if (isDirectory(EXTENSIONS_PATH)) {
+        const extensionPaths = glob.sync(join(EXTENSIONS_PATH, '*'));
+
+        if (Array.isArray(extensions) && extensions.length) {
+          const invalidExtensions = extensions.filter(
+            (extension) => !extensionPaths.some((path) => path.endsWith(extension))
+          );
+
+          if (invalidExtensions.length) {
+            this.logger.warn(`Invalid extensions: ${invalidExtensions.join(', ')}`);
+          }
+
+          const validExtensions = extensionPaths.filter((path) =>
+            extensions.some((extension) => path.endsWith(extension))
+          );
+
+          builtInExtensionPaths.push(...validExtensions);
+        }
+      }
+    }
 
     if (blockAds) {
       puppeteer.use(GhosteryPlugin());
@@ -151,16 +182,16 @@ export class BrowserCDP extends EventEmitter {
       _launchOptions.headless = false;
 
       const recordPath = resolve(process.cwd(), 'extensions', 'recorder');
-      extensionPaths.push(recordPath);
+      builtInExtensionPaths.push(recordPath);
     }
 
-    if (extensionPaths.length) {
+    if (builtInExtensionPaths.length) {
       if (_launchOptions.headless === 'shell') {
         _launchOptions.headless = false;
       }
 
-      setOfArgs.add(`--disable-extensions-except=${extensionPaths.join(',')}`);
-      setOfArgs.add(`--load-extension=${extensionPaths.join(',')}`);
+      setOfArgs.add(`--disable-extensions-except=${builtInExtensionPaths.join(',')}`);
+      setOfArgs.add(`--load-extension=${builtInExtensionPaths.join(',')}`);
     }
 
     const launchArgs = Array.from(setOfArgs);
@@ -205,9 +236,10 @@ export class BrowserCDP extends EventEmitter {
       this.removeAllListeners();
       this.browser.close();
       if (this.virtualProfileDir) {
-        fs.rmSync(this.virtualProfileDir, { recursive: true });
+        rimraf(this.virtualProfileDir).finally(() => {
+          this.virtualProfileDir = null;
+        });
       }
-      this.virtualProfileDir = null;
       this.browser = null;
       this.browserWSEndpoint = null;
       this.wsServer = null;
