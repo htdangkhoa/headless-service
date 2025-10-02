@@ -1,7 +1,8 @@
-import { createWriteStream, existsSync, ReadStream, renameSync, rmSync } from 'node:fs';
+import { createWriteStream, existsSync, ReadStream, renameSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
 import extractZip from 'extract-zip';
+import { rimrafSync } from 'rimraf';
 
 import { downloadFile } from './utils/download.js';
 
@@ -22,7 +23,7 @@ const devtoolsDownloadUrl =
 
 async function main() {
   if (existsSync(devtoolsPath)) {
-    rmSync(devtoolsPath, { recursive: true, force: true });
+    rimrafSync(devtoolsPath);
   }
 
   await downloadFile(devtoolsDownloadUrl, zipFileName);
@@ -32,8 +33,8 @@ async function main() {
   const deepPath = `${extractedDir}/resources/inspector`;
   renameSync(deepPath, devtoolsPath);
 
-  rmSync(zipFileName, { recursive: true, force: true });
-  rmSync(extractedDir, { recursive: true, force: true });
+  rimrafSync(zipFileName);
+  rimrafSync(extractedDir);
 }
 
 main().catch((e) => {

@@ -9,6 +9,7 @@ import proxyChain from 'proxy-chain';
 import vanillaPuppeteer, { type Browser, type LaunchOptions } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { rimraf } from 'rimraf';
 import { WebSocketServer } from 'ws';
 
 import { DEFAULT_LAUNCH_ARGS } from '@/constants';
@@ -233,9 +234,10 @@ export class BrowserCDP extends EventEmitter {
       this.removeAllListeners();
       this.browser.close();
       if (this.virtualProfileDir) {
-        fs.rmSync(this.virtualProfileDir, { recursive: true });
+        rimraf(this.virtualProfileDir).finally(() => {
+          this.virtualProfileDir = null;
+        });
       }
-      this.virtualProfileDir = null;
       this.browser = null;
       this.browserWSEndpoint = null;
       this.wsServer = null;
