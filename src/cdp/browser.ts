@@ -143,9 +143,7 @@ export class BrowserCDP extends EventEmitter {
 
     const _launchOptions = Object.assign({}, launchOptions);
 
-    const builtInExtensionPaths: string[] = [
-      resolve(process.cwd(), 'extensions', 'tabs-management'),
-    ];
+    const builtInExtensionPaths: string[] = [];
 
     const EXTENSIONS_PATH = env('EXTENSIONS_PATH', '');
 
@@ -313,7 +311,6 @@ export class BrowserCDP extends EventEmitter {
 
     const pages = await this.browser.pages();
 
-    // @ts-expect-error
     const page = pages.find((p) => p.target()._targetId === pageId);
 
     return page;

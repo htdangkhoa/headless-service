@@ -175,7 +175,6 @@ main {
   width: 16px;
   height: 16px;
   object-fit: contain;
-  cursor: pointer;
 }
 .screencast-tab-item .close-button svg {
   width: 16px;

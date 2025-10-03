@@ -1,9 +1,10 @@
 import type { IncomingMessage } from 'node:http';
+import dayjs from 'dayjs';
 import {
+  Frame,
   TargetType,
   type Browser,
   type CDPSession,
-  type ConsoleMessage,
   type Page,
   type Target,
 } from 'puppeteer';
@@ -11,24 +12,35 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
-import { COMMANDS, DOMAINS, EVENTS, LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants';
+import {
+  COMMANDS,
+  CUSTOM_COMMANDS,
+  DEFAULT_KEEP_ALIVE_TIMEOUT,
+  DOMAINS,
+  EVENTS,
+  LIVE_COMMANDS,
+  LIVE_EVENT_NAMES,
+  SPECIAL_COMMANDS,
+} from '@/constants';
 import { Logger } from '@/logger';
 import {
   buildProtocolEventNames,
   buildProtocolMethod,
   getBrowserId,
   makeExternalUrl,
-  parseUrlFromIncomingMessage,
 } from '@/utils';
 
-interface PageMappedData {
+import { ClientManagement } from './client-management';
+
+interface PageData {
   page: Page;
   cdp: CDPSession;
-  protocolInfo: {
-    id: number;
-    sessionId?: string;
-  };
   targetId: string;
+}
+
+interface LiveContext {
+  sessionId: string;
+  connectionId: string;
 }
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
@@ -36,14 +48,19 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   private browser: Browser | null = null;
 
-  private consoleListeners: Map<string, (message: ConsoleMessage) => void> = new Map();
+  private pages: Map<string, PageData> = new Map();
 
-  private pageMap: Map<string, PageMappedData> = new Map();
+  private commandSessionIds: Set<string> = new Set();
 
   private readonly PROTOCOL_METHODS = {
     LIVE_URL: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.LIVE_URL),
     LIVE_COMPLETE: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, EVENTS.LIVE_COMPLETE),
   };
+
+  private clientManagement: ClientManagement = new ClientManagement();
+
+  private expiresAt: Date | null = null;
+  private timer: NodeJS.Timeout | null = null;
 
   constructor(
     private ws: WebSocketServer,
@@ -55,6 +72,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.logger.info('connected from plugins', this.requestId);
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
+
+      // socket.on('close', () => {
+      //   this.clientManagement.removeClient(socket);
+      // });
     });
   }
 
@@ -65,15 +86,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   async onBrowser(browser: Browser, opts: any): Promise<void> {
     this.browser = browser;
 
-    const cdp = await browser.target().createCDPSession();
-    await cdp.send('Target.setDiscoverTargets', { discover: true });
-
-    // cdp.on('Target.targetInfoChanged', (event) => {
-    //   if (event.targetInfo.type === 'page') {
-    //     console.log('Tab changed:', event.targetInfo);
-    //   }
-    // });
-
     const browserId = getBrowserId(browser);
 
     const { eventNameForListener } = buildProtocolEventNames(
@@ -82,162 +94,232 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     );
 
     browser.on(eventNameForListener, this.onHeadlessServiceLiveURL.bind(this));
-
-    const targets = browser.targets();
-    const extTarget = targets.find((t) => {
-      return t.type() === 'background_page' && t.url().startsWith('chrome-extension://');
-    });
-    console.log('🚀 ~ PuppeteerExtraPluginLiveUrl ~ onBrowser ~ extTarget:', extTarget);
   }
 
   async onDisconnected(): Promise<void> {
     this.browser = null;
 
-    const pageMapValues = Array.from(this.pageMap.values());
-
-    for (const { page, cdp } of pageMapValues) {
-      const { targetInfo } = await cdp.send('Target.getTargetInfo');
-
-      const consoleListener = this.consoleListeners.get(targetInfo.targetId);
-      if (consoleListener) {
-        page.off('console', consoleListener);
-      }
-
+    Array.from(this.pages.values()).forEach(({ cdp, page }) => {
       cdp.removeAllListeners();
-    }
+      page.removeAllListeners();
+    });
 
-    this.consoleListeners.clear();
-    this.pageMap.clear();
+    this.pages.clear();
   }
 
   async onTargetCreated(target: Target): Promise<void> {
-    console.log('onTargetCreated', target.type(), target.url());
-
-    // extension
-    if (target.type() === TargetType.SERVICE_WORKER) {
-      const cdp = await target.createCDPSession();
-
-      await cdp.send('Runtime.enable');
-
-      cdp.on('Runtime.consoleAPICalled', async (event) => {
-        const args = await Promise.all(
-          (event.args || []).map(async (arg) => {
-            try {
-              const res = await cdp
-                .send('Runtime.getProperties', { objectId: arg.objectId! })
-                .catch(() => null);
-              return arg.value ?? (res ? JSON.stringify(res) : '<complex>');
-            } catch (e) {
-              return '<cannot-serialize>';
-            }
-          })
-        );
-        console.log('[EXT-SW-CONSOLE]', event.type, args);
-      });
-
-      // uncaught exceptions in worker
-      cdp.on('Runtime.exceptionThrown', (ex) => {
-        console.error('[EXT-SW-EX]', ex.exceptionDetails?.text || ex);
-      });
-    }
-
-    // if (target.type() === TargetType.PAGE) {
-    //   const cdp = await target.createCDPSession();
-
-    //   const { targetInfo } = await cdp.send('Target.getTargetInfo');
-
-    //   const page = await target.asPage();
-
-    //   const consoleListener = (message: ConsoleMessage) => {
-    //     console.log('Console log:', `${message.type()}: ${message.text()}`);
-    //   };
-
-    //   this.consoleListeners.set(targetInfo.targetId, consoleListener);
-
-    //   page.on('console', consoleListener);
-
-    //   return Promise.resolve();
-    // }
-
-    return Promise.resolve();
-  }
-
-  async onTargetChanged(target: Target): Promise<void> {
-    // console.log('onTargetChanged', target.type(), target.url());
+    const targetId = target._targetId;
 
     if (target.type() === TargetType.PAGE) {
-      const cdp = await target.createCDPSession();
-
-      const { targetInfo } = await cdp.send('Target.getTargetInfo');
-
       const page = await target.asPage();
 
-      console.log('url:', target.url());
+      const browser = page.browser();
 
-      await page.evaluateOnNewDocument((pageId: string) => {
-        console.log('🚀 ~ PuppeteerExtraPluginLiveUrl ~ onTargetChanged ~ pageId:', pageId);
-        window.addEventListener('load', () => {
-          let pageIdEle = document.getElementById('page-id');
-          if (!pageIdEle) {
-            pageIdEle = document.createElement('meta');
-            pageIdEle.id = 'page-id';
-            pageIdEle.setAttribute('property', 'page-id');
-            document.head.appendChild(pageIdEle);
-          }
+      const browserId = getBrowserId(browser);
 
-          pageIdEle.setAttribute('content', pageId);
+      const cdp = await page.createCDPSession();
+
+      this.pages.set(targetId, {
+        page,
+        cdp,
+        targetId: targetId,
+      });
+
+      const self = this;
+      const clients = this.clientManagement.getClients();
+      clients.forEach((socket) => {
+        const context = {
+          sessionId: browserId,
+          connectionId: socket.id,
+        };
+        self.renderTabs.call(self, socket, context);
+        self.startScreencast.call(self, socket, context);
+      });
+
+      page.on('framenavigated', this.onFrameNavigated.bind(this));
+
+      cdp.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
+        const clients = this.clientManagement.getClients();
+        clients.forEach((socket) => {
+          const context = {
+            sessionId: browserId,
+            connectionId: socket.id,
+          };
+          socket.send(JSON.stringify({ command: LIVE_COMMANDS.SCREENCAST_FRAME, data, context }));
         });
-      }, targetInfo.targetId);
-
-      return Promise.resolve();
+      });
     }
 
     return Promise.resolve();
   }
 
   async onTargetDestroyed(target: Target): Promise<void> {
-    // // @ts-ignore
-    // const targetId = target._targetId;
+    const targetId = target._targetId;
 
-    const cdp = await target.createCDPSession();
+    const pageData = this.pages.get(targetId);
+    if (!pageData) return;
 
-    const { targetInfo } = await cdp.send('Target.getTargetInfo');
+    this.pages.delete(targetId);
 
-    const consoleListener = this.consoleListeners.get(targetInfo.targetId);
-    if (consoleListener) {
-      this.consoleListeners.delete(targetInfo.targetId);
-    }
+    return Promise.resolve(this.handleTargetDestroyed.call(this, target));
+  }
 
-    if (target.type() === TargetType.PAGE) {
-      const page = await target.asPage();
-      page.off('console', consoleListener);
+  private async onFrameNavigated(frame: Frame) {
+    if (!frame.parentFrame()) {
+      const page = frame.page();
+      const cdp = await page.createCDPSession();
+      const { targetInfo } = await cdp.send('Target.getTargetInfo');
+
+      const foundPage = this.pages.get(targetInfo.targetId);
+
+      if (!foundPage) return;
+
+      const { page: targetPage } = foundPage;
+
+      const url = targetPage.url();
+      const title = await targetPage.title();
+
       const browser = page.browser();
       const browserId = getBrowserId(browser);
-      return Promise.resolve(this.handleTargetDestroyed.call(this, browserId));
-    }
 
-    return Promise.resolve();
+      const favicon = await page.evaluate(() => {
+        const icon =
+          document.querySelector<HTMLLinkElement>("link[rel='icon']") ||
+          document.querySelector<HTMLLinkElement>("link[rel='shortcut icon']") ||
+          document.querySelector<HTMLLinkElement>("link[rel*='apple-touch-icon']");
+        return icon ? icon.href : null;
+      });
+
+      const clients = this.clientManagement.getClients();
+      clients.forEach((socket) => {
+        const context = {
+          sessionId: browserId,
+          connectionId: socket.id,
+        };
+
+        socket.send(
+          JSON.stringify({
+            command: LIVE_EVENT_NAMES.FRAME_NAVIGATED,
+            data: {
+              targetId: targetInfo.targetId,
+              url,
+              title,
+              favicon,
+            },
+            context,
+          })
+        );
+      });
+    }
+  }
+
+  private async renderTabs(socket: WebSocket, context: any) {
+    if (!this.browser) return;
+
+    const currentPage = await this.browser.currentPage();
+    const currentPageCDP = await currentPage.createCDPSession();
+    const { targetInfo } = await currentPageCDP.send('Target.getTargetInfo');
+
+    const pagesEntries = Object.fromEntries(this.pages);
+
+    // TODO: Add more properties to the tab object
+    const tabs = Object.values(pagesEntries).map(({ page, targetId }) => ({
+      targetId,
+      active: targetId === targetInfo.targetId,
+      url: page.url(),
+    }));
+
+    socket.send(
+      JSON.stringify({
+        command: CUSTOM_COMMANDS.RENDER_TABS,
+        data: tabs,
+        context,
+      })
+    );
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
-    const { searchParams } = parseUrlFromIncomingMessage(req);
+    if (!this.browser) return;
 
-    const browserId = searchParams.get('session');
+    const browserId = getBrowserId(this.browser);
 
-    if (!browserId) return;
+    const activePage = await this.browser.currentPage();
+    const activePageCDP = await activePage.createCDPSession();
+    const { targetInfo } = await activePageCDP.send('Target.getTargetInfo');
 
-    const pageMapped = this.pageMap.get(browserId);
+    const foundPage = this.pages.get(targetInfo.targetId);
 
-    if (!pageMapped) return;
+    if (!foundPage) return;
 
-    const { page, cdp: client } = pageMapped;
+    const { page, cdp: client } = foundPage;
 
     const buffer = Buffer.from(rawMessage as Buffer);
     const message = Buffer.from(buffer).toString('utf8');
-    const payload = JSON.parse(message);
+    const rawPayload = JSON.parse(message);
+    const { context, ...payload } = rawPayload;
+
+    if (context.sessionId !== browserId) return;
 
     try {
       switch (payload.command) {
+        case CUSTOM_COMMANDS.REGISTER_SCREENCAST: {
+          // TODO: error handling
+          // if (!payload.params.id)
+          const existingClient = this.clientManagement.getClient(payload.params.connectionId);
+          if (existingClient) {
+            this.clientManagement.removeClient(existingClient);
+            existingClient.close();
+          }
+
+          socket.id = payload.params.connectionId;
+          this.clientManagement.addClient(socket);
+
+          this.renderTabs(socket, context);
+
+          this.startScreencast(socket, context);
+
+          break;
+        }
+        case CUSTOM_COMMANDS.GO_TO_TAB: {
+          const foundPage = this.pages.get(payload.params.targetId);
+
+          if (!foundPage) return;
+
+          const { page: targetPage } = foundPage;
+
+          await targetPage.bringToFront();
+
+          this.renderTabs(socket, context);
+
+          this.startScreencast(socket, context);
+
+          break;
+        }
+        case CUSTOM_COMMANDS.CLOSE_TAB: {
+          const foundPage = this.pages.get(payload.params.targetId);
+
+          if (!foundPage) return;
+
+          await foundPage.page.close();
+
+          this.pages.delete(foundPage.targetId);
+
+          this.renderTabs(socket, context);
+
+          break;
+        }
+        case CUSTOM_COMMANDS.KEEP_ALIVE: {
+          const timeout = payload.params.ms || DEFAULT_KEEP_ALIVE_TIMEOUT;
+          this.expiresAt = dayjs().add(timeout).toDate();
+          if (this.timer) {
+            clearTimeout(this.timer);
+          }
+          this.timer = setTimeout(() => {
+            this.stopScreencast();
+          }, timeout);
+
+          break;
+        }
         case SPECIAL_COMMANDS.SET_VIEWPORT: {
           await page.setViewport(payload.params);
 
@@ -258,35 +340,26 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           break;
         }
-        case SPECIAL_COMMANDS.GET_URL: {
-          const sendUrl = () => {
-            const url = page.url();
-
-            socket.send(
-              JSON.stringify({
-                command: SPECIAL_COMMANDS.GET_URL,
-                data: url,
-              })
-            );
-          };
-
-          sendUrl();
-
-          page.on('framenavigated', sendUrl);
-
-          break;
-        }
         case LIVE_COMMANDS.START_SCREENCAST: {
-          await client.send(payload.command, payload.params);
+          const { targetId, ...params } = payload.params;
 
-          client.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
-            socket.send(
-              JSON.stringify({
-                command: LIVE_COMMANDS.SCREENCAST_FRAME,
-                data,
-              })
-            );
-          });
+          const pageData = this.pages.get(targetId);
+
+          if (!pageData) return;
+
+          const { cdp } = pageData;
+
+          await cdp.send(LIVE_COMMANDS.START_SCREENCAST, params);
+
+          // cdp.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
+          //   socket.send(
+          //     JSON.stringify({
+          //       command: LIVE_COMMANDS.SCREENCAST_FRAME,
+          //       data,
+          //       context,
+          //     })
+          //   );
+          // });
 
           break;
         }
@@ -295,7 +368,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           await client.send(payload.command);
 
-          this.handleTargetDestroyed(browserId, 'Screencast stopped');
+          this.stopScreencast('Screencast stopped');
 
           break;
         }
@@ -342,31 +415,18 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     );
 
     try {
-      const currentPage = await this.browser.currentPage();
+      this.commandSessionIds.add(payload.sessionId);
 
-      const client = await currentPage.createCDPSession();
-
-      const {
-        targetInfo: { targetId },
-      } = await client.send('Target.getTargetInfo');
-
-      const browserId = getBrowserId(this.browser);
-
-      this.pageMap.set(browserId, {
-        page: currentPage,
-        cdp: client,
-        protocolInfo: {
-          id: payload.id,
-          sessionId: payload.sessionId,
-        },
-        targetId,
-      });
-
-      const liveUrl = new URL(makeExternalUrl('http', `/live`));
+      const liveUrl = new URL(makeExternalUrl('http', `live`));
       liveUrl.searchParams.set('session', browserId);
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
+
+      this.expiresAt = dayjs().add(DEFAULT_KEEP_ALIVE_TIMEOUT).toDate();
+      this.timer = setTimeout(() => {
+        this.stopScreencast();
+      }, DEFAULT_KEEP_ALIVE_TIMEOUT);
 
       response = Response.success(
         request.id!,
@@ -384,30 +444,93 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private handleTargetDestroyed(browserId: string, reason?: string) {
+  private async handleTargetDestroyed(target: Target, reason?: string) {
+    const targetId = target._targetId;
+
+    const pageData = this.pages.get(targetId);
+    if (!pageData) return;
+
+    const { cdp } = pageData;
+
+    cdp.removeAllListeners();
+
+    this.pages.delete(targetId);
+  }
+
+  private async startScreencast(socket: WebSocket, context: any) {
     if (!this.browser) return;
 
-    const pageMapped = this.pageMap.get(browserId);
+    const pagesEntries = Object.fromEntries(this.pages);
+    await Promise.allSettled(
+      Object.values(pagesEntries).map(({ cdp }) => {
+        return cdp.send(LIVE_COMMANDS.STOP_SCREENCAST);
+      })
+    );
 
-    if (!pageMapped) return;
+    const activePage = await this.browser.currentPage();
 
-    const { protocolInfo, targetId } = pageMapped;
+    const cdp = await activePage.createCDPSession();
+    const { targetInfo } = await cdp.send('Target.getTargetInfo');
+    const targetId = targetInfo.targetId;
 
-    const payload = {
-      // id: protocolInfo.id,
-      sessionId: protocolInfo.sessionId,
-      method: this.PROTOCOL_METHODS.LIVE_COMPLETE,
-      params: {
-        reason: reason ?? `Target ${targetId} destroyed`,
-      },
-    };
+    // await cdp.send(LIVE_COMMANDS.START_SCREENCAST, {
+    //   format: 'jpeg',
+    //   quality: 100,
+    //   everyNthFrame: 1,
+    // });
+
+    socket.emit(
+      'message',
+      JSON.stringify({
+        command: LIVE_COMMANDS.START_SCREENCAST,
+        params: {
+          targetId,
+          format: 'jpeg',
+          quality: 100,
+          everyNthFrame: 1,
+        },
+        context,
+      })
+    );
+  }
+
+  private async stopScreencast(reason?: string) {
+    if (!this.browser) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    const now = dayjs();
+    const expiresAt = dayjs(this.expiresAt);
+    if (!expiresAt.isBefore(now)) {
+      const diff = expiresAt.diff(now);
+      this.timer = setTimeout(() => {
+        this.stopScreencast();
+      }, diff);
+      return;
+    }
 
     const { eventNameForResult } = buildProtocolEventNames(
       browserId,
       this.PROTOCOL_METHODS.LIVE_URL
     );
 
-    this.browser.emit(eventNameForResult, payload);
+    const self = this;
+    this.commandSessionIds.forEach((sessionId) => {
+      const payload = {
+        sessionId,
+        method: this.PROTOCOL_METHODS.LIVE_COMPLETE,
+        params: { reason: reason ?? `Target ${browserId} destroyed` },
+      };
+      self.browser!.emit(eventNameForResult, payload);
+    });
+
+    this.clientManagement.clear();
+    this.commandSessionIds.clear();
   }
 }
 

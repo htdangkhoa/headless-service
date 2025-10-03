@@ -211,7 +211,6 @@ export class BrowserManager {
   }
 
   getPageId(page: Page) {
-    // @ts-ignore
     return page.target()._targetId;
   }
 

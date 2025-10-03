@@ -1,7 +1,13 @@
-import { Maybe } from '..';
+import { Maybe } from '../index';
 
 export {} from 'node:http';
 export {} from 'node:stream';
+
+declare module 'ws' {
+  export interface WebSocket {
+    id?: Maybe<string>;
+  }
+}
 
 declare module 'node:http' {
   export interface IncomingMessage {
@@ -11,6 +17,7 @@ declare module 'node:http' {
 
 declare global {
   interface WebSocket {
+    id?: Maybe<string>;
     requestId?: Maybe<string>;
   }
 }

@@ -2,7 +2,13 @@ import { debounce } from 'lodash-es';
 import { X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
 
-import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants/live';
+import {
+  CUSTOM_COMMANDS,
+  DEFAULT_KEEP_ALIVE_TIMEOUT,
+  LIVE_COMMANDS,
+  LIVE_EVENT_NAMES,
+  SPECIAL_COMMANDS,
+} from '@/constants/live';
 import type { Dictionary } from '@/types';
 
 const MOUSE_BUTTONS = ['none', 'left', 'middle', 'right'];
@@ -17,6 +23,18 @@ const MOUSE_EVENTS: Dictionary<string> = {
   mousemove: 'mouseMoved',
 };
 
+interface ScreencastConfigs {
+  format: string;
+  quality: number | string;
+  everyNthFrame: number | string;
+}
+
+const DEFAULT_SCREENCAST_CONFIGS: ScreencastConfigs = {
+  format: 'jpeg',
+  quality: 100,
+  everyNthFrame: 1,
+};
+
 export class ScreencastView {
   private $tabs: HTMLDivElement;
   private $navigation: HTMLDivElement;
@@ -26,49 +44,32 @@ export class ScreencastView {
   private image = new Image();
   private $notification: HTMLDivElement;
 
+  private screencastConfigs: ScreencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
+
+  private sessionId: string;
   private ws: WebSocket;
 
+  private connectionId?: string;
+
   constructor(private container: HTMLElement) {
+    const url = new URL(location.href);
+
+    const format = url.searchParams.get('format') || DEFAULT_SCREENCAST_CONFIGS.format;
+    const quality = url.searchParams.get('quality') || DEFAULT_SCREENCAST_CONFIGS.quality;
+    const everyNthFrame =
+      url.searchParams.get('everyNthFrame') || DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
+
+    this.screencastConfigs = {
+      format,
+      quality,
+      everyNthFrame,
+    };
+
     this.container.classList.add('flex-auto', 'widget', 'vbox');
 
     /* ===== Tabs ===== */
     this.$tabs = document.createElement('div');
     this.$tabs.classList.add('flex', 'screencast-tabs');
-
-    const tabItem1 = document.createElement('div');
-    tabItem1.classList.add('screencast-tab-item', 'active');
-
-    const tabItem1Icon = document.createElement('img');
-    tabItem1Icon.classList.add('favicon');
-    tabItem1Icon.src = EarthIcon;
-    tabItem1.appendChild(tabItem1Icon);
-
-    const tabItem1Text = document.createElement('span');
-    tabItem1Text.classList.add('title');
-    tabItem1Text.textContent = 'Tab 1';
-    tabItem1.appendChild(tabItem1Text);
-
-    const tabItem1CloseButton = document.createElement('div');
-    tabItem1CloseButton.classList.add('close-button');
-    tabItem1CloseButton.role = 'button';
-    tabItem1CloseButton.innerHTML = XIcon;
-    // tabItem1CloseButton.style.backgroundImage = `url(${XIcon})`;
-    // tabItem1CloseButton.style.backgroundColor = 'red';
-    // tabItem1CloseButton.style.backgroundBlendMode = 'multiply';
-    // tabItem1CloseButton.style.backgroundSize = 'contain';
-    // tabItem1CloseButton.style.backgroundPosition = 'center';
-    // tabItem1CloseButton.style.backgroundRepeat = 'no-repeat';
-    // tabItem1CloseButton.style.width = '16px';
-    // tabItem1CloseButton.style.height = '16px';
-    // tabItem1CloseButton.src = XIcon;
-    tabItem1.appendChild(tabItem1CloseButton);
-
-    this.$tabs.appendChild(tabItem1);
-
-    const tabItem2 = document.createElement('div');
-    tabItem2.classList.add('screencast-tab-item');
-    tabItem2.textContent = 'Tab 2';
-    this.$tabs.appendChild(tabItem2);
 
     container.appendChild(this.$tabs);
 
@@ -114,8 +115,8 @@ export class ScreencastView {
     this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
 
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = location.href.replace(location.protocol, wsProtocol);
+    this.sessionId = url.searchParams.get('session')!;
+    const wsUrl = url.href.replace(/^http/, 'ws');
     this.ws = new WebSocket(wsUrl);
     this.ws.addEventListener('open', this.onOpen.bind(this));
     this.ws.addEventListener('message', this.onMessage.bind(this));
@@ -191,7 +192,16 @@ export class ScreencastView {
   }
 
   private sendCommand(command: string, params: Dictionary = {}) {
-    this.ws.send(JSON.stringify({ command, params }));
+    this.ws.send(
+      JSON.stringify({
+        command,
+        params,
+        context: {
+          sessionId: this.sessionId,
+          connectionId: this.connectionId,
+        },
+      })
+    );
   }
 
   private getNavigationInput() {
@@ -217,6 +227,23 @@ export class ScreencastView {
   }
 
   async onOpen(_event: Event) {
+    const previousConnectionId = sessionStorage.getItem('connection-id');
+    this.connectionId = previousConnectionId || window.crypto.randomUUID();
+    sessionStorage.setItem('connection-id', this.connectionId);
+
+    this.sendCommand(CUSTOM_COMMANDS.REGISTER_SCREENCAST, {
+      connectionId: this.connectionId,
+    });
+
+    setInterval(
+      () => {
+        this.sendCommand(CUSTOM_COMMANDS.KEEP_ALIVE, {
+          ms: DEFAULT_KEEP_ALIVE_TIMEOUT,
+        });
+      },
+      1000 * 60 * 3 // 3 minutes
+    );
+
     // hide notification
     this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
@@ -278,53 +305,67 @@ export class ScreencastView {
     };
     this.$canvas.addEventListener('mouseleave', onMouseLeave);
 
-    const beforeUnload = () => {
-      window.removeEventListener('resize', this.resizeWindow);
-      window.removeEventListener('beforeunload', beforeUnload);
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      // event.preventDefault();
+      // event.returnValue = '';
 
-      this.$canvas.removeEventListener('mousedown', this.onMouseEvent);
-      this.$canvas.removeEventListener('mouseup', this.onMouseEvent);
-      // @ts-ignore
-      this.$canvas.removeEventListener('mousewheel', this.onMouseEvent);
-      this.$canvas.removeEventListener('mousemove', this.onMouseEvent);
-
-      this.$canvas.removeEventListener('mouseover', onMouseOver);
-      this.$canvas.removeEventListener('mouseleave', onMouseLeave);
-
-      document.removeEventListener('keydown', onKeyEvent);
-      document.removeEventListener('keyup', onKeyEvent);
-      document.removeEventListener('keypress', onKeyEvent);
-
-      this.sendCommand(LIVE_COMMANDS.STOP_SCREENCAST);
-
-      this.ws.removeEventListener('open', this.onOpen);
-      this.ws.removeEventListener('message', this.onMessage);
-      this.ws.removeEventListener('close', this.onClose);
-      this.ws.removeEventListener('error', this.onError);
-
-      if (this.ws.readyState !== WebSocket.CLOSED) {
-        this.ws.close();
+      if (this.connectionId) {
+        sessionStorage.setItem('connection-id', this.connectionId);
       }
+
+      // window.removeEventListener('resize', this.resizeWindow);
+      // window.removeEventListener('beforeunload', beforeUnload);
+
+      // this.$canvas.removeEventListener('mousedown', this.onMouseEvent);
+      // this.$canvas.removeEventListener('mouseup', this.onMouseEvent);
+      // // @ts-ignore
+      // this.$canvas.removeEventListener('mousewheel', this.onMouseEvent);
+      // this.$canvas.removeEventListener('mousemove', this.onMouseEvent);
+
+      // this.$canvas.removeEventListener('mouseover', onMouseOver);
+      // this.$canvas.removeEventListener('mouseleave', onMouseLeave);
+
+      // document.removeEventListener('keydown', onKeyEvent);
+      // document.removeEventListener('keyup', onKeyEvent);
+      // document.removeEventListener('keypress', onKeyEvent);
+
+      // this.sendCommand(LIVE_COMMANDS.STOP_SCREENCAST);
+
+      // this.ws.removeEventListener('open', this.onOpen);
+      // this.ws.removeEventListener('message', this.onMessage);
+      // this.ws.removeEventListener('close', this.onClose);
+      // this.ws.removeEventListener('error', this.onError);
+
+      // if (this.ws.readyState !== WebSocket.CLOSED) {
+      //   this.ws.close();
+      // }
     };
     window.addEventListener('beforeunload', beforeUnload);
 
     // initialize
     this.resizeWindow();
 
-    this.sendCommand(SPECIAL_COMMANDS.GET_URL);
-    this.sendCommand(LIVE_COMMANDS.START_SCREENCAST, {
-      format: 'jpeg',
-      quality: 100,
-      everyNthFrame: 1,
-    });
+    // this.sendCommand(SPECIAL_COMMANDS.GET_URL);
+    // this.sendCommand(LIVE_COMMANDS.START_SCREENCAST, this.screencastConfigs);
   }
 
   async onMessage(event: MessageEvent) {
     const text = event.data;
 
-    const { command, data } = JSON.parse(text);
+    const { context, command, data } = JSON.parse(text);
+
+    if (context?.connectionId !== this.connectionId) return;
 
     switch (command) {
+      case CUSTOM_COMMANDS.RENDER_TABS: {
+        this.$tabs.innerHTML = '';
+        data.forEach((tab: any) => {
+          const tabItem = this.createTabItem.call(this, tab);
+          this.$tabs.appendChild(tabItem);
+        });
+        this.resizeWindow();
+        break;
+      }
       case LIVE_COMMANDS.SCREENCAST_FRAME: {
         this.image.onload = () => {
           this.ctx.drawImage(this.image, 0, 0, this.$canvas.width, this.$canvas.height);
@@ -333,9 +374,24 @@ export class ScreencastView {
         this.sendCommand(LIVE_COMMANDS.SCREENCAST_FRAME_ACK, { sessionId: data.sessionId });
         break;
       }
-      case SPECIAL_COMMANDS.GET_URL: {
+      case LIVE_EVENT_NAMES.FRAME_NAVIGATED: {
         const input = this.$navigation.querySelector('input') as HTMLInputElement;
-        input.value = data;
+        input.value = data.url;
+
+        const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#tab-${data.targetId}`);
+        if (tabItem) {
+          tabItem.title = data.title;
+
+          const titleEle = tabItem.querySelector('span.title');
+          if (titleEle) {
+            titleEle.textContent = data.title;
+          }
+
+          const faviconEle = tabItem.querySelector<HTMLImageElement>('img.favicon');
+          if (faviconEle) {
+            faviconEle.src = data.favicon || EarthIcon;
+          }
+        }
         break;
       }
     }
@@ -363,5 +419,43 @@ export class ScreencastView {
     // show notification
     this.$notification.classList.remove('hidden');
     this.$notification.textContent = 'An error occurred';
+  }
+
+  private createTabItem(tab: any) {
+    const defaultTitle = `Untitled`;
+
+    const tabItem = document.createElement('div');
+    tabItem.id = `tab-${tab.targetId}`;
+    tabItem.title = defaultTitle;
+    tabItem.classList.add('screencast-tab-item');
+    if (tab.active) {
+      tabItem.classList.add('active');
+    }
+    tabItem.addEventListener('click', () => {
+      this.sendCommand(CUSTOM_COMMANDS.GO_TO_TAB, { targetId: tab.targetId });
+    });
+
+    const tabItemIcon = document.createElement('img');
+    tabItemIcon.classList.add('favicon');
+    tabItemIcon.src = EarthIcon;
+    tabItem.appendChild(tabItemIcon);
+
+    const tabItemText = document.createElement('span');
+    tabItemText.classList.add('title');
+    tabItemText.textContent = defaultTitle;
+    tabItem.appendChild(tabItemText);
+
+    const tabItemCloseButton = document.createElement('div');
+    tabItemCloseButton.classList.add('close-button');
+    tabItemCloseButton.role = 'button';
+    tabItemCloseButton.innerHTML = XIcon;
+    tabItemCloseButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.sendCommand(CUSTOM_COMMANDS.CLOSE_TAB, { targetId: tab.targetId });
+    });
+    tabItem.appendChild(tabItemCloseButton);
+
+    return tabItem;
   }
 }
