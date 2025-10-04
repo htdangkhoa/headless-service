@@ -28,9 +28,6 @@ article, aside, details, figcaption, figure,
 footer, header, hgroup, menu, nav, section {
 	display: block;
 }
-body {
-	line-height: 1;
-}
 ol, ul {
 	list-style: none;
 }
@@ -54,9 +51,16 @@ html {
   top: 0;
   left: 0;
   position: fixed;
+
+  -webkit-user-select: none;  /* Chrome all / Safari all */
+  -moz-user-select: none;     /* Firefox all */
+  -ms-user-select: none;      /* IE 10+ */
+  -o-user-select: none;
+  user-select: none;
 }
 
 body {
+  line-height: 1;
   width: 100%;
   height: 100%;
   border: 0;
@@ -132,6 +136,79 @@ main {
 
 .hidden {
   display: none;
+}
+
+.screencast-tabs {
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.screencast-tab-item {
+  flex: 0 0 auto;
+  max-width: 12rem;
+  width: 100%;
+  /* height: 24px; */
+  /* background-color: rgb(92 92 92); */
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: pointer;
+}
+.screencast-tab-item.active {
+  background-color: rgb(92 92 92);
+}
+.screencast-tab-item:not(.active):hover {
+  background-color: rgb(46, 46, 46);
+}
+
+.screencast-tab-item .favicon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
+.screencast-tab-item .title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
+.screencast-tab-item .close-button {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.screencast-tab-item .close-button svg {
+  width: 16px;
+  height: 16px;
+  fill: #fff;
+  object-fit: contain;
+}
+.screencast-tab-item .close-button:hover {
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
 .screencast-navigation {

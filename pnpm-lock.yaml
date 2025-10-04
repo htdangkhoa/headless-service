@@ -47,6 +47,9 @@ dependencies:
   lodash-es:
     specifier: 4.17.21
     version: 4.17.21
+  lucide-static:
+    specifier: 0.544.0
+    version: 0.544.0
   proxy-chain:
     specifier: 2.5.9
     version: 2.5.9
@@ -2770,6 +2773,10 @@ packages:
   /lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
+    dev: false
+
+  /lucide-static@0.544.0:
+    resolution: {integrity: sha512-2PkMTYcjQkIzYbd5u2g7UtRaNDP7dLQT107MmYBdvnZZCO3Vj0nqH6HA5AkUS2Era8D1ITb/UxrOkfdH/qN2Ag==}
     dev: false
 
   /marky@1.3.0:

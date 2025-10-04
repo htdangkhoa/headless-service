@@ -311,7 +311,6 @@ export class BrowserCDP extends EventEmitter {
 
     const pages = await this.browser.pages();
 
-    // @ts-expect-error
     const page = pages.find((p) => p.target()._targetId === pageId);
 
     return page;

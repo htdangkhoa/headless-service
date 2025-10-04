@@ -46,15 +46,17 @@ export class LiveIndexWsRoute extends ProxyWebSocketRoute {
     return pathname === this.path;
   };
   handler: WsHandler = async (req, socket, head) => {
-    const { wsServer } = this.context;
+    const url = parseUrlFromIncomingMessage(req);
 
-    const { searchParams } = parseUrlFromIncomingMessage(req);
+    const sessionId = url.searchParams.get('session');
 
-    const sessionId = searchParams.get('session');
+    const { browserManager, wsServer } = this.context;
 
-    if (!sessionId) {
+    const browser = browserManager.getBrowserById(sessionId!);
+
+    if (!browser) {
       return writeResponse(socket, HttpStatus.BAD_REQUEST, {
-        message: 'Missing session id',
+        message: 'Invalid session id',
       });
     }
 

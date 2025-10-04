@@ -1,6 +1,8 @@
 import { debounce } from 'lodash-es';
+import { X as XIcon } from 'lucide-static';
+import EarthIcon from 'lucide-static/icons/earth.svg';
 
-import { LIVE_COMMANDS, SPECIAL_COMMANDS } from '@/constants/live';
+import { DEFAULT_KEEP_ALIVE_TIMEOUT, LIVE_CLIENT } from '@/constants/live';
 import type { Dictionary } from '@/types';
 
 const MOUSE_BUTTONS = ['none', 'left', 'middle', 'right'];
@@ -15,7 +17,20 @@ const MOUSE_EVENTS: Dictionary<string> = {
   mousemove: 'mouseMoved',
 };
 
+interface ScreencastConfigs {
+  format: string;
+  quality: number | string;
+  everyNthFrame: number | string;
+}
+
+const DEFAULT_SCREENCAST_CONFIGS: ScreencastConfigs = {
+  format: 'jpeg',
+  quality: 100,
+  everyNthFrame: 1,
+};
+
 export class ScreencastView {
+  private $tabs: HTMLDivElement;
   private $navigation: HTMLDivElement;
   private $viewer: HTMLDivElement;
   private $canvas: HTMLCanvasElement;
@@ -23,10 +38,34 @@ export class ScreencastView {
   private image = new Image();
   private $notification: HTMLDivElement;
 
+  private screencastConfigs: ScreencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
+
+  private sessionId: string;
   private ws: WebSocket;
 
+  private connectionId?: string;
+
   constructor(private container: HTMLElement) {
+    const url = new URL(location.href);
+
+    const format = url.searchParams.get('format') || DEFAULT_SCREENCAST_CONFIGS.format;
+    const quality = url.searchParams.get('quality') || DEFAULT_SCREENCAST_CONFIGS.quality;
+    const everyNthFrame =
+      url.searchParams.get('everyNthFrame') || DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
+
+    this.screencastConfigs = {
+      format,
+      quality,
+      everyNthFrame,
+    };
+
     this.container.classList.add('flex-auto', 'widget', 'vbox');
+
+    /* ===== Tabs ===== */
+    this.$tabs = document.createElement('div');
+    this.$tabs.classList.add('flex', 'screencast-tabs');
+
+    container.appendChild(this.$tabs);
 
     /* ===== Navigation ===== */
     this.$navigation = document.createElement('div');
@@ -70,8 +109,8 @@ export class ScreencastView {
     this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
 
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = location.href.replace(location.protocol, wsProtocol);
+    this.sessionId = url.searchParams.get('session')!;
+    const wsUrl = url.href.replace(/^http/, 'ws');
     this.ws = new WebSocket(wsUrl);
     this.ws.addEventListener('open', this.onOpen.bind(this));
     this.ws.addEventListener('message', this.onMessage.bind(this));
@@ -103,7 +142,14 @@ export class ScreencastView {
         mobile: true,
       };
 
-      this.sendCommand(SPECIAL_COMMANDS.SET_VIEWPORT, params);
+      const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+      if (activeTab) {
+        const targetId = activeTab.id.replace('tab-', '');
+        this.sendCommand(LIVE_CLIENT.COMMANDS.SET_VIEWPORT, {
+          ...params,
+          targetId,
+        });
+      }
     },
     500,
     { leading: true, trailing: true }
@@ -143,11 +189,27 @@ export class ScreencastView {
       params.deltaY = evt.wheelDeltaY || evt.wheelDelta;
     }
 
-    this.sendCommand(LIVE_COMMANDS.INPUT_EMULATE_TOUCH_FROM_MOUSE_EVENT, params);
+    const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+    if (activeTab) {
+      const targetId = activeTab.id.replace('tab-', '');
+      this.sendCommand(LIVE_CLIENT.COMMANDS.INPUT_EMULATE_TOUCH_FROM_MOUSE_EVENT, {
+        ...params,
+        targetId,
+      });
+    }
   }
 
   private sendCommand(command: string, params: Dictionary = {}) {
-    this.ws.send(JSON.stringify({ command, params }));
+    this.ws.send(
+      JSON.stringify({
+        command,
+        params,
+        context: {
+          sessionId: this.sessionId,
+          connectionId: this.connectionId,
+        },
+      })
+    );
   }
 
   private getNavigationInput() {
@@ -157,22 +219,57 @@ export class ScreencastView {
   private handleBack(e: MouseEvent) {
     e.preventDefault();
 
-    this.sendCommand(SPECIAL_COMMANDS.GO_BACK);
+    const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+    if (activeTab) {
+      const targetId = activeTab.id.replace('tab-', '');
+      this.sendCommand(LIVE_CLIENT.COMMANDS.GO_BACK, {
+        targetId,
+      });
+    }
   }
 
   private handleForward(e: MouseEvent) {
     e.preventDefault();
 
-    this.sendCommand(SPECIAL_COMMANDS.GO_FORWARD);
+    const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+    if (activeTab) {
+      const targetId = activeTab.id.replace('tab-', '');
+      this.sendCommand(LIVE_CLIENT.COMMANDS.GO_FORWARD, {
+        targetId,
+      });
+    }
   }
 
   private handleReload(e: MouseEvent) {
     e.preventDefault();
 
-    this.sendCommand(SPECIAL_COMMANDS.RELOAD);
+    const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+    if (activeTab) {
+      const targetId = activeTab.id.replace('tab-', '');
+      this.sendCommand(LIVE_CLIENT.COMMANDS.RELOAD, {
+        targetId,
+      });
+    }
   }
 
   async onOpen(_event: Event) {
+    const previousConnectionId = sessionStorage.getItem('connection-id');
+    this.connectionId = previousConnectionId || window.crypto.randomUUID();
+    sessionStorage.setItem('connection-id', this.connectionId);
+
+    this.sendCommand(LIVE_CLIENT.COMMANDS.REGISTER_SCREENCAST, {
+      connectionId: this.connectionId,
+    });
+
+    setInterval(
+      () => {
+        this.sendCommand(LIVE_CLIENT.COMMANDS.KEEP_ALIVE, {
+          ms: DEFAULT_KEEP_ALIVE_TIMEOUT,
+        });
+      },
+      1000 * 60 * 3 // 3 minutes
+    );
+
     // hide notification
     this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
@@ -217,7 +314,14 @@ export class ScreencastView {
         location: event.location,
       };
 
-      self.sendCommand(LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT, params);
+      const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
+      if (activeTab) {
+        const targetId = activeTab.id.replace('tab-', '');
+        self.sendCommand(LIVE_CLIENT.COMMANDS.INPUT_DISPATCH_KEY_EVENT, {
+          ...params,
+          targetId,
+        });
+      }
     };
 
     const onMouseOver = () => {
@@ -234,64 +338,75 @@ export class ScreencastView {
     };
     this.$canvas.addEventListener('mouseleave', onMouseLeave);
 
-    const beforeUnload = () => {
-      window.removeEventListener('resize', this.resizeWindow);
-      window.removeEventListener('beforeunload', beforeUnload);
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      // Show confirmation dialog
+      event.preventDefault();
+      event.returnValue = 'Are you sure you want to leave? The live session will be disconnected.';
 
-      this.$canvas.removeEventListener('mousedown', this.onMouseEvent);
-      this.$canvas.removeEventListener('mouseup', this.onMouseEvent);
-      // @ts-ignore
-      this.$canvas.removeEventListener('mousewheel', this.onMouseEvent);
-      this.$canvas.removeEventListener('mousemove', this.onMouseEvent);
-
-      this.$canvas.removeEventListener('mouseover', onMouseOver);
-      this.$canvas.removeEventListener('mouseleave', onMouseLeave);
-
-      document.removeEventListener('keydown', onKeyEvent);
-      document.removeEventListener('keyup', onKeyEvent);
-      document.removeEventListener('keypress', onKeyEvent);
-
-      this.sendCommand(LIVE_COMMANDS.STOP_SCREENCAST);
-
-      this.ws.removeEventListener('open', this.onOpen);
-      this.ws.removeEventListener('message', this.onMessage);
-      this.ws.removeEventListener('close', this.onClose);
-      this.ws.removeEventListener('error', this.onError);
-
-      if (this.ws.readyState !== WebSocket.CLOSED) {
-        this.ws.close();
+      if (this.connectionId) {
+        sessionStorage.setItem('connection-id', this.connectionId);
       }
+
+      return event.returnValue;
     };
     window.addEventListener('beforeunload', beforeUnload);
-
-    // initialize
-    this.resizeWindow();
-
-    this.sendCommand(SPECIAL_COMMANDS.GET_URL);
-    this.sendCommand(LIVE_COMMANDS.START_SCREENCAST, {
-      format: 'jpeg',
-      quality: 100,
-      everyNthFrame: 1,
-    });
   }
 
   async onMessage(event: MessageEvent) {
     const text = event.data;
 
-    const { command, data } = JSON.parse(text);
+    const { context, command, data } = JSON.parse(text);
+
+    if (context?.connectionId !== this.connectionId) return;
 
     switch (command) {
-      case LIVE_COMMANDS.SCREENCAST_FRAME: {
+      case LIVE_CLIENT.EVENTS.SCREENCAST_REGISTERED: {
+        data.forEach(this.createTabItem.bind(this));
+
+        this.resizeWindow();
+
+        break;
+      }
+      case LIVE_CLIENT.EVENTS.SCREENCAST_FRAME: {
+        const { targetId, ...payload } = data;
         this.image.onload = () => {
           this.ctx.drawImage(this.image, 0, 0, this.$canvas.width, this.$canvas.height);
         };
-        this.image.src = `data:image/jpeg;base64,${data.data}`;
-        this.sendCommand(LIVE_COMMANDS.SCREENCAST_FRAME_ACK, { sessionId: data.sessionId });
+        this.image.src = `data:image/jpeg;base64,${payload.data}`;
+        this.sendCommand(LIVE_CLIENT.COMMANDS.SCREENCAST_FRAME_ACK, {
+          targetId,
+          sessionId: payload.sessionId,
+        });
         break;
       }
-      case SPECIAL_COMMANDS.GET_URL: {
-        const input = this.$navigation.querySelector('input') as HTMLInputElement;
-        input.value = data;
+      case LIVE_CLIENT.EVENTS.TARGET_CREATED: {
+        this.createTabItem(data);
+
+        // resize window if the target is active
+        if (data.active) {
+          this.resizeWindow();
+        }
+
+        break;
+      }
+      case LIVE_CLIENT.EVENTS.TARGET_DESTROYED: {
+        this.removeTabItem(data);
+
+        this.resizeWindow();
+
+        break;
+      }
+      case LIVE_CLIENT.EVENTS.TARGET_BRING_TO_FRONT: {
+        this.bringToFrontTab(data.targetId);
+
+        this.resizeWindow();
+
+        break;
+      }
+      case LIVE_CLIENT.EVENTS.FRAME_NAVIGATED: {
+        this.updateTabItem(data);
+        this.updateNavigationInput(data);
+
         break;
       }
     }
@@ -319,5 +434,136 @@ export class ScreencastView {
     // show notification
     this.$notification.classList.remove('hidden');
     this.$notification.textContent = 'An error occurred';
+  }
+
+  private createTabItem(tab: any) {
+    const id = `tab-${tab.targetId}`;
+
+    const existingTabItem = this.$tabs.querySelector<HTMLDivElement>(`#${id}`);
+    if (existingTabItem) {
+      return existingTabItem;
+    }
+
+    const totalTabs = this.$tabs.querySelectorAll('.screencast-tab-item').length;
+
+    const activeTabItem = this.$tabs.querySelector('.screencast-tab-item.active');
+
+    const defaultTitle = `Untitled`;
+    const tabTitle = tab.title || defaultTitle;
+
+    const tabItem = document.createElement('div');
+    tabItem.id = `tab-${tab.targetId}`;
+    tabItem.title = tabTitle;
+    tabItem.classList.add('screencast-tab-item');
+    if (tab.active) {
+      if (activeTabItem) {
+        activeTabItem.classList.remove('active');
+      }
+      tabItem.classList.add('active');
+    }
+    tabItem.addEventListener('click', () => {
+      this.sendCommand(LIVE_CLIENT.COMMANDS.GO_TO_TAB, { targetId: tab.targetId });
+    });
+
+    const tabItemIcon = document.createElement('img');
+    tabItemIcon.classList.add('favicon');
+    tabItemIcon.src = EarthIcon;
+    tabItem.appendChild(tabItemIcon);
+
+    const tabItemText = document.createElement('span');
+    tabItemText.classList.add('title');
+    tabItemText.textContent = tabTitle;
+    tabItem.appendChild(tabItemText);
+
+    this.$tabs.appendChild(tabItem);
+
+    // Only show close button if there are multiple tabs
+    if (totalTabs > 0) {
+      // query all tab items without close button
+      const tabItemsWithoutCloseButton = this.$tabs.querySelectorAll(
+        '.screencast-tab-item:not(.can-close)'
+      );
+
+      tabItemsWithoutCloseButton.forEach((item) => {
+        const targetId = item.id.replace('tab-', '');
+
+        const tabItemCloseButton = document.createElement('div');
+        tabItemCloseButton.classList.add('close-button');
+        tabItemCloseButton.role = 'button';
+        tabItemCloseButton.innerHTML = XIcon;
+        tabItemCloseButton.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.sendCommand(LIVE_CLIENT.COMMANDS.CLOSE_TAB, { targetId });
+        });
+        item.appendChild(tabItemCloseButton);
+        item.classList.add('can-close');
+      });
+    }
+
+    this.updateNavigationInput({ targetId: tab.targetId, url: tab.url });
+
+    return tabItem;
+  }
+
+  private removeTabItem({ targetId, activeTargetId }: any) {
+    const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#tab-${targetId}`);
+    if (!tabItem) return;
+    tabItem.remove();
+
+    const activeTabItem = this.$tabs.querySelector(`#tab-${activeTargetId}`);
+    if (activeTabItem && !activeTabItem.classList.contains('active')) {
+      activeTabItem.classList.add('active');
+    }
+
+    // remove close button if there is only one tab
+    if (this.$tabs.querySelectorAll('.screencast-tab-item.can-close').length === 1) {
+      this.$tabs
+        .querySelectorAll('.screencast-tab-item.can-close .close-button')
+        .forEach((item) => {
+          item.remove();
+        });
+    }
+  }
+
+  private bringToFrontTab(targetId: string) {
+    const tabItems = this.$tabs.querySelectorAll<HTMLDivElement>(`.screencast-tab-item.active`);
+    tabItems.forEach((tabItem) => {
+      tabItem.classList.remove('active');
+    });
+
+    const id = `tab-${targetId}`;
+    const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#${id}`);
+    if (tabItem) {
+      tabItem.classList.add('active');
+    }
+  }
+
+  private updateTabItem(tab: any) {
+    const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#tab-${tab.targetId}`);
+    if (tabItem) {
+      tabItem.title = tab.title;
+
+      const titleEle = tabItem.querySelector('span.title');
+      if (titleEle) {
+        titleEle.textContent = tab.title;
+      }
+
+      const faviconEle = tabItem.querySelector<HTMLImageElement>('img.favicon');
+      if (faviconEle) {
+        faviconEle.src = tab.favicon || EarthIcon;
+      }
+    }
+  }
+
+  private updateNavigationInput({ targetId, url }: any) {
+    const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#tab-${targetId}.active`);
+    if (tabItem) {
+      const input = this.$navigation.querySelector('input') as HTMLInputElement;
+      const _url = new URL(url);
+
+      input.value =
+        _url.href.replace(_url.origin, '') === '/' ? _url.href.replace(/\/$/, '') : _url.href;
+    }
   }
 }
