@@ -31,6 +31,7 @@ FROM node AS builder
 
 WORKDIR /app
 
+ENV NODE_ENV production
 ENV PUPPETEER_SKIP_DOWNLOAD true
 
 COPY ./.npmrc ./package.json ./pnpm-lock.yaml ./

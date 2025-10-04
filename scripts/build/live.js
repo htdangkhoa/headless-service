@@ -16,6 +16,10 @@ const htmlLocation = join(process.cwd(), 'public', 'live', 'index.html');
 const JS_REGEX = /\.js$/,
   CSS_REGEX = /\.css$/;
 
+const DISABLE_DEVTOOL_SCRIPT = `<script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>`;
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 const html = (styles, scripts) => dedent`
 <!DOCTYPE html>
 <html lang="en">
@@ -25,8 +29,9 @@ const html = (styles, scripts) => dedent`
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Headless Live</title>
     ${styles}
+    ${isProduction ? DISABLE_DEVTOOL_SCRIPT : ''}
   </head>
-  <body>
+  <body oncontextmenu="return false;">
     <main id="app"></main>
     ${scripts}
   </body>
