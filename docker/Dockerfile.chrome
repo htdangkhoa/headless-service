@@ -29,7 +29,6 @@ FROM node AS builder
 
 WORKDIR /app
 
-ENV NODE_ENV production
 ENV PUPPETEER_SKIP_DOWNLOAD true
 
 COPY ./.npmrc ./package.json ./pnpm-lock.yaml ./
@@ -43,6 +42,8 @@ COPY ./public ./public
 COPY ./docs ./docs
 COPY ./scripts ./scripts
 COPY ./src ./src
+
+ENV NODE_ENV production
 
 RUN pnpm run /^build:.*/ && \
   pnpm run build
