@@ -150,6 +150,11 @@ main {
   align-items: center;
   gap: 4px;
   padding: 4px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  cursor: pointer;
 }
 .screencast-tab-item.active {
   background-color: rgb(92 92 92);
@@ -162,6 +167,11 @@ main {
   width: 16px;
   height: 16px;
   object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
 }
 
 .screencast-tab-item .title {
@@ -169,12 +179,23 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
 }
 
 .screencast-tab-item .close-button {
   width: 16px;
   height: 16px;
   object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .screencast-tab-item .close-button svg {
   width: 16px;

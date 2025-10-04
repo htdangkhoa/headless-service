@@ -1,27 +1,12 @@
 import type { IncomingMessage } from 'node:http';
 import dayjs from 'dayjs';
-import {
-  Frame,
-  TargetType,
-  type Browser,
-  type CDPSession,
-  type Page,
-  type Target,
-} from 'puppeteer';
+import { Protocol } from 'devtools-protocol';
+import { TargetType, type Browser, type CDPSession, type Page, type Target } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
-import { WebSocketServer, type RawData, type WebSocket } from 'ws';
+import { WebSocket, WebSocketServer, type RawData } from 'ws';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
-import {
-  COMMANDS,
-  CUSTOM_COMMANDS,
-  DEFAULT_KEEP_ALIVE_TIMEOUT,
-  DOMAINS,
-  EVENTS,
-  LIVE_COMMANDS,
-  LIVE_EVENT_NAMES,
-  SPECIAL_COMMANDS,
-} from '@/constants';
+import { COMMANDS, DEFAULT_KEEP_ALIVE_TIMEOUT, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
 import { Logger } from '@/logger';
 import {
   buildProtocolEventNames,
@@ -38,10 +23,10 @@ interface PageData {
   targetId: string;
 }
 
-interface LiveContext {
-  sessionId: string;
-  connectionId: string;
-}
+// interface LiveContext {
+//   sessionId: string;
+//   connectionId: string;
+// }
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
@@ -73,9 +58,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
 
-      // socket.on('close', () => {
-      //   this.clientManagement.removeClient(socket);
-      // });
+      socket.on('close', () => {
+        this.logger.info('WebSocket client disconnected', socket.id);
+        this.clientManagement.removeClient(socket);
+      });
+
+      socket.on('error', (error) => {
+        this.logger.error('WebSocket client error:', error);
+        this.clientManagement.removeClient(socket);
+      });
     });
   }
 
@@ -85,6 +76,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   async onBrowser(browser: Browser, opts: any): Promise<void> {
     this.browser = browser;
+
+    const cdp = await browser.target().createCDPSession();
+    cdp.send('Target.setDiscoverTargets', { discover: true });
+    cdp.on('Target.targetInfoChanged', this.onTargetInfoChanged.bind(this));
 
     const browserId = getBrowserId(browser);
 
@@ -125,133 +120,117 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         targetId: targetId,
       });
 
-      const self = this;
+      const isActive = await page.evaluate(() => document.visibilityState === 'visible');
+
+      if (isActive) {
+        try {
+          await this.startScreencast(targetId);
+        } catch {}
+
+        await this.startScreencast(targetId);
+      }
+
       const clients = this.clientManagement.getClients();
       clients.forEach((socket) => {
         const context = {
           sessionId: browserId,
           connectionId: socket.id,
         };
-        self.renderTabs.call(self, socket, context);
-        self.startScreencast.call(self, socket, context);
+        socket.send(
+          JSON.stringify({
+            command: LIVE_SERVER.COMMANDS.TARGET_CREATED,
+            data: {
+              targetId,
+              active: isActive,
+            },
+            context,
+          })
+        );
       });
 
-      page.on('framenavigated', this.onFrameNavigated.bind(this));
+      // // Wait a bit for page to load, then update tabs with proper title
+      // setTimeout(async () => {
+      //   try {
+      //     const title = await page.title();
+      //     this.logger.info(`Tab ${targetId} title: ${title}`);
 
-      cdp.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
-        const clients = this.clientManagement.getClients();
-        clients.forEach((socket) => {
-          const context = {
-            sessionId: browserId,
-            connectionId: socket.id,
-          };
-          socket.send(JSON.stringify({ command: LIVE_COMMANDS.SCREENCAST_FRAME, data, context }));
-        });
-      });
+      //     // Update tabs for all clients with the new title
+      //     const clients = this.clientManagement.getClients();
+      //     clients.forEach((socket) => {
+      //       const context = {
+      //         sessionId: browserId,
+      //         connectionId: socket.id,
+      //       };
+      //       self.renderTabs.call(self, socket, context);
+      //     });
+      //   } catch (error) {
+      //     this.logger.warn(`Failed to get title for tab ${targetId}:`, error);
+      //   }
+      // }, 1000);
+
+      // Don't register screencast frame listener here - it will be registered per active page
     }
 
     return Promise.resolve();
   }
 
   async onTargetDestroyed(target: Target): Promise<void> {
+    const browser = target.browser();
+    const browserId = getBrowserId(browser);
+
     const targetId = target._targetId;
 
     const pageData = this.pages.get(targetId);
     if (!pageData) return;
 
+    const { cdp } = pageData;
+
+    cdp.removeAllListeners();
+
     this.pages.delete(targetId);
 
-    return Promise.resolve(this.handleTargetDestroyed.call(this, target));
+    const currentPage = await this.browser!.currentPage();
+    const currentTargetId = currentPage.target()._targetId;
+
+    const clients = this.clientManagement.getClients();
+    clients.forEach((socket) => {
+      const context = {
+        sessionId: browserId,
+        connectionId: socket.id,
+      };
+      socket.send(
+        JSON.stringify({
+          command: LIVE_SERVER.COMMANDS.TARGET_DESTROYED,
+          data: {
+            targetId,
+            activeTargetId: currentTargetId,
+          },
+          context,
+        })
+      );
+    });
+
+    await this.startScreencast(currentTargetId);
+
+    return Promise.resolve();
   }
 
-  private async onFrameNavigated(frame: Frame) {
-    if (!frame.parentFrame()) {
-      const page = frame.page();
-      const cdp = await page.createCDPSession();
-      const { targetInfo } = await cdp.send('Target.getTargetInfo');
-
-      const foundPage = this.pages.get(targetInfo.targetId);
-
-      if (!foundPage) return;
-
-      const { page: targetPage } = foundPage;
-
-      const url = targetPage.url();
-      const title = await targetPage.title();
-
-      const browser = page.browser();
-      const browserId = getBrowserId(browser);
-
-      const favicon = await page.evaluate(() => {
-        const icon =
-          document.querySelector<HTMLLinkElement>("link[rel='icon']") ||
-          document.querySelector<HTMLLinkElement>("link[rel='shortcut icon']") ||
-          document.querySelector<HTMLLinkElement>("link[rel*='apple-touch-icon']");
-        return icon ? icon.href : null;
-      });
-
-      const clients = this.clientManagement.getClients();
-      clients.forEach((socket) => {
-        const context = {
-          sessionId: browserId,
-          connectionId: socket.id,
-        };
-
-        socket.send(
-          JSON.stringify({
-            command: LIVE_EVENT_NAMES.FRAME_NAVIGATED,
-            data: {
-              targetId: targetInfo.targetId,
-              url,
-              title,
-              favicon,
-            },
-            context,
-          })
-        );
-      });
-    }
-  }
-
-  private async renderTabs(socket: WebSocket, context: any) {
+  private async onTargetInfoChanged(event: Protocol.Target.TargetInfoChangedEvent) {
     if (!this.browser) return;
 
-    const currentPage = await this.browser.currentPage();
-    const currentPageCDP = await currentPage.createCDPSession();
-    const { targetInfo } = await currentPageCDP.send('Target.getTargetInfo');
+    if (event.targetInfo.type === 'page') {
+      const pages = await this.browser.pages();
+      const page = pages.find((page) => page.target()._targetId === event.targetInfo.targetId);
+      if (!page) return;
 
-    const pagesEntries = Object.fromEntries(this.pages);
-
-    // TODO: Add more properties to the tab object
-    const tabs = Object.values(pagesEntries).map(({ page, targetId }) => ({
-      targetId,
-      active: targetId === targetInfo.targetId,
-      url: page.url(),
-    }));
-
-    socket.send(
-      JSON.stringify({
-        command: CUSTOM_COMMANDS.RENDER_TABS,
-        data: tabs,
-        context,
-      })
-    );
+      await this.updateTabInfo(page);
+    }
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
     if (!this.browser) return;
 
     const browserId = getBrowserId(this.browser);
-
-    const activePage = await this.browser.currentPage();
-    const activePageCDP = await activePage.createCDPSession();
-    const { targetInfo } = await activePageCDP.send('Target.getTargetInfo');
-
-    const foundPage = this.pages.get(targetInfo.targetId);
-
-    if (!foundPage) return;
-
-    const { page, cdp: client } = foundPage;
 
     const buffer = Buffer.from(rawMessage as Buffer);
     const message = Buffer.from(buffer).toString('utf8');
@@ -262,7 +241,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     try {
       switch (payload.command) {
-        case CUSTOM_COMMANDS.REGISTER_SCREENCAST: {
+        case LIVE_SERVER.EVENTS.REGISTER_SCREENCAST: {
           // TODO: error handling
           // if (!payload.params.id)
           const existingClient = this.clientManagement.getClient(payload.params.connectionId);
@@ -274,120 +253,172 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           socket.id = payload.params.connectionId;
           this.clientManagement.addClient(socket);
 
-          this.renderTabs(socket, context);
+          try {
+            await this.stopScreencast();
+          } catch {}
 
-          this.startScreencast(socket, context);
+          const currentPage = await this.browser.currentPage();
+          const currentTargetId = currentPage.target()._targetId;
+
+          const pagesEntries = Object.fromEntries(this.pages);
+
+          const tabs = await Promise.all(
+            Object.values(pagesEntries).map(async ({ page, targetId: pageTargetId }) => {
+              const tabInfo = await this.getTabInfo(page);
+              return {
+                ...tabInfo,
+                targetId: pageTargetId,
+                active: pageTargetId === currentTargetId,
+              };
+            })
+          );
+
+          await this.startScreencast(currentTargetId);
+
+          this.clientManagement.send(
+            payload.params.connectionId,
+            JSON.stringify({
+              command: LIVE_SERVER.COMMANDS.SCREENCAST_REGISTERED,
+              data: tabs,
+              context,
+            })
+          );
 
           break;
         }
-        case CUSTOM_COMMANDS.GO_TO_TAB: {
-          const foundPage = this.pages.get(payload.params.targetId);
-
-          if (!foundPage) return;
-
-          const { page: targetPage } = foundPage;
-
-          await targetPage.bringToFront();
-
-          this.renderTabs(socket, context);
-
-          this.startScreencast(socket, context);
-
-          break;
-        }
-        case CUSTOM_COMMANDS.CLOSE_TAB: {
-          const foundPage = this.pages.get(payload.params.targetId);
-
-          if (!foundPage) return;
-
-          await foundPage.page.close();
-
-          this.pages.delete(foundPage.targetId);
-
-          this.renderTabs(socket, context);
-
-          break;
-        }
-        case CUSTOM_COMMANDS.KEEP_ALIVE: {
+        case LIVE_SERVER.EVENTS.KEEP_ALIVE: {
           const timeout = payload.params.ms || DEFAULT_KEEP_ALIVE_TIMEOUT;
           this.expiresAt = dayjs().add(timeout).toDate();
           if (this.timer) {
             clearTimeout(this.timer);
           }
           this.timer = setTimeout(() => {
-            this.stopScreencast();
+            this.stopLiveSession();
           }, timeout);
 
           break;
         }
-        case SPECIAL_COMMANDS.SET_VIEWPORT: {
-          await page.setViewport(payload.params);
+        case LIVE_SERVER.EVENTS.GO_TO_TAB: {
+          const { targetId } = payload.params;
+          const foundPage = this.pages.get(targetId);
+
+          if (!foundPage) return;
+
+          const { page: targetPage } = foundPage;
+
+          try {
+            await this.stopScreencast();
+          } catch {}
+
+          // Bring target page to front
+          await targetPage.bringToFront();
+
+          const clients = this.clientManagement.getClients();
+          clients.forEach((socket) => {
+            socket.send(
+              JSON.stringify({
+                command: LIVE_SERVER.COMMANDS.TARGET_BRING_TO_FRONT,
+                data: { targetId },
+                context,
+              })
+            );
+          });
+
+          await this.updateTabInfo(targetPage);
+
+          this.logger.info(`Switching to tab ${targetId}`);
+
+          await this.startScreencast(targetId);
 
           break;
         }
-        case SPECIAL_COMMANDS.GO_BACK: {
+        case LIVE_SERVER.EVENTS.CLOSE_TAB: {
+          const { targetId } = payload.params;
+          const foundPage = this.pages.get(targetId);
+
+          if (!foundPage) return;
+
+          try {
+            await this.stopScreencast();
+          } catch {}
+
+          // Close the page
+          await foundPage.page.close();
+
+          break;
+        }
+        case LIVE_SERVER.EVENTS.GO_BACK: {
+          const { targetId } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { page } = pageData;
           await page.goBack();
 
           break;
         }
-        case SPECIAL_COMMANDS.GO_FORWARD: {
+        case LIVE_SERVER.EVENTS.GO_FORWARD: {
+          const { targetId } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { page } = pageData;
           await page.goForward();
 
           break;
         }
-        case SPECIAL_COMMANDS.RELOAD: {
+        case LIVE_SERVER.EVENTS.RELOAD: {
+          const { targetId } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { page } = pageData;
           await page.reload();
 
           break;
         }
-        case LIVE_COMMANDS.START_SCREENCAST: {
+        case LIVE_SERVER.EVENTS.SET_VIEWPORT: {
           const { targetId, ...params } = payload.params;
-
           const pageData = this.pages.get(targetId);
-
           if (!pageData) return;
-
-          const { cdp } = pageData;
-
-          await cdp.send(LIVE_COMMANDS.START_SCREENCAST, params);
-
-          // cdp.on(LIVE_COMMANDS.SCREENCAST_FRAME, async (data) => {
-          //   socket.send(
-          //     JSON.stringify({
-          //       command: LIVE_COMMANDS.SCREENCAST_FRAME,
-          //       data,
-          //       context,
-          //     })
-          //   );
-          // });
+          const { page } = pageData;
+          await page.setViewport(payload.params);
 
           break;
         }
-        case LIVE_COMMANDS.STOP_SCREENCAST: {
-          this.logger.info('Stopping screencast');
+        case LIVE_SERVER.EVENTS.INPUT_DISPATCH_KEY_EVENT: {
+          const { targetId, ...params } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { page, cdp } = pageData;
 
-          await client.send(payload.command);
-
-          this.stopScreencast('Screencast stopped');
-
-          break;
-        }
-        case LIVE_COMMANDS.INPUT_DISPATCH_KEY_EVENT: {
-          if (
-            ['Delete', 'Backspace'].includes(payload.params.code) &&
-            payload.params.type === 'keyDown'
-          ) {
+          if (['Delete', 'Backspace'].includes(params.code) && params.type === 'keyDown') {
             this.logger.info('Backspace detected');
 
             await page.keyboard.press('Backspace');
           } else {
-            await client.send(payload.command, payload.params);
+            await cdp.send(payload.command, params);
           }
 
           break;
         }
+        case LIVE_SERVER.EVENTS.SCREENCAST_FRAME_ACK: {
+          const { targetId, ...params } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { cdp } = pageData;
+          // Forward the ACK to the CDP session to acknowledge frame receipt
+          try {
+            await cdp.send(payload.command, params);
+            this.logger.debug('Screencast frame acknowledged');
+          } catch (error) {
+            this.logger.warn('Failed to send screencast frame ACK:', error);
+          }
+          break;
+        }
         default: {
-          await client.send(payload.command, payload.params);
+          const { targetId, ...params } = payload.params;
+          const pageData = this.pages.get(targetId);
+          if (!pageData) return;
+          const { cdp } = pageData;
+          await cdp.send(payload.command, params);
 
           break;
         }
@@ -425,7 +456,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       this.expiresAt = dayjs().add(DEFAULT_KEEP_ALIVE_TIMEOUT).toDate();
       this.timer = setTimeout(() => {
-        this.stopScreencast();
+        this.stopLiveSession();
       }, DEFAULT_KEEP_ALIVE_TIMEOUT);
 
       response = Response.success(
@@ -444,57 +475,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private async handleTargetDestroyed(target: Target, reason?: string) {
-    const targetId = target._targetId;
-
-    const pageData = this.pages.get(targetId);
-    if (!pageData) return;
-
-    const { cdp } = pageData;
-
-    cdp.removeAllListeners();
-
-    this.pages.delete(targetId);
-  }
-
-  private async startScreencast(socket: WebSocket, context: any) {
-    if (!this.browser) return;
-
-    const pagesEntries = Object.fromEntries(this.pages);
-    await Promise.allSettled(
-      Object.values(pagesEntries).map(({ cdp }) => {
-        return cdp.send(LIVE_COMMANDS.STOP_SCREENCAST);
-      })
-    );
-
-    const activePage = await this.browser.currentPage();
-
-    const cdp = await activePage.createCDPSession();
-    const { targetInfo } = await cdp.send('Target.getTargetInfo');
-    const targetId = targetInfo.targetId;
-
-    // await cdp.send(LIVE_COMMANDS.START_SCREENCAST, {
-    //   format: 'jpeg',
-    //   quality: 100,
-    //   everyNthFrame: 1,
-    // });
-
-    socket.emit(
-      'message',
-      JSON.stringify({
-        command: LIVE_COMMANDS.START_SCREENCAST,
-        params: {
-          targetId,
-          format: 'jpeg',
-          quality: 100,
-          everyNthFrame: 1,
-        },
-        context,
-      })
-    );
-  }
-
-  private async stopScreencast(reason?: string) {
+  private async stopLiveSession(reason?: string) {
     if (!this.browser) return;
 
     const browserId = getBrowserId(this.browser);
@@ -509,10 +490,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     if (!expiresAt.isBefore(now)) {
       const diff = expiresAt.diff(now);
       this.timer = setTimeout(() => {
-        this.stopScreencast();
+        this.stopLiveSession();
       }, diff);
       return;
     }
+
+    try {
+      await this.stopScreencast();
+    } catch {}
 
     const { eventNameForResult } = buildProtocolEventNames(
       browserId,
@@ -531,6 +516,118 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     this.clientManagement.clear();
     this.commandSessionIds.clear();
+  }
+
+  private async updateTabInfo(page: Page) {
+    const targetId = page.target()._targetId;
+
+    const browser = page.browser();
+    const browserId = getBrowserId(browser);
+
+    const tabInfo = await this.getTabInfo(page);
+
+    const clients = this.clientManagement.getClients();
+    clients.forEach((socket) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        const context = {
+          sessionId: browserId,
+          connectionId: socket.id,
+        };
+        socket.send(
+          JSON.stringify({
+            command: LIVE_SERVER.COMMANDS.FRAME_NAVIGATED,
+            data: {
+              ...tabInfo,
+              targetId,
+            },
+            context,
+          })
+        );
+      } else {
+        this.logger.warn(
+          `WebSocket not ready for frame navigation event, client ${socket.id}, state: ${socket.readyState}`
+        );
+        this.clientManagement.removeClient(socket);
+      }
+    });
+  }
+
+  private async getTabInfo(page: Page) {
+    const title = await page.title();
+    const url = page.url();
+    const favicon = await page.evaluate(() => {
+      const icon =
+        document.querySelector<HTMLLinkElement>("link[rel='icon']") ||
+        document.querySelector<HTMLLinkElement>("link[rel='shortcut icon']") ||
+        document.querySelector<HTMLLinkElement>("link[rel*='apple-touch-icon']");
+      return icon ? icon.href : null;
+    });
+
+    return {
+      title,
+      url,
+      favicon,
+    };
+  }
+
+  private async stopScreencast() {
+    if (!this.browser) return;
+    const activePage = await this.browser.currentPage();
+    const targetId = activePage.target()._targetId;
+    const pageData = this.pages.get(targetId);
+    if (!pageData) return;
+    const { cdp } = pageData;
+    await cdp.send(LIVE_SERVER.CDP_COMMANDS.STOP_SCREENCAST);
+    cdp.removeAllListeners(LIVE_SERVER.CDP_EVENTS.SCREENCAST_FRAME);
+    this.logger.info(`Stopped screencast for target ${targetId}`);
+  }
+
+  private async startScreencast(targetId: string) {
+    const pageData = this.pages.get(targetId);
+    if (!pageData) return;
+    const { page, cdp } = pageData;
+
+    const browser = page.browser();
+    const browserId = getBrowserId(browser);
+
+    await cdp.send(LIVE_SERVER.CDP_COMMANDS.START_SCREENCAST, {
+      format: 'jpeg',
+      quality: 100,
+      everyNthFrame: 1,
+    });
+    cdp.on(LIVE_SERVER.CDP_EVENTS.SCREENCAST_FRAME, async (data) => {
+      this.logger.info(
+        `Received screencast frame for target ${targetId}, data size: ${data.data?.length || 0}`
+      );
+
+      const clients = this.clientManagement.getClients();
+      this.logger.info(`Broadcasting to ${clients.length} clients`);
+
+      clients.forEach((clientSocket) => {
+        const clientContext = {
+          sessionId: browserId,
+          connectionId: clientSocket.id,
+        };
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(
+            JSON.stringify({
+              command: LIVE_SERVER.COMMANDS.SCREENCAST_FRAME,
+              data: {
+                ...data,
+                targetId,
+              },
+              context: clientContext,
+            })
+          );
+          this.logger.info(`Sent screencast frame to client ${clientSocket.id}`);
+        } else {
+          this.logger.warn(
+            `WebSocket not ready for client ${clientSocket.id}, state: ${clientSocket.readyState}`
+          );
+          this.clientManagement.removeClient(clientSocket);
+        }
+      });
+    });
   }
 }
 

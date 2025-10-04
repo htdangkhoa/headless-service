@@ -18,7 +18,19 @@ export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
           const pages = await browser.pages();
 
           for (const page of pages) {
-            const isVisible = await page.evaluate(() => document.visibilityState === 'visible');
+            let isVisible = false;
+
+            try {
+              isVisible = await page.evaluate(() => document.visibilityState === 'visible');
+            } catch (error: any) {
+              if (error.message.includes('Execution context was destroyed')) {
+                await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 0 });
+                isVisible = await page.evaluate(() => document.visibilityState === 'visible');
+                return;
+              }
+
+              throw error;
+            }
 
             if (isVisible) {
               return resolve(page);
