@@ -54,6 +54,9 @@ async function buildExtension(extensionDir) {
     entryPoints,
     metafile: true,
     outdir,
+    loader: {
+      '.html': 'copy',
+    },
     plugins: [
       polyfillNode({
         globals: {
