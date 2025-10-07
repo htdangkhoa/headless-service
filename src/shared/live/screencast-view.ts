@@ -1,9 +1,10 @@
 import { debounce } from 'lodash-es';
-import { X as XIcon } from 'lucide-static';
+import { CircleStop as CircleStopIcon, X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
 
 import { DEFAULT_KEEP_ALIVE_TIMEOUT, LIVE_CLIENT } from '@/constants/live';
 import type { Dictionary } from '@/types';
+import { LiveMessage } from '@/types/live';
 
 const MOUSE_BUTTONS = ['none', 'left', 'middle', 'right'];
 
@@ -64,6 +65,15 @@ export class ScreencastView {
     /* ===== Tabs ===== */
     this.$tabs = document.createElement('div');
     this.$tabs.classList.add('flex', 'screencast-tabs');
+    this.$tabs.addEventListener(
+      'wheel',
+      (e) => {
+        if (e.deltaY === 0) return; // ignore pure horizontal scroll
+        e.preventDefault(); // prevent vertical page scroll
+        this.$tabs.scrollLeft += e.deltaY; // scroll horizontally
+      },
+      { passive: false }
+    );
 
     container.appendChild(this.$tabs);
 
@@ -88,10 +98,22 @@ export class ScreencastView {
     input.type = 'text';
     input.disabled = true;
 
+    const stopButton = document.createElement('button');
+    stopButton.innerHTML = CircleStopIcon;
+    const span = document.createElement('span');
+    span.textContent = 'Stop';
+    stopButton.append(span);
+    stopButton.classList.add('flex', 'items-center');
+    stopButton.style.gap = '4px';
+    stopButton.style.width = 'auto';
+    stopButton.style.color = '#ff5449';
+    stopButton.addEventListener('click', this.handleStop.bind(this));
+
     this.$navigation.appendChild(backButton);
     this.$navigation.appendChild(forwardButton);
     this.$navigation.appendChild(reloadButton);
     this.$navigation.appendChild(input);
+    this.$navigation.appendChild(stopButton);
 
     container.appendChild(this.$navigation);
 
@@ -252,10 +274,13 @@ export class ScreencastView {
     }
   }
 
+  private handleStop(e: MouseEvent) {
+    e.preventDefault();
+    this.sendCommand(LIVE_CLIENT.COMMANDS.STOP_SCREENCAST);
+  }
+
   async onOpen(_event: Event) {
-    const previousConnectionId = sessionStorage.getItem('connection-id');
-    this.connectionId = previousConnectionId || window.crypto.randomUUID();
-    sessionStorage.setItem('connection-id', this.connectionId);
+    this.connectionId = window.crypto.randomUUID();
 
     this.sendCommand(LIVE_CLIENT.COMMANDS.REGISTER_SCREENCAST, {
       connectionId: this.connectionId,
@@ -337,27 +362,14 @@ export class ScreencastView {
       document.removeEventListener('keypress', onKeyEvent);
     };
     this.$canvas.addEventListener('mouseleave', onMouseLeave);
-
-    const beforeUnload = (event: BeforeUnloadEvent) => {
-      // Show confirmation dialog
-      event.preventDefault();
-      event.returnValue = 'Are you sure you want to leave? The live session will be disconnected.';
-
-      if (this.connectionId) {
-        sessionStorage.setItem('connection-id', this.connectionId);
-      }
-
-      return event.returnValue;
-    };
-    window.addEventListener('beforeunload', beforeUnload);
   }
 
   async onMessage(event: MessageEvent) {
     const text = event.data;
 
-    const { context, command, data } = JSON.parse(text);
+    const { context, command, data = {} } = JSON.parse(text) as LiveMessage;
 
-    if (context?.connectionId !== this.connectionId) return;
+    if (context.connectionId !== this.connectionId) return;
 
     switch (command) {
       case LIVE_CLIENT.EVENTS.SCREENCAST_REGISTERED: {

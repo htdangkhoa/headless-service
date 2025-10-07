@@ -1,13 +1,21 @@
 import type { IncomingMessage } from 'node:http';
 import dayjs from 'dayjs';
 import { Protocol } from 'devtools-protocol';
-import { TargetType, type Browser, type CDPSession, type Page, type Target } from 'puppeteer';
+import {
+  TargetType,
+  type Browser,
+  type CDPSession,
+  type Page,
+  type Target,
+  type Viewport,
+} from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 import { COMMANDS, DEFAULT_KEEP_ALIVE_TIMEOUT, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
 import { Logger } from '@/logger';
+import type { LiveContext, LiveMessage } from '@/types/live';
 import {
   buildProtocolEventNames,
   buildProtocolMethod,
@@ -23,10 +31,10 @@ interface PageData {
   targetId: string;
 }
 
-// interface LiveContext {
-//   sessionId: string;
-//   connectionId: string;
-// }
+enum STATE {
+  IDLE = 'idle',
+  RUNNING = 'running',
+}
 
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
@@ -47,6 +55,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private expiresAt: Date | null = null;
   private timer: NodeJS.Timeout | null = null;
 
+  private state: STATE = STATE.IDLE;
+
   constructor(
     private ws: WebSocketServer,
     private readonly requestId?: string
@@ -58,15 +68,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       socket.on('message', (rawMessage) => this.messageHandler.call(this, rawMessage, socket, req));
 
-      socket.on('close', () => {
-        this.logger.info('WebSocket client disconnected', socket.id);
-        this.clientManagement.removeClient(socket);
-      });
+      socket.on('close', () => this.onSocketClose.call(this, socket));
 
-      socket.on('error', (error) => {
-        this.logger.error('WebSocket client error:', error);
-        this.clientManagement.removeClient(socket);
-      });
+      socket.on('error', (error) => this.onSocketError.call(this, socket, error));
     });
   }
 
@@ -132,9 +136,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       const clients = this.clientManagement.getClients();
       clients.forEach((socket) => {
-        const context = {
+        const context: LiveContext = {
           sessionId: browserId,
-          connectionId: socket.id,
+          connectionId: socket.id!,
         };
         socket.send(
           JSON.stringify({
@@ -147,28 +151,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           })
         );
       });
-
-      // // Wait a bit for page to load, then update tabs with proper title
-      // setTimeout(async () => {
-      //   try {
-      //     const title = await page.title();
-      //     this.logger.info(`Tab ${targetId} title: ${title}`);
-
-      //     // Update tabs for all clients with the new title
-      //     const clients = this.clientManagement.getClients();
-      //     clients.forEach((socket) => {
-      //       const context = {
-      //         sessionId: browserId,
-      //         connectionId: socket.id,
-      //       };
-      //       self.renderTabs.call(self, socket, context);
-      //     });
-      //   } catch (error) {
-      //     this.logger.warn(`Failed to get title for tab ${targetId}:`, error);
-      //   }
-      // }, 1000);
-
-      // Don't register screencast frame listener here - it will be registered per active page
     }
 
     return Promise.resolve();
@@ -194,9 +176,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const clients = this.clientManagement.getClients();
     clients.forEach((socket) => {
-      const context = {
+      const context: LiveContext = {
         sessionId: browserId,
-        connectionId: socket.id,
+        connectionId: socket.id!,
       };
       socket.send(
         JSON.stringify({
@@ -228,13 +210,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
+    if (this.state === STATE.IDLE) return;
+
     if (!this.browser) return;
 
     const browserId = getBrowserId(this.browser);
 
     const buffer = Buffer.from(rawMessage as Buffer);
     const message = Buffer.from(buffer).toString('utf8');
-    const rawPayload = JSON.parse(message);
+    const rawPayload = JSON.parse(message) as LiveMessage;
     const { context, ...payload } = rawPayload;
 
     if (context.sessionId !== browserId) return;
@@ -243,7 +227,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       switch (payload.command) {
         case LIVE_SERVER.EVENTS.REGISTER_SCREENCAST: {
           // TODO: error handling
-          // if (!payload.params.id)
+          if (!payload.params?.connectionId) return;
+
           const existingClient = this.clientManagement.getClient(payload.params.connectionId);
           if (existingClient) {
             this.clientManagement.removeClient(existingClient);
@@ -287,19 +272,19 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.KEEP_ALIVE: {
-          const timeout = payload.params.ms || DEFAULT_KEEP_ALIVE_TIMEOUT;
+          const timeout = payload.params?.ms || DEFAULT_KEEP_ALIVE_TIMEOUT;
           this.expiresAt = dayjs().add(timeout).toDate();
           if (this.timer) {
             clearTimeout(this.timer);
           }
           this.timer = setTimeout(() => {
-            this.stopLiveSession();
+            this.endLiveSession({ reason: 'Keep-alive timeout' });
           }, timeout);
 
           break;
         }
         case LIVE_SERVER.EVENTS.GO_TO_TAB: {
-          const { targetId } = payload.params;
+          const { targetId } = payload.params || {};
           const foundPage = this.pages.get(targetId);
 
           if (!foundPage) return;
@@ -333,7 +318,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.CLOSE_TAB: {
-          const { targetId } = payload.params;
+          const { targetId } = payload.params || {};
           const foundPage = this.pages.get(targetId);
 
           if (!foundPage) return;
@@ -348,7 +333,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.GO_BACK: {
-          const { targetId } = payload.params;
+          const { targetId } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { page } = pageData;
@@ -357,7 +342,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.GO_FORWARD: {
-          const { targetId } = payload.params;
+          const { targetId } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { page } = pageData;
@@ -366,7 +351,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.RELOAD: {
-          const { targetId } = payload.params;
+          const { targetId } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { page } = pageData;
@@ -374,17 +359,22 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           break;
         }
+        case LIVE_SERVER.EVENTS.STOP_SCREENCAST: {
+          await this.endLiveSession({ force: true });
+
+          break;
+        }
         case LIVE_SERVER.EVENTS.SET_VIEWPORT: {
-          const { targetId, ...params } = payload.params;
+          const { targetId, ...params } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { page } = pageData;
-          await page.setViewport(payload.params);
+          await page.setViewport(params as Viewport);
 
           break;
         }
         case LIVE_SERVER.EVENTS.INPUT_DISPATCH_KEY_EVENT: {
-          const { targetId, ...params } = payload.params;
+          const { targetId, ...params } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { page, cdp } = pageData;
@@ -394,19 +384,19 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
             await page.keyboard.press('Backspace');
           } else {
-            await cdp.send(payload.command, params);
+            await cdp.send(payload.command, params as Protocol.Input.DispatchKeyEventRequest);
           }
 
           break;
         }
         case LIVE_SERVER.EVENTS.SCREENCAST_FRAME_ACK: {
-          const { targetId, ...params } = payload.params;
+          const { targetId, ...params } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { cdp } = pageData;
           // Forward the ACK to the CDP session to acknowledge frame receipt
           try {
-            await cdp.send(payload.command, params);
+            await cdp.send(payload.command, params as Protocol.Page.ScreencastFrameAckRequest);
             this.logger.debug('Screencast frame acknowledged');
           } catch (error) {
             this.logger.warn('Failed to send screencast frame ACK:', error);
@@ -414,11 +404,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         default: {
-          const { targetId, ...params } = payload.params;
+          const { targetId, ...params } = payload.params || {};
           const pageData = this.pages.get(targetId);
           if (!pageData) return;
           const { cdp } = pageData;
-          await cdp.send(payload.command, params);
+          await cdp.send(payload.command as any, params as any);
 
           break;
         }
@@ -427,6 +417,16 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.logger.error('Error sending command', error);
       this.logger.debug('Payload params', payload.params);
     }
+  }
+
+  private async onSocketClose(socket: WebSocket) {
+    this.logger.info('WebSocket client disconnected', socket.id);
+    this.clientManagement.removeClient(socket);
+  }
+
+  private async onSocketError(socket: WebSocket, error: Error) {
+    this.logger.error('WebSocket client error', error);
+    this.clientManagement.removeClient(socket);
   }
 
   private async onHeadlessServiceLiveURL(payload: any) {
@@ -456,8 +456,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       this.expiresAt = dayjs().add(DEFAULT_KEEP_ALIVE_TIMEOUT).toDate();
       this.timer = setTimeout(() => {
-        this.stopLiveSession();
+        this.endLiveSession({ reason: 'Keep-alive timeout' });
       }, DEFAULT_KEEP_ALIVE_TIMEOUT);
+
+      this.state = STATE.RUNNING;
 
       response = Response.success(
         request.id!,
@@ -475,49 +477,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private async stopLiveSession(reason?: string) {
-    if (!this.browser) return;
-
-    const browserId = getBrowserId(this.browser);
-
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
-    const now = dayjs();
-    const expiresAt = dayjs(this.expiresAt);
-    if (!expiresAt.isBefore(now)) {
-      const diff = expiresAt.diff(now);
-      this.timer = setTimeout(() => {
-        this.stopLiveSession();
-      }, diff);
-      return;
-    }
-
-    try {
-      await this.stopScreencast();
-    } catch {}
-
-    const { eventNameForResult } = buildProtocolEventNames(
-      browserId,
-      this.PROTOCOL_METHODS.LIVE_URL
-    );
-
-    const self = this;
-    this.commandSessionIds.forEach((sessionId) => {
-      const payload = {
-        sessionId,
-        method: this.PROTOCOL_METHODS.LIVE_COMPLETE,
-        params: { reason: reason ?? `Target ${browserId} destroyed` },
-      };
-      self.browser!.emit(eventNameForResult, payload);
-    });
-
-    this.clientManagement.clear();
-    this.commandSessionIds.clear();
-  }
-
   private async updateTabInfo(page: Page) {
     const targetId = page.target()._targetId;
 
@@ -529,9 +488,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const clients = this.clientManagement.getClients();
     clients.forEach((socket) => {
       if (socket.readyState === WebSocket.OPEN) {
-        const context = {
+        const context: LiveContext = {
           sessionId: browserId,
-          connectionId: socket.id,
+          connectionId: socket.id!,
         };
         socket.send(
           JSON.stringify({
@@ -570,16 +529,24 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     };
   }
 
-  private async stopScreencast() {
+  private async stopScreencast(targetId?: string) {
     if (!this.browser) return;
-    const activePage = await this.browser.currentPage();
-    const targetId = activePage.target()._targetId;
-    const pageData = this.pages.get(targetId);
-    if (!pageData) return;
-    const { cdp } = pageData;
-    await cdp.send(LIVE_SERVER.CDP_COMMANDS.STOP_SCREENCAST);
-    cdp.removeAllListeners(LIVE_SERVER.CDP_EVENTS.SCREENCAST_FRAME);
-    this.logger.info(`Stopped screencast for target ${targetId}`);
+
+    if (targetId) {
+      const pageData = this.pages.get(targetId);
+      if (!pageData) return;
+      const { cdp } = pageData;
+      await cdp.send(LIVE_SERVER.CDP_COMMANDS.STOP_SCREENCAST);
+      cdp.removeAllListeners(LIVE_SERVER.CDP_EVENTS.SCREENCAST_FRAME);
+      this.logger.info(`Stopped screencast for target ${targetId}`);
+      return;
+    }
+
+    const pagesData = Array.from(this.pages.values());
+    for (const pageData of pagesData) {
+      const { targetId } = pageData;
+      await this.stopScreencast(targetId);
+    }
   }
 
   private async startScreencast(targetId: string) {
@@ -628,6 +595,52 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         }
       });
     });
+  }
+
+  private async endLiveSession(options?: { reason?: string; force?: boolean }) {
+    const { reason, force } = options || {};
+
+    if (!this.browser) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    const now = dayjs();
+    const expiresAt = dayjs(this.expiresAt);
+    if (!expiresAt.isBefore(now) && !force) {
+      const diff = expiresAt.diff(now);
+      this.timer = setTimeout(() => {
+        this.endLiveSession({ reason: 'Keep-alive timeout' });
+      }, diff);
+      return;
+    }
+
+    try {
+      await this.stopScreencast();
+    } catch {}
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.LIVE_URL
+    );
+
+    const self = this;
+    this.commandSessionIds.forEach((sessionId) => {
+      const payload = {
+        sessionId,
+        method: this.PROTOCOL_METHODS.LIVE_COMPLETE,
+        params: { reason: reason ?? `Target ${browserId} destroyed` },
+      };
+      self.browser!.emit(eventNameForResult, payload);
+    });
+
+    this.clientManagement.clear();
+    this.commandSessionIds.clear();
+    this.state = STATE.IDLE;
   }
 }
 
