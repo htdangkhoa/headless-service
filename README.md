@@ -16,6 +16,7 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 | `SERVICE_NAME`              | The name of the service                                          | :white_check_mark: | `headless-service`              |
 | `HOST`                      | The host where the service will be listening                     |                    | `localhost`                     |
 | `PORT`                      | The port where the service will be listening                     |                    | `3000`                          |
+| `REQUEST_TIMEOUT`           | The timeout for the requests                                     |                    | `60s`                           |
 | `SECRET`                    | The secret to authenticate the internal requests                 | :white_check_mark: |                                 |
 | `HEADLESS_SERVICE_TOKEN`    | The token to authenticate the requests (separated by comma)      | :white_check_mark: |                                 |
 | `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service | :white_check_mark: |                                 |

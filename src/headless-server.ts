@@ -47,6 +47,8 @@ const publicDir = path.resolve(process.cwd(), 'public');
 export class HeadlessServer {
   private readonly logger = new Logger(this.constructor.name);
 
+  private readonly requestTimeout = env<string>('REQUEST_TIMEOUT', '60s')!;
+
   private options: HeadlessServerOptions;
 
   private app = express();
@@ -90,7 +92,7 @@ export class HeadlessServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.raw({ type: 'application/javascript' }));
-    this.app.use(timeout('60s'));
+    this.app.use(timeout(this.requestTimeout));
 
     // Routes
     this.apiInternalGroup = new Group(
