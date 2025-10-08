@@ -38,4 +38,6 @@ The DevTools frontend URL follows this pattern:
 {{baseUrl}}/devtools/inspector.html?ws=<websocket-url>
 ```
 
-![DevTools Frontend](images/devtools-frontend.png)
+<p align="center">
+    <img src="images/devtools-frontend.png" alt="DevTools Frontend">
+</p>

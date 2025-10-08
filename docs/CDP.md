@@ -17,7 +17,7 @@ already come to know.
 
 ## HeadlessService.liveURL
 
-Gets the live streaming URL for the current session.
+Gets the live streaming URL for the current session. You can listen to the `HeadlessService.liveComplete` event to know when the live mode is completed.
 
 **Example:**
 
@@ -34,10 +34,22 @@ import puppeteer from 'puppeteer-core';
   const { liveURL } = await cdp.send('HeadlessService.liveURL');
 
   // liveURL = `{{baseUrl}}/live?session=eb7e3067-9d3c-40f6-91b6-0ef08f0c4c0d&token=${TOKEN}`;
+
+  await new Promise<void>((resolve) =>
+    cdp.on('HeadlessService.liveComplete', () => {
+      return resolve();
+    })
+  );
+
+  // ... do something after the live mode is completed
+
+  await browser.close();
 })();
 ```
 
-![Live Session](images/live-session.png)
+<p align="center">
+    <img src="images/live-session.png" alt="Live Session">
+</p>
 
 ---
 
