@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
-import dayjs from 'dayjs';
 import { Protocol } from 'devtools-protocol';
+import jwt from 'jsonwebtoken';
 import {
   TargetType,
   type Browser,
@@ -13,12 +13,14 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
-import { COMMANDS, DEFAULT_KEEP_ALIVE_TIMEOUT, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
+import { COMMANDS, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
 import { Logger } from '@/logger';
+import { Dictionary } from '@/types';
 import type { LiveContext, LiveMessage } from '@/types/live';
 import {
   buildProtocolEventNames,
   buildProtocolMethod,
+  env,
   getBrowserId,
   makeExternalUrl,
 } from '@/utils';
@@ -52,8 +54,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   private clientManagement: ClientManagement = new ClientManagement();
 
-  private expiresAt: Date | null = null;
-  private timer: NodeJS.Timeout | null = null;
+  private jwtOptions: Dictionary;
 
   private state: STATE = STATE.IDLE;
 
@@ -62,6 +63,12 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     private readonly requestId?: string
   ) {
     super();
+
+    const liveUrl = new URL(makeExternalUrl('http', 'live'));
+    this.jwtOptions = {
+      audience: [liveUrl.href],
+      issuer: liveUrl.hostname,
+    };
 
     this.ws.on(this.constructor.name, async (socket: WebSocket, req) => {
       this.logger.info('connected from plugins', this.requestId);
@@ -137,7 +144,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       const clients = this.clientManagement.getClients();
       clients.forEach((socket) => {
         const context: LiveContext = {
-          sessionId: browserId,
           connectionId: socket.id!,
         };
         socket.send(
@@ -177,7 +183,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const clients = this.clientManagement.getClients();
     clients.forEach((socket) => {
       const context: LiveContext = {
-        sessionId: browserId,
         connectionId: socket.id!,
       };
       socket.send(
@@ -221,9 +226,17 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const rawPayload = JSON.parse(message) as LiveMessage;
     const { context, ...payload } = rawPayload;
 
-    if (context.sessionId !== browserId) return;
+    if (!context.session) return;
+
+    const jwtPayload = this.verifySession(context.session);
 
     try {
+      if (!jwtPayload) {
+        return this.endLiveSession({ reason: 'Invalid session' });
+      }
+
+      if (jwtPayload?.browserId !== browserId) return;
+
       switch (payload.command) {
         case LIVE_SERVER.EVENTS.REGISTER_SCREENCAST: {
           // TODO: error handling
@@ -271,15 +284,16 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           break;
         }
-        case LIVE_SERVER.EVENTS.KEEP_ALIVE: {
-          const timeout = payload.params?.ms || DEFAULT_KEEP_ALIVE_TIMEOUT;
-          this.expiresAt = dayjs().add(timeout).toDate();
-          if (this.timer) {
-            clearTimeout(this.timer);
-          }
-          this.timer = setTimeout(() => {
-            this.endLiveSession({ reason: 'Keep-alive timeout' });
-          }, timeout);
+        case LIVE_SERVER.EVENTS.RENEW_SESSION: {
+          const newSession = this.generateSession(jwtPayload.browserId);
+
+          socket.send(
+            JSON.stringify({
+              command: LIVE_SERVER.COMMANDS.RENEW_SESSION_ACK,
+              data: { session: newSession },
+              context,
+            })
+          );
 
           break;
         }
@@ -449,15 +463,13 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.commandSessionIds.add(payload.sessionId);
 
       const liveUrl = new URL(makeExternalUrl('http', `live`));
-      liveUrl.searchParams.set('session', browserId);
+
+      const session = this.generateSession(browserId);
+      liveUrl.searchParams.set('session', session);
+
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
-
-      this.expiresAt = dayjs().add(DEFAULT_KEEP_ALIVE_TIMEOUT).toDate();
-      this.timer = setTimeout(() => {
-        this.endLiveSession({ reason: 'Keep-alive timeout' });
-      }, DEFAULT_KEEP_ALIVE_TIMEOUT);
 
       this.state = STATE.RUNNING;
 
@@ -489,7 +501,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     clients.forEach((socket) => {
       if (socket.readyState === WebSocket.OPEN) {
         const context: LiveContext = {
-          sessionId: browserId,
           connectionId: socket.id!,
         };
         socket.send(
@@ -571,9 +582,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.logger.info(`Broadcasting to ${clients.length} clients`);
 
       clients.forEach((clientSocket) => {
-        const clientContext = {
-          sessionId: browserId,
-          connectionId: clientSocket.id,
+        const clientContext: LiveContext = {
+          connectionId: clientSocket.id!,
         };
         if (clientSocket.readyState === WebSocket.OPEN) {
           clientSocket.send(
@@ -604,21 +614,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const browserId = getBrowserId(this.browser);
 
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
-    }
-
-    const now = dayjs();
-    const expiresAt = dayjs(this.expiresAt);
-    if (!expiresAt.isBefore(now) && !force) {
-      const diff = expiresAt.diff(now);
-      this.timer = setTimeout(() => {
-        this.endLiveSession({ reason: 'Keep-alive timeout' });
-      }, diff);
-      return;
-    }
-
     try {
       await this.stopScreencast();
     } catch {}
@@ -638,9 +633,25 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       self.browser!.emit(eventNameForResult, payload);
     });
 
-    this.clientManagement.clear();
     this.commandSessionIds.clear();
+    this.clientManagement.clear();
     this.state = STATE.IDLE;
+  }
+
+  private generateSession(browserId: string, expiresIn: number = 300) {
+    const session = jwt.sign({ browserId }, env('HEADLESS_SERVICE_TOKEN')!, {
+      ...this.jwtOptions,
+      expiresIn,
+    });
+    return session;
+  }
+
+  private verifySession(session: string): jwt.JwtPayload | null {
+    try {
+      return jwt.verify(session, env('HEADLESS_SERVICE_TOKEN')!, this.jwtOptions) as jwt.JwtPayload;
+    } catch (error) {
+      return null;
+    }
   }
 }
 

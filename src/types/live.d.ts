@@ -3,7 +3,7 @@ import { ProtocolMapping } from 'devtools-protocol/types/protocol-mapping';
 import { Dictionary } from './index.d';
 
 export interface LiveContext {
-  sessionId: string;
+  session?: string;
   connectionId: string;
 }
 

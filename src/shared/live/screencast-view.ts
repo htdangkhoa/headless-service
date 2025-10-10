@@ -2,7 +2,7 @@ import { debounce } from 'lodash-es';
 import { CircleStop as CircleStopIcon, X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
 
-import { DEFAULT_KEEP_ALIVE_TIMEOUT, LIVE_CLIENT } from '@/constants/live';
+import { LIVE_CLIENT } from '@/constants/live';
 import type { Dictionary } from '@/types';
 import { LiveMessage } from '@/types/live';
 
@@ -24,11 +24,11 @@ interface ScreencastConfigs {
   everyNthFrame: number | string;
 }
 
-const DEFAULT_SCREENCAST_CONFIGS: ScreencastConfigs = {
-  format: 'jpeg',
-  quality: 100,
-  everyNthFrame: 1,
-};
+// const DEFAULT_SCREENCAST_CONFIGS: ScreencastConfigs = {
+//   format: 'jpeg',
+//   quality: 100,
+//   everyNthFrame: 1,
+// };
 
 export class ScreencastView {
   private $tabs: HTMLDivElement;
@@ -39,26 +39,13 @@ export class ScreencastView {
   private image = new Image();
   private $notification: HTMLDivElement;
 
-  private screencastConfigs: ScreencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
-
-  private sessionId: string;
+  private session: string;
   private ws: WebSocket;
 
   private connectionId?: string;
 
   constructor(private container: HTMLElement) {
     const url = new URL(location.href);
-
-    const format = url.searchParams.get('format') || DEFAULT_SCREENCAST_CONFIGS.format;
-    const quality = url.searchParams.get('quality') || DEFAULT_SCREENCAST_CONFIGS.quality;
-    const everyNthFrame =
-      url.searchParams.get('everyNthFrame') || DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
-
-    this.screencastConfigs = {
-      format,
-      quality,
-      everyNthFrame,
-    };
 
     this.container.classList.add('flex-auto', 'widget', 'vbox');
 
@@ -131,9 +118,14 @@ export class ScreencastView {
     this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
 
-    this.sessionId = url.searchParams.get('session')!;
-    const wsUrl = url.href.replace(/^http/, 'ws');
-    this.ws = new WebSocket(wsUrl);
+    this.session = url.searchParams.get('session')!;
+    const wsEndpoint = url.searchParams.get('ws') ?? location.href;
+
+    const wsUrl = new URL(wsEndpoint);
+    wsUrl.search = url.search;
+    const finalWsUrl = wsUrl.href.replace(/^http/, 'ws');
+
+    this.ws = new WebSocket(finalWsUrl);
     this.ws.addEventListener('open', this.onOpen.bind(this));
     this.ws.addEventListener('message', this.onMessage.bind(this));
     this.ws.addEventListener('close', this.onClose.bind(this));
@@ -227,7 +219,7 @@ export class ScreencastView {
         command,
         params,
         context: {
-          sessionId: this.sessionId,
+          session: this.session,
           connectionId: this.connectionId,
         },
       })
@@ -288,9 +280,7 @@ export class ScreencastView {
 
     setInterval(
       () => {
-        this.sendCommand(LIVE_CLIENT.COMMANDS.KEEP_ALIVE, {
-          ms: DEFAULT_KEEP_ALIVE_TIMEOUT,
-        });
+        this.sendCommand(LIVE_CLIENT.COMMANDS.RENEW_SESSION);
       },
       1000 * 60 * 3 // 3 minutes
     );
@@ -419,6 +409,10 @@ export class ScreencastView {
         this.updateTabItem(data);
         this.updateNavigationInput(data);
 
+        break;
+      }
+      case LIVE_CLIENT.EVENTS.RENEW_SESSION_ACK: {
+        this.session = data.session;
         break;
       }
     }
