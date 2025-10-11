@@ -1,4 +1,5 @@
 import type { IncomingMessage } from 'node:http';
+import dayjs from 'dayjs';
 import { Protocol } from 'devtools-protocol';
 import jwt from 'jsonwebtoken';
 import {
@@ -55,6 +56,9 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private clientManagement: ClientManagement = new ClientManagement();
 
   private jwtOptions: Dictionary;
+
+  private expiresAt: number | null = null;
+  private timer: NodeJS.Timeout | null = null;
 
   private state: STATE = STATE.IDLE;
 
@@ -232,7 +236,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     try {
       if (!jwtPayload) {
-        return this.endLiveSession({ reason: 'Invalid session' });
+        return this.endLiveSession({ reason: 'Invalid session', force: true });
       }
 
       if (jwtPayload?.browserId !== browserId) return;
@@ -285,7 +289,15 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.RENEW_SESSION: {
-          const newSession = this.generateSession(jwtPayload.browserId);
+          const { session: newSession, expiresAt } = this.generateSession(jwtPayload.browserId);
+
+          if (this.timer) {
+            clearTimeout(this.timer);
+          }
+          this.expiresAt = expiresAt;
+          this.timer = setTimeout(() => {
+            this.endLiveSession({ reason: 'Session expired' });
+          }, expiresAt);
 
           socket.send(
             JSON.stringify({
@@ -374,7 +386,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.STOP_SCREENCAST: {
-          await this.endLiveSession({ force: true });
+          await this.endLiveSession({ reason: 'Stop screencast', force: true });
 
           break;
         }
@@ -464,12 +476,16 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       const liveUrl = new URL(makeExternalUrl('http', `live`));
 
-      const session = this.generateSession(browserId);
+      const { session, expiresAt } = this.generateSession(browserId);
       liveUrl.searchParams.set('session', session);
-
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
       }
+
+      this.expiresAt = expiresAt;
+      this.timer = setTimeout(() => {
+        this.endLiveSession({ reason: 'Session expired' });
+      }, expiresAt);
 
       this.state = STATE.RUNNING;
 
@@ -614,6 +630,21 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const browserId = getBrowserId(this.browser);
 
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    const now = dayjs();
+    const expiresAt = dayjs(this.expiresAt);
+    if (!expiresAt.isBefore(now) && !force) {
+      const diff = expiresAt.diff(now);
+      this.timer = setTimeout(() => {
+        this.endLiveSession({ reason: 'Session expired' });
+      }, diff);
+      return;
+    }
+
     try {
       await this.stopScreencast();
     } catch {}
@@ -643,7 +674,13 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       ...this.jwtOptions,
       expiresIn,
     });
-    return session;
+
+    const payload = jwt.decode(session) as jwt.JwtPayload;
+
+    return {
+      session,
+      expiresAt: dayjs.unix(payload.exp!).valueOf(),
+    };
   }
 
   private verifySession(session: string): jwt.JwtPayload | null {
