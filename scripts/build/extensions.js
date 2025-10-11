@@ -20,6 +20,7 @@ async function buildExtension(extensionDir) {
     outdir,
     loader: {
       '.html': 'copy',
+      '.json': 'copy',
     },
     plugins: [
       polyfillNode({
@@ -29,9 +30,6 @@ async function buildExtension(extensionDir) {
       }),
     ],
   });
-
-  const manifestContent = fs.readFileSync(join(extensionDir, 'manifest.json'), 'utf-8');
-  fs.writeFileSync(join(outdir, 'manifest.json'), manifestContent);
 }
 
 async function main() {
