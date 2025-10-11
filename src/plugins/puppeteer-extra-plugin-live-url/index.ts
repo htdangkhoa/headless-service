@@ -289,7 +289,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           break;
         }
         case LIVE_SERVER.EVENTS.RENEW_SESSION: {
-          const { session: newSession, expiresAt } = this.generateSession(jwtPayload.browserId);
+          const {
+            session: newSession,
+            expiresAt,
+            duration,
+          } = this.generateSession(jwtPayload.browserId);
 
           if (this.timer) {
             clearTimeout(this.timer);
@@ -297,7 +301,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           this.expiresAt = expiresAt;
           this.timer = setTimeout(() => {
             this.endLiveSession({ reason: 'Session expired' });
-          }, expiresAt);
+          }, duration);
 
           socket.send(
             JSON.stringify({
@@ -423,7 +427,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           // Forward the ACK to the CDP session to acknowledge frame receipt
           try {
             await cdp.send(payload.command, params as Protocol.Page.ScreencastFrameAckRequest);
-            this.logger.debug('Screencast frame acknowledged');
+            // this.logger.debug('Screencast frame acknowledged');
           } catch (error) {
             this.logger.warn('Failed to send screencast frame ACK:', error);
           }
@@ -441,7 +445,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       }
     } catch (error) {
       this.logger.error('Error sending command', error);
-      this.logger.debug('Payload params', payload.params);
+      // this.logger.debug('Payload params', payload.params);
     }
   }
 
@@ -476,7 +480,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       const liveUrl = new URL(makeExternalUrl('http', `live`));
 
-      const { session, expiresAt } = this.generateSession(browserId);
+      const { session, expiresAt, duration } = this.generateSession(browserId);
       liveUrl.searchParams.set('session', session);
       if (this.requestId) {
         liveUrl.searchParams.set('request_id', this.requestId);
@@ -485,7 +489,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       this.expiresAt = expiresAt;
       this.timer = setTimeout(() => {
         this.endLiveSession({ reason: 'Session expired' });
-      }, expiresAt);
+      }, duration);
 
       this.state = STATE.RUNNING;
 
@@ -624,6 +628,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   private async endLiveSession(options?: { reason?: string; force?: boolean }) {
+    this.logger.debug('Ending live session', options);
+
     const { reason, force } = options || {};
 
     if (!this.browser) return;
@@ -676,10 +682,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     });
 
     const payload = jwt.decode(session) as jwt.JwtPayload;
+    const now = dayjs();
+    const expiresAt = dayjs.unix(payload.exp!).valueOf();
+    const duration = dayjs(expiresAt).diff(now);
 
     return {
       session,
-      expiresAt: dayjs.unix(payload.exp!).valueOf(),
+      expiresAt,
+      duration,
     };
   }
 

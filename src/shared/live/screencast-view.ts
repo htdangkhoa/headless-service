@@ -44,6 +44,8 @@ export class ScreencastView {
 
   private connectionId?: string;
 
+  private interval: NodeJS.Timeout | null = null;
+
   constructor(private container: HTMLElement) {
     const url = new URL(location.href);
 
@@ -278,7 +280,7 @@ export class ScreencastView {
       connectionId: this.connectionId,
     });
 
-    setInterval(
+    this.interval = setInterval(
       () => {
         this.sendCommand(LIVE_CLIENT.COMMANDS.RENEW_SESSION);
       },
@@ -428,6 +430,10 @@ export class ScreencastView {
     // show notification
     this.$notification.classList.remove('hidden');
     this.$notification.textContent = 'Session closed';
+
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
   }
 
   async onError(_event: Event) {
@@ -440,6 +446,10 @@ export class ScreencastView {
     // show notification
     this.$notification.classList.remove('hidden');
     this.$notification.textContent = 'An error occurred';
+
+    if (this.interval) {
+      clearInterval(this.interval);
+    }
   }
 
   private createTabItem(tab: any) {
