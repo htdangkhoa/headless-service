@@ -1,4 +1,4 @@
-import { debounce } from 'lodash-es';
+import { debounce, isNumber } from 'lodash-es';
 import { CircleStop as CircleStopIcon, X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
 
@@ -45,6 +45,10 @@ export class ScreencastView {
   private connectionId?: string;
 
   private interval: NodeJS.Timeout | null = null;
+  private renewSessionRetryCount = 0;
+  private maxRetries = 3;
+  private renewSessionTimeout: NodeJS.Timeout | null = null;
+  private lastRenewTime: number = 0;
 
   constructor(private container: HTMLElement) {
     const url = new URL(location.href);
@@ -228,6 +232,41 @@ export class ScreencastView {
     );
   }
 
+  private sendRenewSessionCommand() {
+    // Check if we should renew more aggressively based on time
+    const now = Date.now();
+    const timeSinceLastRenew = now - (this.lastRenewTime || 0);
+    const shouldRenewNow = timeSinceLastRenew >= 60000; // At least 1 minute since last renew
+
+    if (!shouldRenewNow) {
+      // console.log('⏰ Skipping renew - too soon since last renewal');
+      return;
+    }
+
+    // console.log(`🔄 Renewing session (${Math.floor(timeSinceLastRenew / 1000)}s since last renew)`);
+    this.sendCommand(LIVE_CLIENT.COMMANDS.RENEW_SESSION);
+    this.lastRenewTime = now;
+
+    // Set timeout to retry if no response received
+    if (this.renewSessionTimeout) {
+      clearTimeout(this.renewSessionTimeout);
+    }
+
+    this.renewSessionTimeout = setTimeout(() => {
+      if (this.renewSessionRetryCount < this.maxRetries) {
+        this.renewSessionRetryCount++;
+        // console.warn(
+        //   `⚠️ Session renewal timeout, retrying (${this.renewSessionRetryCount}/${this.maxRetries})...`
+        // );
+        this.sendRenewSessionCommand();
+      } else {
+        // console.error('❌ Session renewal failed after maximum retries');
+        this.$notification.classList.remove('hidden');
+        this.$notification.textContent = 'Session renewal failed';
+      }
+    }, 10000); // 10 seconds timeout
+  }
+
   private getNavigationInput() {
     return this.$navigation.querySelector<HTMLInputElement>('input');
   }
@@ -282,9 +321,11 @@ export class ScreencastView {
 
     this.interval = setInterval(
       () => {
-        this.sendCommand(LIVE_CLIENT.COMMANDS.RENEW_SESSION);
+        // console.log('🔄 Renewing session...');
+        this.renewSessionRetryCount = 0;
+        this.sendRenewSessionCommand();
       },
-      1000 * 60 * 3 // 3 minutes
+      1000 * 60 * 1.5 // 1.5 minutes (90 seconds)
     );
 
     // hide notification
@@ -414,7 +455,15 @@ export class ScreencastView {
         break;
       }
       case LIVE_CLIENT.EVENTS.RENEW_SESSION_ACK: {
+        // console.log('✅ Session renewed successfully');
         this.session = data.session;
+        this.renewSessionRetryCount = 0; // Reset retry count on success
+
+        // Clear timeout since we got the response
+        if (this.renewSessionTimeout) {
+          clearTimeout(this.renewSessionTimeout);
+          this.renewSessionTimeout = null;
+        }
         break;
       }
     }
@@ -433,6 +482,12 @@ export class ScreencastView {
 
     if (this.interval) {
       clearInterval(this.interval);
+      this.interval = null;
+    }
+
+    if (this.renewSessionTimeout) {
+      clearTimeout(this.renewSessionTimeout);
+      this.renewSessionTimeout = null;
     }
   }
 
@@ -449,6 +504,12 @@ export class ScreencastView {
 
     if (this.interval) {
       clearInterval(this.interval);
+      this.interval = null;
+    }
+
+    if (this.renewSessionTimeout) {
+      clearTimeout(this.renewSessionTimeout);
+      this.renewSessionTimeout = null;
     }
   }
 

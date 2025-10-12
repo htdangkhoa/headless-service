@@ -38,9 +38,34 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
       ],
     };
 
+    const LiveUrlParametersType: PayloadType = [
+      {
+        name: 'webhook',
+        type: 'object',
+        properties: [
+          {
+            name: 'url',
+            type: 'string',
+          },
+          {
+            name: 'method',
+            type: 'string',
+            enum: ['GET', 'POST', 'PUT', 'DELETE'],
+            optional: true,
+          },
+          {
+            name: 'headers',
+            type: 'object',
+            optional: true,
+          },
+        ],
+      },
+    ];
+
     const LiveUrlCommand: Command = {
       name: COMMANDS.LIVE_URL,
       description: 'Get live URL',
+      parameters: LiveUrlParametersType,
       returns: this.buildReturns(LiveUrlPayloadType),
     };
 

@@ -2,6 +2,7 @@ import type { IncomingMessage } from 'node:http';
 import dayjs from 'dayjs';
 import { Protocol } from 'devtools-protocol';
 import jwt from 'jsonwebtoken';
+import { get } from 'lodash-es';
 import {
   TargetType,
   type Browser,
@@ -39,6 +40,12 @@ enum STATE {
   RUNNING = 'running',
 }
 
+interface Webhook {
+  url: string;
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  headers?: Record<string, string>;
+}
+
 export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private readonly logger = new Logger(this.constructor.name);
 
@@ -61,6 +68,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private timer: NodeJS.Timeout | null = null;
 
   private state: STATE = STATE.IDLE;
+
+  private webhook: Webhook | null = null;
 
   constructor(
     private ws: WebSocketServer,
@@ -300,8 +309,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           }
           this.expiresAt = expiresAt;
           this.timer = setTimeout(() => {
+            this.logger.warn('Session expired, ending live session');
             this.endLiveSession({ reason: 'Session expired' });
           }, duration);
+
+          this.logger.info(`Session renewed, expires at: ${new Date(expiresAt).toISOString()}`);
 
           socket.send(
             JSON.stringify({
@@ -468,6 +480,11 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const browserId = getBrowserId(this.browser);
 
+    const webhook = get(payload, 'params.webhook') as Webhook | null;
+    if (webhook) {
+      this.webhook = webhook;
+    }
+
     let response: any = null;
 
     const { eventNameForResult } = buildProtocolEventNames(
@@ -628,8 +645,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   }
 
   private async endLiveSession(options?: { reason?: string; force?: boolean }) {
-    this.logger.debug('Ending live session', options);
-
     const { reason, force } = options || {};
 
     if (!this.browser) return;
@@ -645,6 +660,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const expiresAt = dayjs(this.expiresAt);
     if (!expiresAt.isBefore(now) && !force) {
       const diff = expiresAt.diff(now);
+      this.logger.info(`Session not expired yet, rescheduling end in ${diff}ms`);
       this.timer = setTimeout(() => {
         this.endLiveSession({ reason: 'Session expired' });
       }, diff);
@@ -673,9 +689,21 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     this.commandSessionIds.clear();
     this.clientManagement.clear();
     this.state = STATE.IDLE;
+
+    if (this.webhook) {
+      const { url, method, headers } = this.webhook;
+      try {
+        await fetch(url, {
+          method: method ?? 'GET',
+          headers,
+        });
+      } catch (error) {
+        this.logger.warn('Error calling webhook', error);
+      }
+    }
   }
 
-  private generateSession(browserId: string, expiresIn: number = 300) {
+  private generateSession(browserId: string, expiresIn: number = 420) {
     const session = jwt.sign({ browserId }, env('HEADLESS_SERVICE_TOKEN')!, {
       ...this.jwtOptions,
       expiresIn,
@@ -685,6 +713,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const now = dayjs();
     const expiresAt = dayjs.unix(payload.exp!).valueOf();
     const duration = dayjs(expiresAt).diff(now);
+
+    this.logger.info(`Generated session: expires in ${expiresIn}s, actual duration: ${duration}ms`);
 
     return {
       session,
