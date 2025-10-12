@@ -90,7 +90,7 @@ export class BrowserManager {
     }
   }
 
-  async complete(browser: BrowserCDP) {
+  async complete(browser: BrowserCDP, force?: boolean) {
     const sessionId = browser.id();
 
     const found = this.browsers.get(sessionId);
@@ -110,12 +110,16 @@ export class BrowserManager {
         const timer = setTimeout(() => {
           const browser = this.browsers.get(sessionId);
           if (browser) {
-            this.close(browser);
+            this.complete(browser);
           }
         }, timeout);
 
         this.timers.set(sessionId, timer);
       }
+    }
+
+    if (force) {
+      shouldExit = true;
     }
 
     if (shouldExit) {

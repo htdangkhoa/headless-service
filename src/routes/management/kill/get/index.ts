@@ -45,7 +45,7 @@ export class ManagementKillGetRoute extends ProxyHttpRoute {
       });
     }
 
-    await browserManager.close(browser);
+    await browserManager.complete(browser, true);
 
     return writeResponse(res, HttpStatus.NO_CONTENT);
   };
