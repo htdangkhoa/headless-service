@@ -1,6 +1,7 @@
-import { get, isNil } from 'lodash-es';
+import { get } from 'lodash-es';
 import type { Browser } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
+import z from 'zod';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
 import { COMMANDS, DOMAINS } from '@/constants';
@@ -10,6 +11,7 @@ import {
   env,
   getBrowserId,
   makeExternalUrl,
+  useTypedParsers,
 } from '@/utils';
 
 export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
@@ -18,6 +20,8 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
   private readonly PROTOCOL_METHODS = {
     KEEP_ALIVE: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.KEEP_ALIVE),
     DEBUGGER_URL: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.DEBUGGER_URL),
+    BROWSER_ID: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.BROWSER_ID),
+    PAGE_ID: buildProtocolMethod(DOMAINS.HEADLESS_SERVICE, COMMANDS.PAGE_ID),
   };
 
   constructor() {
@@ -41,9 +45,19 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       browserId,
       this.PROTOCOL_METHODS.DEBUGGER_URL
     );
+    const { eventNameForListener: browserIdEventNameForListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.BROWSER_ID
+    );
+    const { eventNameForListener: pageIdEventNameForListener } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.PAGE_ID
+    );
 
     browser.on(keepAliveEventNameForListener, this.onHeadlessServiceKeepAlive.bind(this));
     browser.on(debuggerUrlEventNameForListener, this.onHeadlessServiceDebuggerUrl.bind(this));
+    browser.on(browserIdEventNameForListener, this.onHeadlessServiceBrowserId.bind(this));
+    browser.on(pageIdEventNameForListener, this.onHeadlessServicePageId.bind(this));
   }
 
   async onDisconnected(): Promise<void> {
@@ -68,7 +82,9 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       this.PROTOCOL_METHODS.KEEP_ALIVE
     );
 
-    if (isNil(ms)) {
+    const { error, data: keepAliveMs } = useTypedParsers(z.number()).safeParse(ms as any);
+
+    if (error) {
       const dispatchResponse = DispatchResponse.InvalidParams(
         `Invalid parameters Failed to deserialize params.ms`
       );
@@ -86,7 +102,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ keep_alive: ms }),
+      body: JSON.stringify({ keep_alive: keepAliveMs }),
     });
 
     if (!fetchResponse.ok) {
@@ -166,6 +182,54 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     } finally {
       return this.browser.emit(eventNameForResult, response);
     }
+  }
+
+  private async onHeadlessServiceBrowserId(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    if (request.method !== this.PROTOCOL_METHODS.BROWSER_ID) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.BROWSER_ID
+    );
+
+    const response = Response.success(request.id!, { browserId }, request.sessionId);
+    return this.browser.emit(eventNameForResult, response);
+  }
+
+  private async onHeadlessServicePageId(payload: any) {
+    const request = Request.parse(payload);
+
+    if (!this.browser) return;
+
+    if (request.method !== this.PROTOCOL_METHODS.PAGE_ID) return;
+
+    const browserId = getBrowserId(this.browser);
+
+    const { eventNameForResult } = buildProtocolEventNames(
+      browserId,
+      this.PROTOCOL_METHODS.PAGE_ID
+    );
+
+    const currentPage = await this.browser.currentPage();
+
+    if (!currentPage) {
+      const dispatchResponse = DispatchResponse.InternalError('No current page');
+      const response = Response.error(request.id!, dispatchResponse, request.sessionId);
+      return this.browser.emit(eventNameForResult, response);
+    }
+
+    const response = Response.success(
+      request.id!,
+      { pageId: currentPage.target()._targetId },
+      request.sessionId
+    );
+    return this.browser.emit(eventNameForResult, response);
   }
 }
 

@@ -8,6 +8,8 @@ Here's a quick list of what it can do:
 - Tab recording.
 - Keep the browser session alive.
 - Get debugger URL.
+- Get browser ID.
+- Get page ID.
 - And more!
 
 Since most libraries come with a way to issue "raw" CDP commands, it's an
@@ -138,5 +140,51 @@ import puppeteer from 'puppeteer-core';
 
   // webSocketDebuggerUrl = `{{baseUrl}}/devtools/page/B9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
   // devtoolsFrontendUrl = `{{baseUrl}}/devtools/inspector.html?ws=localhost%3A3000%2Fdevtools%2Fpage%2FB9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
+})();
+```
+
+---
+
+## HeadlessService.browserId
+
+Gets the browser ID for the current session.
+
+**Example:**
+
+```typescript
+import puppeteer from 'puppeteer-core';
+
+(async () => {
+  const TOKEN = '<token>';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}';
+  const browser = await puppeteer.connect({ browserWSEndpoint });
+  const page = await browser.newPage();
+  const cdp = await page.createCDPSession();
+  const { browserId } = await cdp.send('HeadlessService.browserId');
+
+  // browserId = 'eb773067-9d3c-40f6-91b6-0ef08f0c4c0d';
+})();
+```
+
+---
+
+## HeadlessService.pageId
+
+Gets the page ID for the current session.
+
+**Example:**
+
+```typescript
+import puppeteer from 'puppeteer-core';
+
+(async () => {
+  const TOKEN = '<token>';
+  const browserWSEndpoint = '{{wsUrl}}/?token=${TOKEN}';
+  const browser = await puppeteer.connect({ browserWSEndpoint });
+  const page = await browser.newPage();
+  const cdp = await page.createCDPSession();
+  const { pageId } = await cdp.send('HeadlessService.pageId');
+
+  // pageId = 'B9FB4CB53702ABDF73347C04B7EF1E14';
 })();
 ```

@@ -13,6 +13,8 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     this.createRecordingCommand();
     this.createKeepAliveCommand();
     this.createDebuggerUrlCommand();
+    this.createBrowserIdCommand();
+    this.createPageIdCommand();
 
     /* Register events */
     this.createLiveCompleteEvent();
@@ -156,5 +158,51 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
 
     this.addDomainType(DebuggerUrlPayloadType);
     this.addCommand(debuggerUrlCommand);
+  }
+
+  private createBrowserIdCommand() {
+    const BrowserIdPayloadType: DomainType = {
+      id: 'BrowserIdPayload',
+      description: 'Payload for browserId command',
+      type: 'object',
+      properties: [
+        {
+          name: 'browserId',
+          type: 'string',
+        },
+      ],
+    };
+
+    const browserIdCommand: Command = {
+      name: COMMANDS.BROWSER_ID,
+      description: 'Get browser ID',
+      returns: this.buildReturns(BrowserIdPayloadType),
+    };
+
+    this.addDomainType(BrowserIdPayloadType);
+    this.addCommand(browserIdCommand);
+  }
+
+  private createPageIdCommand() {
+    const PageIdPayloadType: DomainType = {
+      id: 'PageIdPayload',
+      description: 'Payload for pageId command',
+      type: 'object',
+      properties: [
+        {
+          name: 'pageId',
+          type: 'string',
+        },
+      ],
+    };
+
+    const pageIdCommand: Command = {
+      name: COMMANDS.PAGE_ID,
+      description: 'Get page ID',
+      returns: this.buildReturns(PageIdPayloadType),
+    };
+
+    this.addDomainType(PageIdPayloadType);
+    this.addCommand(pageIdCommand);
   }
 }

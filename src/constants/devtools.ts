@@ -8,6 +8,8 @@ export enum COMMANDS {
   STOP_RECORDING = 'stopRecording',
   KEEP_ALIVE = 'keepAlive',
   DEBUGGER_URL = 'debuggerUrl',
+  BROWSER_ID = 'browserId',
+  PAGE_ID = 'pageId',
 }
 
 export enum EVENTS {
