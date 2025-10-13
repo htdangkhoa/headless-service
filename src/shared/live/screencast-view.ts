@@ -1,6 +1,7 @@
-import { debounce, isNumber } from 'lodash-es';
+import { debounce } from 'lodash-es';
 import { CircleStop as CircleStopIcon, X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
+import LoadingIcon from 'lucide-static/icons/loader-circle.svg';
 
 import { LIVE_CLIENT } from '@/constants/live';
 import type { Dictionary } from '@/types';
@@ -448,6 +449,11 @@ export class ScreencastView {
 
         break;
       }
+      case LIVE_CLIENT.EVENTS.TARGET_STATE_CHANGED: {
+        this.updateTabItem(data);
+
+        break;
+      }
       case LIVE_CLIENT.EVENTS.FRAME_NAVIGATED: {
         this.updateTabItem(data);
         this.updateNavigationInput(data);
@@ -619,16 +625,24 @@ export class ScreencastView {
   private updateTabItem(tab: any) {
     const tabItem = this.$tabs.querySelector<HTMLDivElement>(`#tab-${tab.targetId}`);
     if (tabItem) {
-      tabItem.title = tab.title;
+      if (tab.title) {
+        tabItem.title = tab.title;
 
-      const titleEle = tabItem.querySelector('span.title');
-      if (titleEle) {
-        titleEle.textContent = tab.title;
+        const titleEle = tabItem.querySelector('span.title');
+        if (titleEle) {
+          titleEle.textContent = tab.title;
+        }
       }
 
       const faviconEle = tabItem.querySelector<HTMLImageElement>('img.favicon');
       if (faviconEle) {
-        faviconEle.src = tab.favicon || EarthIcon;
+        if (tab.state === 'loading:start') {
+          faviconEle.src = LoadingIcon;
+          faviconEle.classList.add('loading');
+        } else {
+          faviconEle.src = tab.favicon || EarthIcon;
+          faviconEle.classList.remove('loading');
+        }
       }
     }
   }

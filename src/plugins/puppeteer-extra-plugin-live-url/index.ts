@@ -132,11 +132,12 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     if (target.type() === TargetType.PAGE) {
       const page = await target.asPage();
 
-      const browser = page.browser();
-
-      const browserId = getBrowserId(browser);
-
       const cdp = await page.createCDPSession();
+      await cdp.send(LIVE_SERVER.CDP_COMMANDS.ENABLE);
+      await cdp.send(LIVE_SERVER.CDP_COMMANDS.SET_LIFECYCLE_EVENTS_ENABLED, { enabled: true });
+      cdp.on(LIVE_SERVER.CDP_EVENTS.LIFECYCLE_EVENT, (event) =>
+        this.onPageLifecycleEvent.call(this, event, page)
+      );
 
       this.pages.set(targetId, {
         page,
@@ -225,6 +226,48 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
       await this.updateTabInfo(page);
     }
+  }
+
+  private async onPageLifecycleEvent(event: Protocol.Page.LifecycleEventEvent, page: Page) {
+    switch (event.name) {
+      case 'init': {
+        await this.sendTargetStateChanged(page, 'loading:start');
+        break;
+      }
+      case 'networkIdle': {
+        await this.sendTargetStateChanged(page, 'loading:end');
+        break;
+      }
+    }
+  }
+
+  private async sendTargetStateChanged(page: Page, state: string) {
+    const targetId = page.target()._targetId;
+
+    let tabInfo = null;
+
+    try {
+      tabInfo = await this.getTabInfo(page);
+    } catch {}
+
+    const clients = this.clientManagement.getClients();
+    clients.forEach((socket) => {
+      const context: LiveContext = {
+        connectionId: socket.id!,
+      };
+
+      socket.send(
+        JSON.stringify({
+          command: LIVE_SERVER.COMMANDS.TARGET_STATE_CHANGED,
+          data: {
+            ...tabInfo,
+            targetId,
+            state,
+          },
+          context,
+        })
+      );
+    });
   }
 
   private async messageHandler(rawMessage: RawData, socket: WebSocket, req: IncomingMessage) {
@@ -528,9 +571,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   private async updateTabInfo(page: Page) {
     const targetId = page.target()._targetId;
-
-    const browser = page.browser();
-    const browserId = getBrowserId(browser);
 
     const tabInfo = await this.getTabInfo(page);
 

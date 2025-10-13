@@ -182,6 +182,15 @@ main {
   pointer-events: none;
 }
 
+.screencast-tab-item .favicon.loading {
+  animation: loading 1s linear infinite;
+}
+
+@keyframes loading {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .screencast-tab-item .title {
   flex: 1;
   overflow: hidden;
