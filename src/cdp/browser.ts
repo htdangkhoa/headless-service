@@ -1,6 +1,5 @@
 import EventEmitter from 'events';
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs';
 import os from 'node:os';
 import { join, resolve } from 'node:path';
 import { FingerprintGeneratorOptions } from 'fingerprint-generator';
