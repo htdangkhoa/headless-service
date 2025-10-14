@@ -143,9 +143,11 @@ main {
 }
 
 .screencast-tabs {
-  gap: 4px;
+  gap: 2px;
   overflow-x: auto;
   scrollbar-width: none;
+  border-bottom: 1px solid rgb(92 92 92);
+  margin-bottom: 2px;
 }
 
 .screencast-tab-item {
@@ -269,6 +271,6 @@ main {
 .screencast-navigation input {
   background: transparent;
   border: 1px solid rgb(92 92 92);
-  max-height: 19px;
+  max-height: 18px;
   color: white;
 }
