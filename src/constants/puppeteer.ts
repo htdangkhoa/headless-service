@@ -1,7 +1,11 @@
 export const DEFAULT_LAUNCH_ARGS = [
   '--disable-setuid-sandbox',
   '--disable-dev-shm-usage',
-  '--disable-features=site-per-process,AudioServiceOutOfProcess',
+  '--disable-features=site-per-process,AudioServiceOutOfProcess,Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,InterestFeedContentSuggestions,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4,RenderDocument',
+  '--disable-component-extensions-with-background-pages',
+  '--disable-backgrounding-occluded-windows',
+  '--disable-ipc-flooding-protection',
+  '--disable-hang-monitor',
   /* Disable animations to reduce time waiting for animations to complete */
   '--disable-modal-animations',
   '--disable-popup-blocking',
@@ -28,4 +32,7 @@ export const DEFAULT_LAUNCH_ARGS = [
   '--mute-audio',
   '--wm-window-animations-disabled',
   '--use-gl=swiftshader',
+  '--password-store=basic',
+  '--use-mock-keychain',
+  '--force-fieldtrials=*BackgroundTracing/default/',
 ];
