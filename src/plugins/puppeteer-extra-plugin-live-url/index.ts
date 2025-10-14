@@ -15,7 +15,7 @@ import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 
 import { DispatchResponse, Request, Response } from '@/cdp/devtools';
-import { COMMANDS, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
+import { COMMANDS, DEFAULT_SCREENCAST_CONFIGS, DOMAINS, EVENTS, LIVE_SERVER } from '@/constants';
 import { Logger } from '@/logger';
 import { Dictionary } from '@/types';
 import type { LiveContext, LiveMessage } from '@/types/live';
@@ -70,6 +70,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private state: STATE = STATE.IDLE;
 
   private webhook: Webhook | null = null;
+
+  private screencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
 
   constructor(
     private ws: WebSocketServer,
@@ -306,6 +308,14 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
           socket.id = payload.params.connectionId;
           this.clientManagement.addClient(socket);
+
+          this.screencastConfigs.format =
+            payload.params.screencastConfigs.format || DEFAULT_SCREENCAST_CONFIGS.format;
+          this.screencastConfigs.quality =
+            payload.params.screencastConfigs.quality || DEFAULT_SCREENCAST_CONFIGS.quality;
+          this.screencastConfigs.everyNthFrame =
+            payload.params.screencastConfigs.everyNthFrame ||
+            DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
 
           try {
             await this.stopScreencast();
@@ -645,11 +655,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     const browser = page.browser();
     const browserId = getBrowserId(browser);
 
-    await cdp.send(LIVE_SERVER.CDP_COMMANDS.START_SCREENCAST, {
-      format: 'jpeg',
-      quality: 100,
-      everyNthFrame: 1,
-    });
+    await cdp.send(LIVE_SERVER.CDP_COMMANDS.START_SCREENCAST, this.screencastConfigs);
     cdp.on(LIVE_SERVER.CDP_EVENTS.SCREENCAST_FRAME, async (data) => {
       this.logger.info(
         `Received screencast frame for target ${targetId}, data size: ${data.data?.length || 0}`

@@ -1,3 +1,5 @@
+import { type Protocol } from 'puppeteer-core';
+
 enum COMMANDS {
   START_SCREENCAST = 'Page.startScreencast',
   STOP_SCREENCAST = 'Page.stopScreencast',
@@ -97,4 +99,10 @@ export const LIVE_SERVER = {
     SCREENCAST_FRAME: COMMANDS.SCREENCAST_FRAME,
     LIFECYCLE_EVENT: COMMANDS.LIFECYCLE_EVENT,
   },
+} as const;
+
+export const DEFAULT_SCREENCAST_CONFIGS: Protocol.Page.StartScreencastRequest = {
+  format: 'jpeg',
+  quality: 80,
+  everyNthFrame: 1,
 } as const;
