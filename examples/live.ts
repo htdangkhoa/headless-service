@@ -18,7 +18,7 @@ async function main() {
 
   // @ts-ignore
   const { liveUrl } = await cdp.send('HeadlessService.liveURL');
-  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl + `&token=${TOKEN}`);
+  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl);
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
