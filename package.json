@@ -13,8 +13,23 @@
     "playwright",
     "automation"
   ],
-  "license": "ISC",
-  "author": "",
+  "license": "MIT",
+  "author": "htdangkhoa <huynhtran.dangkhoa@gmail.com> (https://github.com/htdangkhoa)",
+  "homepage": "https://github.com/htdangkhoa/headless-service",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/htdangkhoa/headless-service.git"
+  },
+  "bugs": {
+    "url": "https://github.com/htdangkhoa/headless-service/issues"
+  },
+  "contributors": [
+    {
+      "name": "Khoa Huynh",
+      "email": "huynhtran.dangkhoa@gmail.com",
+      "url": "https://github.com/htdangkhoa"
+    }
+  ],
   "type": "module",
   "scripts": {
     "prebuild": "rimraf dist && pnpm run build:all",
