@@ -31,11 +31,7 @@ FROM node AS builder
 
 WORKDIR /app
 
-
 ENV PUPPETEER_SKIP_DOWNLOAD true
-
-COPY ./.npmrc ./package.json ./pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --prefer-offline
 
 COPY ./tsconfig.json ./
 COPY ./tsconfig.build.json ./
@@ -45,6 +41,9 @@ COPY ./public ./public
 COPY ./docs ./docs
 COPY ./scripts ./scripts
 COPY ./src ./src
+
+COPY ./.npmrc ./package.json ./pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prefer-offline
 
 ENV NODE_ENV production
 
