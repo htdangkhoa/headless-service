@@ -1,9 +1,10 @@
 import { fork } from 'node:child_process';
 import { Handler } from 'express';
+import { isNil } from 'lodash-es';
 import treeKill from 'tree-kill';
 import { z } from 'zod';
 
-import { HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { DEFAULT_REQUEST_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
 import {
   NumberOrStringSchema,
@@ -77,6 +78,8 @@ export class PerformancePostRoute extends ProxyHttpRoute {
     },
   };
   handler?: Handler = async (req, res) => {
+    req.clearTimeout();
+
     const { browserManager } = this.context;
 
     const query = parseSearchParams(req.query);
@@ -97,7 +100,11 @@ export class PerformancePostRoute extends ProxyHttpRoute {
       });
     }
 
-    const { timeout, ...childData } = bodyValidation.data;
+    let { timeout, ...childData } = bodyValidation.data;
+
+    if (isNil(timeout)) {
+      timeout = env<number>('REQUEST_TIMEOUT', DEFAULT_REQUEST_TIMEOUT)!;
+    }
 
     const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
@@ -117,6 +124,12 @@ export class PerformancePostRoute extends ProxyHttpRoute {
       timeout && timeout > 0
         ? setTimeout(() => {
             close(child.pid);
+
+            const error = new Error('Request Timeout');
+
+            writeResponse(res, HttpStatus.REQUEST_TIMEOUT, {
+              body: error,
+            });
           }, timeout)
         : null;
 
