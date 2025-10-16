@@ -1,3 +1,5 @@
+export const DEFAULT_REQUEST_TIMEOUT = 60000;
+
 export const enum HttpStatus {
   OK = 200,
   NO_CONTENT = 204,

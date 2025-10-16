@@ -1,7 +1,7 @@
 import type { Browser, Page } from 'puppeteer';
 import { PuppeteerExtraPlugin } from 'puppeteer-extra-plugin';
 
-import { DEFAULT_TIMEOUT } from '@/constants';
+import { DEFAULT_PAGE_TIMEOUT } from '@/constants';
 import { sleep } from '@/utils';
 
 export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
@@ -10,7 +10,7 @@ export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
   }
 
   onBrowser(browser: Browser, opts: any): Promise<void> {
-    browser.currentPage = (timeout = DEFAULT_TIMEOUT) => {
+    browser.currentPage = (timeout = DEFAULT_PAGE_TIMEOUT) => {
       const start = Date.now();
 
       return new Promise<Page>(async (resolve) => {
@@ -94,7 +94,11 @@ export class PuppeteerExtraPluginHelper extends PuppeteerExtraPlugin {
     }, viewport.height);
   }
 
-  private async waitForEvent(page: Page, eventName: string, timeout: number = DEFAULT_TIMEOUT) {
+  private async waitForEvent(
+    page: Page,
+    eventName: string,
+    timeout: number = DEFAULT_PAGE_TIMEOUT
+  ) {
     const waitEvent = async (eventName: string) => {
       await new Promise<void>((resolve) => {
         document.addEventListener(eventName, () => resolve(), { once: true });

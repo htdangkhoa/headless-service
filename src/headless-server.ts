@@ -7,7 +7,7 @@ import dedent from 'dedent';
 import express, { ErrorRequestHandler } from 'express';
 import { WebSocketServer } from 'ws';
 
-import { HttpStatus } from '@/constants';
+import { DEFAULT_REQUEST_TIMEOUT, HttpStatus } from '@/constants';
 import { OpenAPI } from '@/openapi';
 import { Group } from '@/router';
 import {
@@ -47,7 +47,7 @@ const publicDir = path.resolve(process.cwd(), 'public');
 export class HeadlessServer {
   private readonly logger = new Logger(this.constructor.name);
 
-  private readonly requestTimeout = env<string>('REQUEST_TIMEOUT', '60s')!;
+  private readonly requestTimeout = env<number>('REQUEST_TIMEOUT', DEFAULT_REQUEST_TIMEOUT)!;
 
   private options: HeadlessServerOptions;
 

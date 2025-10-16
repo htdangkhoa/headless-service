@@ -1,3 +1,7 @@
+export const DEFAULT_PAGE_TIMEOUT = 30000;
+
+export const HEADLESS_PAGE_IDENTIFIER = 'HEADLESS';
+
 export const DEFAULT_LAUNCH_ARGS = [
   '--disable-setuid-sandbox',
   '--disable-dev-shm-usage',

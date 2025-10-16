@@ -1,3 +1,0 @@
-export const DEFAULT_TIMEOUT = 30000;
-
-export const HEADLESS_PAGE_IDENTIFIER = 'HEADLESS';

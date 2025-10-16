@@ -4,7 +4,7 @@ import type { Handler } from 'express';
 import type { CookieParam, GoToOptions, Viewport, WaitForOptions } from 'puppeteer-core';
 import { z } from 'zod';
 
-import { DEFAULT_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
+import { DEFAULT_PAGE_TIMEOUT, HttpStatus, OPENAPI_TAGS } from '@/constants';
 import { Method, ProxyHttpRoute } from '@/router';
 import {
   PuppeteerAddScriptTagsSchema,
@@ -79,7 +79,7 @@ const RequestScrapeBodySchema = z.object({
 });
 
 const scrape = async (elements: IElementsSelector) => {
-  const wait = async (selector: string, timeout = DEFAULT_TIMEOUT) => {
+  const wait = async (selector: string, timeout = DEFAULT_PAGE_TIMEOUT) => {
     return new Promise<void>((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         clearTimeout(timeoutId);
