@@ -79,10 +79,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   ) {
     super();
 
-    const liveUrl = new URL(makeExternalUrl('http', 'live'));
+    const liveURL = new URL(makeExternalUrl('http', 'live'));
     this.jwtOptions = {
-      audience: [liveUrl.href],
-      issuer: liveUrl.hostname,
+      audience: [liveURL.href],
+      issuer: liveURL.hostname,
     };
 
     this.ws.on(this.constructor.name, async (socket: WebSocket, req) => {
@@ -548,12 +548,12 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     try {
       this.commandSessionIds.add(payload.sessionId);
 
-      const liveUrl = new URL(makeExternalUrl('http', `live`));
+      const liveURL = new URL(makeExternalUrl('http', `live`));
 
       const { session, expiresAt, duration } = this.generateSession(browserId);
-      liveUrl.searchParams.set('session', session);
+      liveURL.searchParams.set('session', session);
       if (this.requestId) {
-        liveUrl.searchParams.set('request_id', this.requestId);
+        liveURL.searchParams.set('request_id', this.requestId);
       }
 
       this.expiresAt = expiresAt;
@@ -566,7 +566,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
       response = Response.success(
         request.id!,
         {
-          liveUrl: liveUrl.href,
+          liveURL: liveURL.href,
         },
         payload.sessionId
       );

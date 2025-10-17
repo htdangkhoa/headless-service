@@ -17,8 +17,8 @@ async function main() {
   const cdp = await page.createCDPSession();
 
   // @ts-ignore
-  const { liveUrl } = await cdp.send('HeadlessService.liveURL');
-  console.log('🚀 ~ liveURL ~ liveURL:', liveUrl);
+  const { liveURL } = await cdp.send('HeadlessService.liveURL');
+  console.log('🚀 ~ main ~ liveURL:', liveURL);
 
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
