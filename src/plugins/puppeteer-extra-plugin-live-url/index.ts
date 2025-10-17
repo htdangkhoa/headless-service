@@ -315,14 +315,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
           socket.id = payload.params.connectionId;
           this.clientManagement.addClient(socket);
 
-          this.screencastConfigs.format =
-            payload.params.screencastConfigs.format || DEFAULT_SCREENCAST_CONFIGS.format;
-          this.screencastConfigs.quality =
-            payload.params.screencastConfigs.quality || DEFAULT_SCREENCAST_CONFIGS.quality;
-          this.screencastConfigs.everyNthFrame =
-            payload.params.screencastConfigs.everyNthFrame ||
-            DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
-
           try {
             await this.stopScreencast();
           } catch {}
@@ -546,6 +538,22 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     if (request.method !== this.PROTOCOL_METHODS.LIVE_URL) return;
 
     const browserId = getBrowserId(this.browser);
+
+    const format = get(payload, 'params.format', DEFAULT_SCREENCAST_CONFIGS.format) as
+      | 'jpeg'
+      | 'png';
+    const quality = get(payload, 'params.quality', DEFAULT_SCREENCAST_CONFIGS.quality) as number;
+    const everyNthFrame = get(
+      payload,
+      'params.everyNthFrame',
+      DEFAULT_SCREENCAST_CONFIGS.everyNthFrame
+    ) as number;
+
+    this.screencastConfigs = {
+      format,
+      quality,
+      everyNthFrame,
+    };
 
     const webhook = get(payload, 'params.webhook') as Webhook | null;
     if (webhook) {

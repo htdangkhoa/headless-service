@@ -42,6 +42,22 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
 
     const LiveUrlParametersType: PayloadType = [
       {
+        name: 'format',
+        type: 'string',
+        enum: ['jpeg', 'png'],
+        optional: true,
+      },
+      {
+        name: 'quality',
+        type: 'number',
+        optional: true,
+      },
+      {
+        name: 'everyNthFrame',
+        type: 'number',
+        optional: true,
+      },
+      {
         name: 'webhook',
         type: 'object',
         properties: [

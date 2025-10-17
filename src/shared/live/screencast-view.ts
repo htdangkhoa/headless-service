@@ -3,7 +3,7 @@ import { CircleStop as CircleStopIcon, X as XIcon } from 'lucide-static';
 import EarthIcon from 'lucide-static/icons/earth.svg';
 import LoadingIcon from 'lucide-static/icons/loader-circle.svg';
 
-import { DEFAULT_SCREENCAST_CONFIGS, LIVE_CLIENT } from '@/constants/live';
+import { LIVE_CLIENT } from '@/constants/live';
 import type { Dictionary } from '@/types';
 import { LiveMessage } from '@/types/live';
 
@@ -38,8 +38,6 @@ export class ScreencastView {
   private maxRetries = 3;
   private renewSessionTimeout: NodeJS.Timeout | null = null;
   private lastRenewTime: number = 0;
-
-  private screencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
 
   constructor(private container: HTMLElement) {
     const url = new URL(location.href);
@@ -114,13 +112,6 @@ export class ScreencastView {
     this.$viewer.appendChild(this.$canvas);
     this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
-
-    this.screencastConfigs.format =
-      (url.searchParams.get('format') as any) || DEFAULT_SCREENCAST_CONFIGS.format;
-    this.screencastConfigs.quality =
-      (url.searchParams.get('quality') as any) || DEFAULT_SCREENCAST_CONFIGS.quality;
-    this.screencastConfigs.everyNthFrame =
-      (url.searchParams.get('every_nth_frame') as any) || DEFAULT_SCREENCAST_CONFIGS.everyNthFrame;
 
     this.session = url.searchParams.get('session')!;
     const wsEndpoint = url.searchParams.get('ws') ?? location.href;
@@ -315,7 +306,6 @@ export class ScreencastView {
 
     this.sendCommand(LIVE_CLIENT.COMMANDS.REGISTER_SCREENCAST, {
       connectionId: this.connectionId,
-      screencastConfigs: this.screencastConfigs,
     });
 
     this.interval = setInterval(
