@@ -771,7 +771,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     }
   }
 
-  private generateSession(browserId: string, expiresIn: number = 420) {
+  private generateSession(browserId: string, expiresIn: number = 600 /* 10 minutes */) {
     const session = jwt.sign({ browserId }, env('HEADLESS_SERVICE_TOKEN')!, {
       ...this.jwtOptions,
       expiresIn,
