@@ -65,6 +65,7 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private jwtOptions: Dictionary;
 
   private expiresAt: number | null = null;
+
   private timer: NodeJS.Timeout | null = null;
 
   private state: STATE = STATE.IDLE;
@@ -72,6 +73,8 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
   private webhook: Webhook | null = null;
 
   private screencastConfigs = DEFAULT_SCREENCAST_CONFIGS;
+
+  private lastViewport: Viewport | null = null;
 
   constructor(
     private ws: WebSocketServer,
@@ -134,6 +137,10 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
     if (target.type() === TargetType.PAGE) {
       const page = await target.asPage();
 
+      if (this.lastViewport) {
+        await page.setViewport(this.lastViewport);
+      }
+
       const cdp = await page.createCDPSession();
       await cdp.send(LIVE_SERVER.CDP_COMMANDS.ENABLE);
       await cdp.send(LIVE_SERVER.CDP_COMMANDS.SET_LIFECYCLE_EVENTS_ENABLED, { enabled: true });
@@ -180,7 +187,6 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
   async onTargetDestroyed(target: Target): Promise<void> {
     const browser = target.browser();
-    const browserId = getBrowserId(browser);
 
     const targetId = target._targetId;
 
@@ -461,10 +467,18 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
         }
         case LIVE_SERVER.EVENTS.SET_VIEWPORT: {
           const { targetId, ...params } = payload.params || {};
+
+          const viewport = params as Viewport;
+
+          this.lastViewport = viewport;
+
           const pageData = this.pages.get(targetId);
+
           if (!pageData) return;
+
           const { page } = pageData;
-          await page.setViewport(params as Viewport);
+
+          await page.setViewport(viewport);
 
           break;
         }
