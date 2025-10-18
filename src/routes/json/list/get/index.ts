@@ -9,12 +9,12 @@ import { writeResponse } from '@/utils';
 
 const DevToolsJSONSchema = z.object({
   description: z.string().describe("The description of the target. Generally the page's title."),
-  devtoolsFrontendUrl: z.string().describe('The frontend URL for the target.'),
+  devtoolsFrontendURL: z.string().describe('The frontend URL for the target.'),
   id: z.string().describe('The unique identifier of the target.'),
   title: z.string().describe('The title of the target.'),
   type: z.literal('page').or(z.literal('background_page')).describe('The type of the target.'),
   url: z.string().describe('The URL the target is pointing to.'),
-  webSocketDebuggerUrl: z.string().describe('The WebSocket debugger URL for the target.'),
+  webSocketDebuggerURL: z.string().describe('The WebSocket debugger URL for the target.'),
 });
 
 const ResponseBodySchema = z.array(DevToolsJSONSchema).describe('The list of targets');

@@ -16,7 +16,7 @@ async function main() {
 
   const cdp = await page.createCDPSession();
   // @ts-ignore
-  const payload = await cdp.send('HeadlessService.debuggerUrl');
+  const payload = await cdp.send('HeadlessService.debuggerURL');
   console.log('🚀 ~ main ~ payload:', payload);
 
   // await page.setViewport({ width: 1920, height: 1080 });

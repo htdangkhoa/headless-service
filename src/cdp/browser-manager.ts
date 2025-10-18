@@ -168,8 +168,8 @@ export class BrowserManager {
 
         return {
           ...c,
-          devtoolsFrontendUrl: devtoolsFrontendURL.href,
-          webSocketDebuggerUrl: webSocketDebuggerURL.href,
+          devtoolsFrontendURL: devtoolsFrontendURL.href,
+          webSocketDebuggerURL: webSocketDebuggerURL.href,
         };
       });
     });

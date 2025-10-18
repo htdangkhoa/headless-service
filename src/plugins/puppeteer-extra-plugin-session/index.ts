@@ -41,7 +41,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       browserId,
       this.PROTOCOL_METHODS.KEEP_ALIVE
     );
-    const { eventNameForListener: debuggerUrlEventNameForListener } = buildProtocolEventNames(
+    const { eventNameForListener: debuggerURLEventNameForListener } = buildProtocolEventNames(
       browserId,
       this.PROTOCOL_METHODS.DEBUGGER_URL
     );
@@ -55,7 +55,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     );
 
     browser.on(keepAliveEventNameForListener, this.onHeadlessServiceKeepAlive.bind(this));
-    browser.on(debuggerUrlEventNameForListener, this.onHeadlessServiceDebuggerUrl.bind(this));
+    browser.on(debuggerURLEventNameForListener, this.onHeadlessServiceDebuggerUrl.bind(this));
     browser.on(browserIdEventNameForListener, this.onHeadlessServiceBrowserId.bind(this));
     browser.on(pageIdEventNameForListener, this.onHeadlessServicePageId.bind(this));
   }
@@ -170,8 +170,8 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
       response = Response.success(
         request.id!,
         {
-          webSocketDebuggerUrl: webSocketDebuggerURL.href,
-          devtoolsFrontendUrl: devtoolsFrontendURL.href,
+          webSocketDebuggerURL: webSocketDebuggerURL.href,
+          devtoolsFrontendURL: devtoolsFrontendURL.href,
         },
         request.sessionId
       );

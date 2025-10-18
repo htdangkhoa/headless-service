@@ -118,7 +118,7 @@ import puppeteer from 'puppeteer-core';
 
 ---
 
-## HeadlessService.debuggerUrl
+## HeadlessService.debuggerURL
 
 Gets the debugger URL for the current session.
 
@@ -134,12 +134,12 @@ import puppeteer from 'puppeteer-core';
   const page = await browser.newPage();
   const cdp = await page.createCDPSession();
   await page.goto('https://example.com');
-  const { webSocketDebuggerUrl, devtoolsFrontendUrl } = await cdp.send(
-    'HeadlessService.debuggerUrl'
+  const { webSocketDebuggerURL, devtoolsFrontendURL } = await cdp.send(
+    'HeadlessService.debuggerURL'
   );
 
   // webSocketDebuggerUrl = `{{baseUrl}}/devtools/page/B9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
-  // devtoolsFrontendUrl = `{{baseUrl}}/devtools/inspector.html?ws=localhost%3A3000%2Fdevtools%2Fpage%2FB9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
+  // devtoolsFrontendURL = `{{baseUrl}}/devtools/inspector.html?ws=localhost%3A3000%2Fdevtools%2Fpage%2FB9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
 })();
 ```
 

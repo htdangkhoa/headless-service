@@ -12,7 +12,7 @@ The Session Inspector is a powerful debugging feature that allows you to inspect
 
 ## Usage
 
-See the [`HeadlessService.debuggerUrl`](#description/headlessservicedebuggerurl) documentation for more information.
+See the [`HeadlessService.debuggerURL`](#description/headlessservicedebuggerurl) documentation for more information.
 
 ## DevTools Frontend
 

@@ -10,12 +10,12 @@ import { generatePageId, makeExternalUrl, useTypedParsers, writeResponse } from 
 
 const DevToolsJSONSchema = z.object({
   description: z.string().describe("The description of the target. Generally the page's title."),
-  devtoolsFrontendUrl: z.string().describe('The frontend URL for the target.'),
+  devtoolsFrontendURL: z.string().describe('The frontend URL for the target.'),
   id: z.string().describe('The unique identifier of the target.'),
   title: z.string().describe('The title of the target.'),
   type: z.literal('page').or(z.literal('background_page')).describe('The type of the target.'),
   url: z.string().describe('The URL the target is pointing to.'),
-  webSocketDebuggerUrl: z.string().describe('The WebSocket debugger URL for the target.'),
+  webSocketDebuggerURL: z.string().describe('The WebSocket debugger URL for the target.'),
 });
 
 export class JSONNewPutRoute extends ProxyHttpRoute {
@@ -67,7 +67,7 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
 
     const body: any = {
       description: '',
-      devtoolsFrontendUrl: makeExternalUrl(
+      devtoolsFrontendURL: makeExternalUrl(
         'http',
         `/devtools/inspector.html?${devtoolsUrlSearchParams}`
       ),
@@ -75,7 +75,7 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
       title: 'New Tab',
       type: 'page',
       url: openUrl ?? 'about:blank',
-      webSocketDebuggerUrl: href,
+      webSocketDebuggerURL: href,
     };
 
     return writeResponse(res, HttpStatus.OK, {

@@ -150,30 +150,30 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
   }
 
   private createDebuggerUrlCommand() {
-    const DebuggerUrlPayloadType: DomainType = {
-      id: 'DebuggerUrlPayload',
-      description: 'Payload for debuggerUrl command',
+    const DebuggerURLPayloadType: DomainType = {
+      id: 'DebuggerURLPayload',
+      description: 'Payload for debuggerURL command',
       type: 'object',
       properties: [
         {
-          name: 'webSocketDebuggerUrl',
+          name: 'webSocketDebuggerURL',
           type: 'string',
         },
         {
-          name: 'devtoolsFrontendUrl',
+          name: 'devtoolsFrontendURL',
           type: 'string',
         },
       ],
     };
 
-    const debuggerUrlCommand: Command = {
+    const debuggerURLCommand: Command = {
       name: COMMANDS.DEBUGGER_URL,
       description: 'Get debugger URL',
-      returns: this.buildReturns(DebuggerUrlPayloadType),
+      returns: this.buildReturns(DebuggerURLPayloadType),
     };
 
-    this.addDomainType(DebuggerUrlPayloadType);
-    this.addCommand(debuggerUrlCommand);
+    this.addDomainType(DebuggerURLPayloadType);
+    this.addCommand(debuggerURLCommand);
   }
 
   private createBrowserIdCommand() {
