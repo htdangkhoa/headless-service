@@ -19,15 +19,13 @@ export const RequestLaunchQuerySchema = z.object({
 export const RequestDefaultQuerySchema = z
   .object({
     launch: RequestLaunchQuerySchema.describe('The launch options for the browser').optional(),
-    stealth: BooleanOrStringSchema.describe(
-      'Whether to run the browser in stealth mode'
-    ).optional(),
+    stealth: z
+      .union([z.literal(false), z.enum(['basic', 'advanced']), UnblockOptionsSchema])
+      .describe('The stealth mode to use. Defaults to `basic`.')
+      .default('basic')
+      .optional(),
     proxy: z.string().describe('The proxy server to use').optional(),
     block_ads: BooleanOrStringSchema.describe('Whether to block ads').optional(),
-    unblock: BooleanOrStringSchema.describe('Whether to bypass the bot detection').optional(),
-    unblock_options: UnblockOptionsSchema.describe(
-      'The options for customizing the fingerprint'
-    ).optional(),
     extensions: CommaSeparatedStringSchema.describe('The names of the extensions').optional(),
     request_id: z.string().describe('The request ID').optional(),
   })

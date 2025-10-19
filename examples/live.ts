@@ -4,7 +4,7 @@ const TOKEN = '<token>';
 
 const browserWSURL = new URL('ws://127.0.0.1:3000');
 browserWSURL.searchParams.set('token', TOKEN);
-browserWSURL.searchParams.set('unblock', 'true');
+browserWSURL.searchParams.set('stealth', 'advanced');
 const browserWSEndpoint = browserWSURL.href;
 
 async function main() {

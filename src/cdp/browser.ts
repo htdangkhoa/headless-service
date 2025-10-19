@@ -20,7 +20,7 @@ import RecorderPlugin from '@/plugins/puppeteer-extra-plugin-recorder';
 import SessionPlugin from '@/plugins/puppeteer-extra-plugin-session';
 import UnblockPlugin from '@/plugins/puppeteer-extra-plugin-unblock';
 import { UnblockOptions } from '@/schemas';
-import { env, isDirectory } from '@/utils';
+import { env, isDirectory, transformKeysToCamelCase } from '@/utils';
 import { getBrowserId } from '@/utils/puppeteer';
 
 import { HeadlessServiceDomainRegistry, Protocol } from './devtools';
@@ -29,11 +29,9 @@ export interface BrowserCDPOptions {
   // launch options
   launch?: LaunchOptions;
   // feature options
-  stealth?: boolean;
+  stealth?: 'basic' | 'advanced' | UnblockOptions | false;
   proxy?: string;
   block_ads?: boolean;
-  unblock?: boolean;
-  unblock_options?: UnblockOptions;
   token?: string;
   request_id?: string;
   extensions?: string[];
@@ -85,9 +83,7 @@ export class BrowserCDP extends EventEmitter {
 
     const {
       // ws,
-      stealth,
-      unblock,
-      unblock_options,
+      stealth = 'basic',
       block_ads: blockAds,
       proxy,
       launch: launchOptions,
@@ -99,33 +95,22 @@ export class BrowserCDP extends EventEmitter {
       puppeteer.use(LiveUrlPlugin(this.wsServer, requestId));
     }
 
-    if (stealth) {
-      puppeteer.use(StealthPlugin());
+    if (stealth !== false) {
+      if (stealth === 'basic') {
+        puppeteer.use(StealthPlugin());
+      } else {
+        let fingerprintOptions: Partial<FingerprintGeneratorOptions> = {};
+        if (typeof stealth === 'object') {
+          fingerprintOptions =
+            transformKeysToCamelCase<Partial<FingerprintGeneratorOptions>>(stealth);
+        }
+
+        puppeteer.use(UnblockPlugin({ fingerprintOptions }));
+      }
     }
 
-    if (unblock) {
-      const fingerprintOptions: Partial<FingerprintGeneratorOptions> = {};
-      if (unblock_options) {
-        fingerprintOptions.browsers = unblock_options.browsers;
-        fingerprintOptions.browserListQuery = unblock_options.browserslist_query;
-        fingerprintOptions.operatingSystems = unblock_options.operating_systems;
-        fingerprintOptions.devices = unblock_options.devices;
-        fingerprintOptions.locales = unblock_options.locales;
-        fingerprintOptions.httpVersion = unblock_options.http_version;
-        fingerprintOptions.strict = unblock_options.strict;
-        if (unblock_options.screen) {
-          fingerprintOptions.screen = {
-            minWidth: unblock_options.screen.min_width,
-            maxWidth: unblock_options.screen.max_width,
-            minHeight: unblock_options.screen.min_height,
-            maxHeight: unblock_options.screen.max_height,
-          };
-        }
-        fingerprintOptions.mockWebRTC = unblock_options.mock_webrtc;
-        fingerprintOptions.slim = unblock_options.slim;
-      }
-
-      puppeteer.use(UnblockPlugin({ fingerprintOptions }));
+    if (stealth) {
+      puppeteer.use(StealthPlugin());
     }
 
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
