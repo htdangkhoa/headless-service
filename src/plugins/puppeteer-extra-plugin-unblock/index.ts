@@ -62,7 +62,12 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
   }
 
   async beforeLaunch(options: any): Promise<void> {
-    const args = options.args.filter((arg: string) => !arg.includes('disable-gpu'));
+    const args = options.args.filter(
+      (arg: string) =>
+        !arg.includes('disable-gpu') &&
+        !arg.includes('use-gl') &&
+        !arg.includes('disable-notifications')
+    );
 
     const idx = args.findIndex((arg: string) => arg.startsWith('--disable-blink-features='));
 

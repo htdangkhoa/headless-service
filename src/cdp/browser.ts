@@ -109,10 +109,6 @@ export class BrowserCDP extends EventEmitter {
       }
     }
 
-    if (stealth) {
-      puppeteer.use(StealthPlugin());
-    }
-
     const setOfArgs = new Set<string>(DEFAULT_LAUNCH_ARGS);
 
     (launchOptions?.args ?? [])
