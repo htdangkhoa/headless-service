@@ -138,7 +138,7 @@ import puppeteer from 'puppeteer-core';
     'HeadlessService.debuggerURL'
   );
 
-  // webSocketDebuggerUrl = `{{baseUrl}}/devtools/page/B9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
+  // webSocketDebuggerURL = `{{baseUrl}}/devtools/page/B9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
   // devtoolsFrontendURL = `{{baseUrl}}/devtools/inspector.html?ws=localhost%3A3000%2Fdevtools%2Fpage%2FB9FB4CB53702ABDF73347C04B7EF1E14?token=${TOKEN}`;
 })();
 ```

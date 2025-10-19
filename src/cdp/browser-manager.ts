@@ -151,7 +151,7 @@ export class BrowserManager {
       const response = await fetch(`http://${host}/json/list`);
       const cdpJSON = await response.json();
       return cdpJSON.map((c: any) => {
-        const webSocketDebuggerURL = new URL(c.webSocketDebuggerUrl);
+        const webSocketDebuggerURL = new URL(c.webSocketDebuggerURL);
         webSocketDebuggerURL.host = externalURL.host;
         webSocketDebuggerURL.port = externalURL.port;
         webSocketDebuggerURL.protocol = externalURL.protocol;
@@ -194,12 +194,12 @@ export class BrowserManager {
       const { 'WebKit-Version': webkitVersion } = meta;
       const debuggerVersion = webkitVersion.match(/\s\(@(\b[0-9a-f]{5,40}\b)/)[1];
 
-      const webSocketDebuggerUrl = makeExternalUrl('ws');
+      const webSocketDebuggerURL = makeExternalUrl('ws');
 
       return {
         ...meta,
         'Debugger-Version': debuggerVersion,
-        webSocketDebuggerUrl,
+        webSocketDebuggerURL,
       };
     } catch (error) {
       this.logger.error('Error getting JSON version', error);

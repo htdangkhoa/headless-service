@@ -27,7 +27,7 @@ export class JSONNewPutRoute extends ProxyHttpRoute {
     description: dedent`
       Returns a JSON payload that acts as a pass-through to the DevTools /json/new HTTP API in Browser.
       
-      Headless Service mocks this payload so that remote clients can connect to the underlying \`webSocketDebuggerUrl\` which will cause Headless Service to start the browser and proxy that request into a blank page.
+      Headless Service mocks this payload so that remote clients can connect to the underlying \`webSocketDebuggerURL\` which will cause Headless Service to start the browser and proxy that request into a blank page.
     `,
     responses: {
       200: {

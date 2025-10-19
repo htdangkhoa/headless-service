@@ -12,7 +12,7 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     this.createLiveUrlCommand();
     this.createRecordingCommand();
     this.createKeepAliveCommand();
-    this.createDebuggerUrlCommand();
+    this.createDebuggerURLCommand();
     this.createBrowserIdCommand();
     this.createPageIdCommand();
 
@@ -149,7 +149,7 @@ export class HeadlessServiceDomainRegistry extends DomainRegistry {
     this.addCommand(keepAliveCommand);
   }
 
-  private createDebuggerUrlCommand() {
+  private createDebuggerURLCommand() {
     const DebuggerURLPayloadType: DomainType = {
       id: 'DebuggerURLPayload',
       description: 'Payload for debuggerURL command',

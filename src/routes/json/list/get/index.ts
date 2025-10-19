@@ -28,7 +28,7 @@ export class JSONListGetRoute extends ProxyHttpRoute {
     description: dedent`
       Returns a JSON payload that acts as a pass-through to the DevTools /json/list HTTP API in Browser.
       
-      Headless Service crafts this payload so that remote clients can connect to the underlying "webSocketDebuggerUrl" properly.
+      Headless Service crafts this payload so that remote clients can connect to the underlying "webSocketDebuggerURL" properly.
     `,
     responses: {
       200: {

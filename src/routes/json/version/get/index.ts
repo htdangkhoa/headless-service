@@ -13,7 +13,7 @@ const DevToolsVersionSchema = z.object({
   'User-Agent': z.string().describe('The user agent.'),
   'V8-Version': z.string().describe('The V8 version.'),
   'WebKit-Version': z.string().describe('The WebKit version.'),
-  webSocketDebuggerUrl: z.string().describe('The WebSocket debugger URL for the target.'),
+  webSocketDebuggerURL: z.string().describe('The WebSocket debugger URL for the target.'),
   'Debugger-Version': z.string().describe('The debugger version.'),
 });
 

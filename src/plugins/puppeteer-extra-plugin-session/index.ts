@@ -55,7 +55,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     );
 
     browser.on(keepAliveEventNameForListener, this.onHeadlessServiceKeepAlive.bind(this));
-    browser.on(debuggerURLEventNameForListener, this.onHeadlessServiceDebuggerUrl.bind(this));
+    browser.on(debuggerURLEventNameForListener, this.onHeadlessServiceDebuggerURL.bind(this));
     browser.on(browserIdEventNameForListener, this.onHeadlessServiceBrowserId.bind(this));
     browser.on(pageIdEventNameForListener, this.onHeadlessServicePageId.bind(this));
   }
@@ -127,7 +127,7 @@ export class PuppeteerExtraPluginSession extends PuppeteerExtraPlugin {
     return this.browser.emit(eventNameForResult, response);
   }
 
-  private async onHeadlessServiceDebuggerUrl(payload: any) {
+  private async onHeadlessServiceDebuggerURL(payload: any) {
     const request = Request.parse(payload);
 
     if (!this.browser) return;
