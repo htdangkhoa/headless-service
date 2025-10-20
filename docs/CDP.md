@@ -50,7 +50,7 @@ import puppeteer from 'puppeteer-core';
 ```
 
 <p align="center">
-    <img src="images/live-session.png" alt="Live Session">
+    <img src="{{baseUrl}}/docs/images/live-session.png" alt="Live Session">
 </p>
 
 ---

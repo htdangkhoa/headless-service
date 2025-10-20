@@ -39,5 +39,5 @@ The DevTools frontend URL follows this pattern:
 ```
 
 <p align="center">
-    <img src="images/devtools-frontend.png" alt="DevTools Frontend">
+    <img src="{{baseUrl}}/docs/images/devtools-frontend.png" alt="DevTools Frontend">
 </p>
