@@ -14,7 +14,7 @@ async function main() {
 
   const page = await browser.newPage();
   await page.setViewport({ width: 1920, height: 1080 });
-  await page.goto('https://adblock-tester.com/', {
+  await page.goto('https://adblock-tester.com', {
     waitUntil: 'domcontentloaded',
   });
 
