@@ -201,7 +201,7 @@ export class ScreencastView {
     const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
     if (activeTab) {
       const targetId = activeTab.id.replace('tab-', '');
-      this.sendCommand(LIVE_CLIENT.COMMANDS.INPUT_EMULATE_TOUCH_FROM_MOUSE_EVENT, {
+      this.sendCommand(LIVE_CLIENT.COMMANDS.INPUT_DISPATCH_MOUSE_EVENT, {
         ...params,
         targetId,
       });
