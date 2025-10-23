@@ -194,8 +194,8 @@ export class ScreencastView {
     };
 
     if (evt.type === 'mousewheel') {
-      params.deltaX = evt.wheelDeltaX || 0;
-      params.deltaY = evt.wheelDeltaY || evt.wheelDelta;
+      params.deltaX = evt.deltaX || 0;
+      params.deltaY = evt.deltaY || 0;
     }
 
     const activeTab = this.$tabs.querySelector('.screencast-tab-item.active');
