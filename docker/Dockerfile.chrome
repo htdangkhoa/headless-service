@@ -87,6 +87,12 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
+# Install fonts
+RUN apt-get update && apt-get install -y \
+  fonts-noto-cjk \
+  fonts-noto-color-emoji \
+  && rm -rf /var/lib/apt/lists/*
+
 RUN npx --yes playwright install --with-deps chrome
 
 WORKDIR /app
