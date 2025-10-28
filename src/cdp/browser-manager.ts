@@ -151,7 +151,7 @@ export class BrowserManager {
       const response = await fetch(`http://${host}/json/list`);
       const cdpJSON = await response.json();
       return cdpJSON.map((c: any) => {
-        const webSocketDebuggerURL = new URL(c.webSocketDebuggerURL);
+        const webSocketDebuggerURL = new URL(c.webSocketDebuggerUrl);
         webSocketDebuggerURL.host = externalURL.host;
         webSocketDebuggerURL.port = externalURL.port;
         webSocketDebuggerURL.protocol = externalURL.protocol;
