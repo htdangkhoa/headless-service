@@ -34,6 +34,7 @@ export class ScreencastView {
   private connectionId?: string;
 
   private interval: NodeJS.Timeout | null = null;
+  private pingInterval: NodeJS.Timeout | null = null;
   private renewSessionRetryCount = 0;
   private maxRetries = 3;
   private renewSessionTimeout: NodeJS.Timeout | null = null;
@@ -317,6 +318,10 @@ export class ScreencastView {
       1000 * 60 * 1.5 // 1.5 minutes (90 seconds)
     );
 
+    this.pingInterval = setInterval(() => {
+      this.sendCommand('ping');
+    }, 1000 * 10);
+
     // hide notification
     this.$notification.classList.contains('hidden') || this.$notification.classList.add('hidden');
 
@@ -479,6 +484,11 @@ export class ScreencastView {
       this.interval = null;
     }
 
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
     if (this.renewSessionTimeout) {
       clearTimeout(this.renewSessionTimeout);
       this.renewSessionTimeout = null;
@@ -499,6 +509,11 @@ export class ScreencastView {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
+    }
+
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
     }
 
     if (this.renewSessionTimeout) {
