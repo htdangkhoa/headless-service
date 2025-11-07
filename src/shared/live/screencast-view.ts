@@ -140,7 +140,8 @@ export class ScreencastView {
 
   private resizeWindow = debounce(
     () => {
-      const { width, height } = window.document.body.getBoundingClientRect();
+      const width = this.$viewer.clientWidth;
+      const height = this.$viewer.clientHeight;
 
       this.$canvas.width = width;
       this.$canvas.height = height;
