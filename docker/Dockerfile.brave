@@ -54,6 +54,8 @@ RUN pnpm install --prod --frozen-lockfile --prefer-offline
 
 FROM builder AS brave
 
+ARG ENTERPRISE_POLICIES=false
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
   apt-transport-https \
@@ -106,6 +108,13 @@ RUN apt-get update && apt-get install -y \
   --no-install-recommends && \
   rm -rf /var/lib/apt/lists/*
 
+# Copy managed policies
+COPY policies .
+RUN mkdir -p /etc/brave/policies/managed && \
+  if [ "$ENTERPRISE_POLICIES" = "true" ]; then \
+  cp -r ./policies/* /etc/brave/policies/managed/; \
+  fi
+
 WORKDIR /app
 
 ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/brave-browser
@@ -123,5 +132,3 @@ RUN chmod +x /usr/local/bin/startup.sh
 
 ENTRYPOINT ["/usr/local/bin/startup.sh"]
 CMD ["pnpm", "run", "start"]
-
-EXPOSE 3000

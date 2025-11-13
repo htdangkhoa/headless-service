@@ -52,6 +52,8 @@ RUN pnpm install --prod --frozen-lockfile --prefer-offline
 
 FROM node AS chrome
 
+ARG ENTERPRISE_POLICIES=false
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
   apt-transport-https \
@@ -95,6 +97,13 @@ RUN apt-get update && apt-get install -y \
   rm -rf /var/lib/apt/lists/*
 
 RUN npx --yes playwright install --with-deps chrome
+
+# Copy managed policies
+COPY policies .
+RUN mkdir -p /etc/brave/policies/managed && \
+  if [ "$ENTERPRISE_POLICIES" = "true" ]; then \
+  cp -r ./policies/* /etc/brave/policies/managed/; \
+  fi
 
 WORKDIR /app
 
