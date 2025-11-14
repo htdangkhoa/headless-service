@@ -1,0 +1,4 @@
+{
+  "URLBlocklist": ["chrome://*"],
+  "URLAllowlist": ["chrome://newtab/"]
+}

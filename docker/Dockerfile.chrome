@@ -52,6 +52,8 @@ RUN pnpm install --prod --frozen-lockfile --prefer-offline
 
 FROM node AS chrome
 
+ARG ENTERPRISE_POLICIES=false
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
   apt-transport-https \
@@ -96,6 +98,13 @@ RUN apt-get update && apt-get install -y \
 
 RUN npx --yes playwright install --with-deps chrome
 
+# Copy managed policies
+COPY policies .
+RUN mkdir -p /etc/brave/policies/managed && \
+  if [ "$ENTERPRISE_POLICIES" = "true" ]; then \
+  cp -r ./policies/* /etc/brave/policies/managed/; \
+  fi
+
 WORKDIR /app
 
 ENV PUPPETEER_EXECUTABLE_PATH /usr/bin/google-chrome-stable
@@ -113,5 +122,3 @@ RUN chmod +x /usr/local/bin/startup.sh
 
 ENTRYPOINT ["/usr/local/bin/startup.sh"]
 CMD ["pnpm", "run", "start"]
-
-EXPOSE 3000

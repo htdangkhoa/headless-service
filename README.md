@@ -20,12 +20,18 @@ A service that provides a way to execute the Puppeteer's logic without the need 
 | `SECRET`                    | The secret to authenticate the internal requests                 | :white_check_mark: |                                 |
 | `HEADLESS_SERVICE_TOKEN`    | The token to authenticate the requests (separated by comma)      | :white_check_mark: |                                 |
 | `EXTERNAL_ADDRESS`          | The external address that will be used to connect to the service | :white_check_mark: |                                 |
-| `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                |                    | `false`                         |
 | `PUPPETEER_EXECUTABLE_PATH` | The path to the Puppeteer's browser executable                   | :white_check_mark: |                                 |
 | `DEBUG`                     | Enable the debug mode                                            |                    | `headless-service*,-**:verbose` |
 | `DOWNLOAD_RECORDER_DIR`     | The directory where the downloaded recordings will be stored     |                    | None (`os.tmpdir()`)            |
 | `INITIALIZE_GHOSTERY`       | Initialize Ghostery                                              |                    | `false`                         |
 | `EXTENSIONS_PATH`           | The path to the extensions directory                             |                    | None                            |
+
+## Build variables
+
+| Name                        | Description                                                      |      Required      | Default                         |
+| --------------------------- | ---------------------------------------------------------------- | :----------------: | ------------------------------- |
+| `PUPPETEER_SKIP_DOWNLOAD`   | Skip downloading the Puppeteer's browser binaries                |                    | `false`                         |
+| `ENTERPRISE_POLICIES`       | Enable the Enterprise Policies (Only for Linux)                  |                    | `false`                         |
 
 ## Usage
 
@@ -98,7 +104,7 @@ main().catch(console.error);
 1. Build the Docker image:
 
    ```bash
-   docker build -t headless-service/<browser> . -f ./docker/Dockerfile.<browser>
+   docker build --build-arg ENTERPRISE_POLICIES=<true|false> -t headless-service/<browser> . -f ./docker/Dockerfile.<browser>
    ```
 
 2. Run the Docker container:
