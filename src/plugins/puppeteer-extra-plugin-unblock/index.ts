@@ -56,7 +56,7 @@ export class PuppeteerExtraPluginUnblock extends PuppeteerExtraPlugin {
 
     if (!page) return;
 
-    if (!page.isClosed()) return;
+    if (page.isClosed()) return;
 
     await this.injector.attachFingerprintToPuppeteer(page, this.fingerprintWithHeaders);
   }
