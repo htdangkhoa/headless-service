@@ -287,7 +287,13 @@ export class PuppeteerExtraPluginLiveUrl extends PuppeteerExtraPlugin {
 
     const buffer = Buffer.from(rawMessage as Buffer);
     const message = Buffer.from(buffer).toString('utf8');
-    const rawPayload = JSON.parse(message) as LiveMessage;
+    let rawPayload: LiveMessage;
+    try {
+      rawPayload = JSON.parse(message) as LiveMessage;
+    } catch (error) {
+      this.logger.warn('Invalid live payload:', error);
+      return;
+    }
     const { context, ...payload } = rawPayload;
 
     if (!context.session) return;

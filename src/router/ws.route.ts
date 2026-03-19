@@ -70,37 +70,40 @@ export abstract class ProxyWebSocketRoute implements WsRoute {
       wsServer.once('close', close);
       wsServer.once('error', close);
 
-      wsServer.once('connection', (s, r) => {
-        this.logger.info('socket connected');
-
-        client.on('message', (data: any) => {
-          const message = Buffer.from(data).toString('utf-8');
-
-          this.logger.debug(`Received message:`, message);
-
-          return s.send(message);
-        });
-
-        s.on('message', (data: any) => {
-          const message = Buffer.from(data).toString('utf-8');
-
-          const payload = JSON.parse(message);
-
-          const request = Request.parse(payload);
-
-          const customDomains = Object.values(DOMAINS);
-
-          if (customDomains.some((d) => request.method.startsWith(d))) {
-            return this.onCustomCDPCommand(s, request, browser);
-          }
-
-          return client.send(message);
-        });
-      });
-
       client.once('open', () => {
-        wsServer.handleUpgrade(req, socket, head, (ws) => {
-          wsServer.emit('connection', ws, req);
+        wsServer.handleUpgrade(req, socket, head, (serverSocket) => {
+          this.logger.info('socket connected');
+
+          client.on('message', (data: any) => {
+            const message = Buffer.from(data).toString('utf-8');
+
+            this.logger.debug(`Received message:`, message);
+
+            return serverSocket.send(message);
+          });
+
+          serverSocket.on('message', (data: any) => {
+            const message = Buffer.from(data).toString('utf-8');
+            let payload: unknown;
+            try {
+              payload = JSON.parse(message);
+            } catch (error) {
+              this.logger.warn('Invalid WS payload received:', error);
+              return;
+            }
+
+            const request = Request.parse(payload);
+
+            const customDomains = Object.values(DOMAINS);
+
+            if (customDomains.some((d) => request.method.startsWith(d))) {
+              return this.onCustomCDPCommand(serverSocket, request, browser);
+            }
+
+            return client.send(message);
+          });
+
+          wsServer.emit('connection', serverSocket, req);
         });
       });
     });

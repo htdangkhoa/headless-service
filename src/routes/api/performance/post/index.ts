@@ -142,11 +142,16 @@ export class PerformancePostRoute extends ProxyHttpRoute {
       await browserManager.complete(browser);
     };
 
-    child.on('error', (error) => {
+    child.on('error', async (error) => {
       this.logger.error(error);
+      await close(child.pid);
       return writeResponse(res, HttpStatus.INTERNAL_SERVER_ERROR, {
         body: error,
       });
+    });
+
+    child.on('exit', () => {
+      void close(child.pid);
     });
 
     child.on('message', (message: IChildProcessOutput) => {

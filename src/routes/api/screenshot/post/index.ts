@@ -140,156 +140,158 @@ export class ScreenshotPostRoute extends ProxyHttpRoute {
 
     const browser = await browserManager.requestBrowser(req, queryValidation.data);
 
-    const page = await browser.newPage();
+    try {
+      const page = await browser.newPage();
 
-    const cdp = await page.createCDPSession();
+      const cdp = await page.createCDPSession();
 
-    if (authenticate) {
-      await page.authenticate(authenticate);
-    }
+      if (authenticate) {
+        await page.authenticate(authenticate);
+      }
 
-    if (Array.isArray(cookies) && cookies.length) {
-      const parsedCookies = cookies.map((cookie) => transformKeysToCamelCase<CookieParam>(cookie));
-      page.setCookie(...parsedCookies);
-    }
+      if (Array.isArray(cookies) && cookies.length) {
+        const parsedCookies = cookies.map((cookie) => transformKeysToCamelCase<CookieParam>(cookie));
+        page.setCookie(...parsedCookies);
+      }
 
-    if (emulateMediaType) {
-      await page.emulateMediaType(emulateMediaType);
-    }
+      if (emulateMediaType) {
+        await page.emulateMediaType(emulateMediaType);
+      }
 
-    if (userAgent) {
-      await page.setUserAgent(userAgent);
-    }
+      if (userAgent) {
+        await page.setUserAgent(userAgent);
+      }
 
-    if (viewport) {
-      const parsedViewport = transformKeysToCamelCase<Viewport>(viewport);
-      await page.setViewport(parsedViewport);
-    }
+      if (viewport) {
+        const parsedViewport = transformKeysToCamelCase<Viewport>(viewport);
+        await page.setViewport(parsedViewport);
+      }
 
-    if (Array.isArray(blockUrls) && blockUrls.length) {
-      await cdp.send('Network.setBlockedURLs', {
-        urls: blockUrls,
-      });
-    }
+      if (Array.isArray(blockUrls) && blockUrls.length) {
+        await cdp.send('Network.setBlockedURLs', {
+          urls: blockUrls,
+        });
+      }
 
-    if (
-      requestInterception &&
-      Array.isArray(requestInterception.patterns) &&
-      requestInterception.patterns.length
-    ) {
-      const parsedRequestInterception =
-        transformKeysToCamelCase<Protocol.Network.SetRequestInterceptionRequest>(
-          requestInterception
-        );
-      await cdp.send('Network.setRequestInterception', parsedRequestInterception);
-    }
+      if (
+        requestInterception &&
+        Array.isArray(requestInterception.patterns) &&
+        requestInterception.patterns.length
+      ) {
+        const parsedRequestInterception =
+          transformKeysToCamelCase<Protocol.Network.SetRequestInterceptionRequest>(
+            requestInterception
+          );
+        await cdp.send('Network.setRequestInterception', parsedRequestInterception);
+      }
 
-    if (setExtraHTTPHeaders) {
-      await page.setExtraHTTPHeaders(setExtraHTTPHeaders);
-    }
+      if (setExtraHTTPHeaders) {
+        await page.setExtraHTTPHeaders(setExtraHTTPHeaders);
+      }
 
-    if (typeof setJavascriptEnabled === 'boolean') {
-      await page.setJavaScriptEnabled(setJavascriptEnabled);
-    }
+      if (typeof setJavascriptEnabled === 'boolean') {
+        await page.setJavaScriptEnabled(setJavascriptEnabled);
+      }
 
-    const parsedGoToOptions = transformKeysToCamelCase<GoToOptions | WaitForOptions>(goToOptions);
+      const parsedGoToOptions = transformKeysToCamelCase<GoToOptions | WaitForOptions>(goToOptions);
 
-    const performGoTo = url ? page.goto.bind(page) : page.setContent.bind(page);
+      const performGoTo = url ? page.goto.bind(page) : page.setContent.bind(page);
 
-    const content = url || html;
+      const content = url || html;
 
-    if (!content) {
-      const error = new Error('Either "url" or "html" must be provided');
+      if (!content) {
+        const error = new Error('Either "url" or "html" must be provided');
+        return writeResponse(res, HttpStatus.BAD_REQUEST, {
+          body: error,
+        });
+      }
+
+      const pageResponse = await performGoTo(content, parsedGoToOptions);
+
+      if (Array.isArray(addScriptTags) && addScriptTags.length) {
+        for (const script of addScriptTags) {
+          await page.addScriptTag(script);
+        }
+      }
+
+      if (Array.isArray(addStyleTags) && addStyleTags.length) {
+        for (const style of addStyleTags) {
+          await page.addStyleTag(style);
+        }
+      }
+
+      if (waitForTimeout) {
+        await sleep(waitForTimeout);
+      }
+
+      if (waitForFunction) {
+        const { page_function: pageFunction, ...waitForFunctionOptions } = waitForFunction;
+        await page.waitForFunction(pageFunction, waitForFunctionOptions);
+      }
+
+      if (waitForSelector) {
+        const { selector, ...waitForSelectorOptions } = waitForSelector;
+        const parsedWaitForSelector =
+          transformKeysToCamelCase<WaitForOptions>(waitForSelectorOptions);
+        await page.waitForSelector(selector, parsedWaitForSelector);
+      }
+
+      if (waitForEvent) {
+        const { event_name: eventName, timeout } = waitForEvent;
+        await page.waitForEvent(eventName, timeout);
+      }
+
+      if (scrollPage) {
+        await page.scrollThroughPage();
+      }
+
+      const headers = {
+        'X-Response-Code': pageResponse?.status(),
+        'X-Response-IP': pageResponse?.remoteAddress().ip,
+        'X-Response-Port': pageResponse?.remoteAddress().port,
+        'X-Response-Status': pageResponse?.statusText(),
+        'X-Response-URL': pageResponse?.url().substring(0, 1000),
+      };
+
+      for (const [key, value] of Object.entries(headers)) {
+        if (value !== undefined) {
+          res.setHeader(key, value);
+        }
+      }
+
+      const target = selector ? await page.$(selector) : page;
+
+      if (!target) {
+        const error = new Error(`Element with selector "${selector}" not found`);
+        return writeResponse(res, HttpStatus.NOT_FOUND, {
+          body: error,
+        });
+      }
+
+      const parsedScreenshotOptions = transformKeysToCamelCase<ScreenshotOptions>(screenshotOptions);
+
+      const screenshot: string | Uint8Array = await target.screenshot(parsedScreenshotOptions);
+
+      if (screenshot instanceof Uint8Array) {
+        const buffer = Buffer.alloc(screenshot.length);
+        screenshot.forEach((byte, index) => {
+          buffer[index] = byte;
+        });
+
+        const mimeType = ['image', parsedScreenshotOptions.type ?? 'png'].join('/');
+
+        res.setHeader('Content-Type', mimeType).status(HttpStatus.OK).send(buffer);
+
+        return;
+      }
+
       return writeResponse(res, HttpStatus.BAD_REQUEST, {
-        body: error,
+        body: {
+          data: 'done',
+        },
       });
+    } finally {
+      await browserManager.complete(browser);
     }
-
-    const pageResponse = await performGoTo(content, parsedGoToOptions);
-
-    if (Array.isArray(addScriptTags) && addScriptTags.length) {
-      for (const script of addScriptTags) {
-        await page.addScriptTag(script);
-      }
-    }
-
-    if (Array.isArray(addStyleTags) && addStyleTags.length) {
-      for (const style of addStyleTags) {
-        await page.addStyleTag(style);
-      }
-    }
-
-    if (waitForTimeout) {
-      await sleep(waitForTimeout);
-    }
-
-    if (waitForFunction) {
-      const { page_function: pageFunction, ...waitForFunctionOptions } = waitForFunction;
-      await page.waitForFunction(pageFunction, waitForFunctionOptions);
-    }
-
-    if (waitForSelector) {
-      const { selector, ...waitForSelectorOptions } = waitForSelector;
-      const parsedWaitForSelector =
-        transformKeysToCamelCase<WaitForOptions>(waitForSelectorOptions);
-      await page.waitForSelector(selector, parsedWaitForSelector);
-    }
-
-    if (waitForEvent) {
-      const { event_name: eventName, timeout } = waitForEvent;
-      await page.waitForEvent(eventName, timeout);
-    }
-
-    if (scrollPage) {
-      await page.scrollThroughPage();
-    }
-
-    const headers = {
-      'X-Response-Code': pageResponse?.status(),
-      'X-Response-IP': pageResponse?.remoteAddress().ip,
-      'X-Response-Port': pageResponse?.remoteAddress().port,
-      'X-Response-Status': pageResponse?.statusText(),
-      'X-Response-URL': pageResponse?.url().substring(0, 1000),
-    };
-
-    for (const [key, value] of Object.entries(headers)) {
-      if (value !== undefined) {
-        res.setHeader(key, value);
-      }
-    }
-
-    const target = selector ? await page.$(selector) : page;
-
-    if (!target) {
-      const error = new Error(`Element with selector "${selector}" not found`);
-      return writeResponse(res, HttpStatus.NOT_FOUND, {
-        body: error,
-      });
-    }
-
-    const parsedScreenshotOptions = transformKeysToCamelCase<ScreenshotOptions>(screenshotOptions);
-
-    const screenshot: string | Uint8Array = await target.screenshot(parsedScreenshotOptions);
-
-    await browserManager.complete(browser);
-
-    if (screenshot instanceof Uint8Array) {
-      const buffer = Buffer.alloc(screenshot.length);
-      screenshot.forEach((byte, index) => {
-        buffer[index] = byte;
-      });
-
-      const mimeType = ['image', parsedScreenshotOptions.type ?? 'png'].join('/');
-
-      res.setHeader('Content-Type', mimeType).status(HttpStatus.OK).send(buffer);
-
-      return;
-    }
-
-    return writeResponse(res, HttpStatus.BAD_REQUEST, {
-      body: {
-        data: 'done',
-      },
-    });
   };
 }
