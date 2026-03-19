@@ -25,6 +25,8 @@ export class ScreencastView {
   private $viewer: HTMLDivElement;
   private $canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private $cursorCanvas: HTMLCanvasElement;
+  private cursorCtx: CanvasRenderingContext2D;
   private image = new Image();
   private $notification: HTMLDivElement;
 
@@ -39,6 +41,106 @@ export class ScreencastView {
   private maxRetries = 3;
   private renewSessionTimeout: NodeJS.Timeout | null = null;
   private lastRenewTime: number = 0;
+
+  // Fake cursor overlay drawn on top of the screencast canvas.
+  private cursorVisible = false;
+  private cursorX = 0;
+  private cursorY = 0;
+  private cursorPressed = false;
+  private lastMoveAt = 0;
+  private lastClickAt = 0;
+
+  private cursorTick: NodeJS.Timeout | null = null;
+
+  private getCanvasCoordinates(event: MouseEvent) {
+    const rect = this.$canvas.getBoundingClientRect();
+    const widthScale = this.$canvas.width / (rect.width || 1);
+    const heightScale = this.$canvas.height / (rect.height || 1);
+    return {
+      x: (event.clientX - rect.left) * widthScale,
+      y: (event.clientY - rect.top) * heightScale,
+    };
+  }
+
+  private drawCursor(now = Date.now()) {
+    const w = this.$cursorCanvas.width;
+    const h = this.$cursorCanvas.height;
+
+    // Always clear cursor overlay to avoid leaving trails.
+    this.cursorCtx.clearRect(0, 0, w, h);
+
+    if (!this.cursorVisible) return;
+
+    // If the canvas resized after initial load and we never got mouse
+    // coordinates yet, keep the cursor anchored to the center.
+    if (w > 0 && h > 0 && this.cursorX === 0 && this.cursorY === 0 && now - this.lastMoveAt < 2000) {
+      this.cursorX = w / 2;
+      this.cursorY = h / 2;
+    }
+
+    // Clamp to avoid drawing outside the canvas after resizes.
+    const x = Math.max(0, Math.min(this.cursorX, w));
+    const y = Math.max(0, Math.min(this.cursorY, h));
+
+    const ageSinceMove = now - this.lastMoveAt;
+    // Keep the cursor visible for a little while even if screencast frames are slow.
+    const fadeMs = 5000;
+    const cursorAlpha = ageSinceMove > fadeMs ? 0 : 1 - ageSinceMove / fadeMs;
+
+    if (cursorAlpha <= 0) return;
+
+    const pressed = this.cursorPressed;
+    const baseRadius = pressed ? 10 : 8;
+    const centerRadius = pressed ? 2.5 : 2;
+
+    this.cursorCtx.save();
+    this.cursorCtx.globalAlpha = cursorAlpha;
+    this.cursorCtx.shadowBlur = 4;
+    this.cursorCtx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+
+    // Click ripple
+    const clickAge = now - this.lastClickAt;
+    if (clickAge >= 0 && clickAge < 350) {
+      const t = clickAge / 350;
+      const rippleRadius = baseRadius + t * 14;
+      const rippleAlpha = 1 - t;
+      this.cursorCtx.beginPath();
+      this.cursorCtx.arc(x, y, rippleRadius, 0, Math.PI * 2);
+      this.cursorCtx.strokeStyle = `rgba(255, 84, 73, ${0.9 * rippleAlpha})`;
+      this.cursorCtx.lineWidth = 2;
+      this.cursorCtx.stroke();
+    }
+
+    // Outer ring
+    this.cursorCtx.beginPath();
+    this.cursorCtx.arc(x, y, baseRadius, 0, Math.PI * 2);
+    this.cursorCtx.strokeStyle = pressed
+      ? 'rgba(255, 255, 255, 0.98)'
+      : 'rgba(255, 255, 255, 0.86)';
+    this.cursorCtx.lineWidth = pressed ? 2.25 : 1.75;
+    this.cursorCtx.stroke();
+
+    // Center dot
+    this.cursorCtx.beginPath();
+    this.cursorCtx.arc(x, y, centerRadius, 0, Math.PI * 2);
+    this.cursorCtx.fillStyle = pressed ? 'rgba(255, 84, 73, 0.98)' : 'rgba(255, 255, 255, 0.95)';
+    this.cursorCtx.fill();
+
+    this.cursorCtx.restore();
+  }
+
+  private startCursorTick() {
+    if (this.cursorTick) return;
+    this.cursorTick = setInterval(() => {
+      this.drawCursor();
+    }, 50);
+  }
+
+  private stopCursorTick() {
+    if (!this.cursorTick) return;
+    clearInterval(this.cursorTick);
+    this.cursorTick = null;
+  }
 
   constructor(private container: HTMLElement) {
     const url = new URL(location.href);
@@ -103,14 +205,26 @@ export class ScreencastView {
     /* ===== Viewer ===== */
     this.$viewer = document.createElement('div');
     this.$viewer.classList.add('flex', 'flex-1');
+    this.$viewer.style.position = 'relative';
 
     this.$canvas = document.createElement('canvas');
     this.ctx = this.$canvas.getContext('2d')!;
+
+    this.$cursorCanvas = document.createElement('canvas');
+    this.cursorCtx = this.$cursorCanvas.getContext('2d')!;
+    this.$cursorCanvas.style.position = 'absolute';
+    this.$cursorCanvas.style.top = '0';
+    this.$cursorCanvas.style.left = '0';
+    this.$cursorCanvas.style.pointerEvents = 'none';
+    this.$cursorCanvas.style.width = '100%';
+    this.$cursorCanvas.style.height = '100%';
+    this.$cursorCanvas.style.zIndex = '5';
 
     this.$notification = document.createElement('div');
     this.$notification.classList.add('absolute', 'top-50', 'left-50', 'translate-n50', 'hidden');
 
     this.$viewer.appendChild(this.$canvas);
+    this.$viewer.appendChild(this.$cursorCanvas);
     this.$viewer.appendChild(this.$notification);
     container.appendChild(this.$viewer);
 
@@ -145,6 +259,8 @@ export class ScreencastView {
 
       this.$canvas.width = width;
       this.$canvas.height = height;
+      this.$cursorCanvas.width = width;
+      this.$cursorCanvas.height = height;
 
       const params = {
         width: Math.floor(width),
@@ -185,6 +301,23 @@ export class ScreencastView {
     const isScroll = type.indexOf('wheel') !== -1;
     const x = isScroll ? evt.clientX : evt.offsetX;
     const y = isScroll ? evt.clientY : evt.offsetY;
+
+    // Update cursor overlay state using canvas-relative coordinates.
+    const { x: cursorX, y: cursorY } = this.getCanvasCoordinates(event);
+    this.cursorVisible = true;
+    this.cursorX = cursorX;
+    this.cursorY = cursorY;
+    this.lastMoveAt = Date.now();
+
+    if (evt.type === 'mousedown' || evt.type === 'touchstart') {
+      this.cursorPressed = true;
+      this.lastClickAt = Date.now();
+    } else if (evt.type === 'mouseup' || evt.type === 'touchend') {
+      this.cursorPressed = false;
+    }
+
+    // Draw immediately so users see cursor movement even before the next frame arrives.
+    this.drawCursor();
 
     const params: Dictionary = {
       type: MOUSE_EVENTS[evt.type],
@@ -310,6 +443,17 @@ export class ScreencastView {
       connectionId: this.connectionId,
     });
 
+    // Show an initial cursor marker immediately. This helps verify the overlay is
+    // drawn correctly even if the user hasn't moved the mouse yet.
+    this.cursorVisible = true;
+    this.cursorPressed = false;
+    this.lastClickAt = Date.now() - 10000;
+    this.lastMoveAt = Date.now();
+    this.cursorX = this.$canvas.width / 2;
+    this.cursorY = this.$canvas.height / 2;
+    this.drawCursor();
+    this.startCursorTick();
+
     this.interval = setInterval(
       () => {
         // console.log('🔄 Renewing session...');
@@ -378,6 +522,8 @@ export class ScreencastView {
     };
 
     const onMouseOver = () => {
+      this.cursorVisible = true;
+      this.lastMoveAt = Date.now();
       document.addEventListener('keydown', onKeyEvent);
       document.addEventListener('keyup', onKeyEvent);
       document.addEventListener('keypress', onKeyEvent);
@@ -385,6 +531,7 @@ export class ScreencastView {
     this.$canvas.addEventListener('mouseover', onMouseOver);
 
     const onMouseLeave = () => {
+      this.cursorPressed = false;
       document.removeEventListener('keydown', onKeyEvent);
       document.removeEventListener('keyup', onKeyEvent);
       document.removeEventListener('keypress', onKeyEvent);
@@ -411,6 +558,7 @@ export class ScreencastView {
         const { targetId, ...payload } = data;
         this.image.onload = () => {
           this.ctx.drawImage(this.image, 0, 0, this.$canvas.width, this.$canvas.height);
+          this.drawCursor();
         };
         this.image.src = `data:image/jpeg;base64,${payload.data}`;
         this.sendCommand(LIVE_CLIENT.COMMANDS.SCREENCAST_FRAME_ACK, {
@@ -472,6 +620,10 @@ export class ScreencastView {
   async onClose(_event: CloseEvent) {
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
+    this.cursorCtx.clearRect(0, 0, this.$cursorCanvas.width, this.$cursorCanvas.height);
+    this.cursorVisible = false;
+    this.cursorPressed = false;
+    this.stopCursorTick();
 
     // clear input
     this.getNavigationInput()!.value = '';
@@ -499,6 +651,10 @@ export class ScreencastView {
   async onError(_event: Event) {
     // clear canvas
     this.ctx.clearRect(0, 0, this.$canvas.width, this.$canvas.height);
+    this.cursorCtx.clearRect(0, 0, this.$cursorCanvas.width, this.$cursorCanvas.height);
+    this.cursorVisible = false;
+    this.cursorPressed = false;
+    this.stopCursorTick();
 
     // clear input
     this.getNavigationInput()!.value = '';
