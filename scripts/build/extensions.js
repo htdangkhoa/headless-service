@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { join } from 'path';
 import { build } from 'esbuild';
 import { polyfillNode } from 'esbuild-plugin-polyfill-node';

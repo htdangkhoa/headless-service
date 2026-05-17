@@ -1,0 +1,16 @@
+{
+  "name": "Headless Service Native Select Overlay",
+  "version": "0.0.1",
+  "manifest_version": 3,
+  "description": "Replaces native select dropdown with an in-DOM overlay so live screencast can show options in all frames.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_end",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "host_permissions": ["<all_urls>"]
+}

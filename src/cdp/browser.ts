@@ -163,6 +163,13 @@ export class BrowserCDP extends EventEmitter {
       builtInExtensionPaths.push(recordPath);
     }
 
+    if (this.wsServer instanceof WebSocketServer) {
+      const selectPickerPath = resolve(process.cwd(), 'extensions', 'select-picker');
+      if (!builtInExtensionPaths.includes(selectPickerPath)) {
+        builtInExtensionPaths.push(selectPickerPath);
+      }
+    }
+
     if (builtInExtensionPaths.length) {
       if (_launchOptions.headless === 'shell') {
         _launchOptions.headless = false;
